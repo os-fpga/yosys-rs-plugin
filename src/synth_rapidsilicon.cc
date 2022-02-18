@@ -7,6 +7,8 @@
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
 #include "include/abc.h"
+#include <iostream>
+#include <fstream>
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -92,10 +94,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
         log("\n");
-        log("    -no_adder\n");
-        log("        By default use adder cells in output netlist.\n");
-        log("        Specifying this switch turns it off.\n");
-        log("\n");
         log("    -no_bram\n");
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
@@ -112,10 +110,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string verilog_file;
     Strategy goal;
     EffortLevel effort;
-#ifdef DEV_BUILD
     string abc_script;
     bool cec;
-#endif
     bool nodsp;
     bool nobram;
 
@@ -127,10 +123,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         verilog_file = "";
         goal = Strategy::MIXED;
         effort = EffortLevel::MEDIUM;
-#ifdef DEV_BUILD
         abc_script = "";
         cec = false;
-#endif
         nobram = false;
         nodsp = false;
     }
@@ -198,7 +192,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (tech_str == "generic")
             tech = Technologies::GENERIC;
-        else
+        else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
 
         if (goal_str == "area")
@@ -207,7 +201,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             goal = Strategy::DELAY;
         else if (goal_str == "mixed")
             goal = Strategy::MIXED;
-        else
+        else if (goal_str != "")
             log_cmd_error("Invalid goal specified: '%s'\n", goal_str.c_str());
 
         if (effort_str == "high")
@@ -216,7 +210,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             effort = EffortLevel::MEDIUM;
         else if (effort_str == "low")
             effort = EffortLevel::LOW;
-        else
+        else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
 
         log_header(design, "Executing synth_rs pass.\n");
@@ -273,7 +267,31 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("map_luts")) {
-            run("abc -script " + abc_base6_a21);
+            if (abc_script != "")
+                run("abc -script " + abc_script);
+            else {
+                switch(goal) {
+                    case Strategy::AREA:
+                        {
+                            string tmp_file("abc_tmp.scr");
+                            std::ofstream out(tmp_file);
+                            if (cec)
+                                out << "write_eqn input.eqn;";
+                            out << abc_base6_a21;
+                            if (cec)
+                                out << "write_eqn output.eqn; cec input.eqn output.eqn";
+                            out.close();
+                            run("abc -script " + tmp_file);
+                            if (remove(tmp_file.c_str()) != 0)
+                                log("Error deleting file: %s", tmp_file.c_str());
+                            break;
+                        }
+                    case Strategy::DELAY:
+                        break;
+                    case Strategy::MIXED:
+                        break;
+                }
+            }
             run("opt");
         }
 
