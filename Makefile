@@ -17,8 +17,11 @@ PLUGINS_DIR ?= $(shell $(YOSYS_CONFIG) --datdir)/plugins
 DATA_DIR ?= $(shell $(YOSYS_CONFIG) --datdir)
 EXTRA_FLAGS ?=
 
-#COMMON          = common
-#VERILOG_MODULES = $(COMMON)/cells_sim.v         
+COMMON			= common
+RS_K6N10		= rs_k6n10
+VERILOG_MODULES = $(COMMON)/cells_sim.v \
+				  $(RS_K6N10)/cells_sim.v	\
+				  $(RS_K6N10)/ffs_map.v \
 
 NAME = synth-rs
 SOURCES = src/synth_rapidsilicon.cc 
@@ -36,11 +39,11 @@ $(NAME).so: $(OBJS)
 install_plugin: $(NAME).so
 	install -D $< $(PLUGINS_DIR)/$<
 
-#install_modules: $(VERILOG_MODULES)
-#	$(foreach f,$^,install -D $(f) $(DATA_DIR)/rapidsilicon/$(f);)
+install_modules: $(VERILOG_MODULES)
+	$(foreach f,$^,install -D $(f) $(DATA_DIR)/rapidsilicon/$(f);)
 
 .PHONY: install
-install: install_plugin
+install: install_plugin install_modules
 
 clean:
 	rm -f src/*.d src/*.o *.so

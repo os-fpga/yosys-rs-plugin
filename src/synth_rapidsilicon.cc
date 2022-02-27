@@ -20,6 +20,13 @@ PRIVATE_NAMESPACE_BEGIN
 #define PASS_NAME synth_rs
 #endif
 
+#define RS_K6N10_DIR rs_k6n10
+#define COMMON_DIR common
+#define SIM_LIB_FILE cells_sim.v
+#define FFS_MAP_FILE ffs_map.v
+
+#define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/"#tech_dir"/"#file
+
 enum Strategy {
     AREA,
     DELAY,
@@ -33,7 +40,8 @@ enum EffortLevel {
 };
 
 enum Technologies {
-    GENERIC    
+    GENERIC,   
+    RS_K6N10 
 };
 
 struct SynthRapidSiliconPass : public ScriptPass {
@@ -192,6 +200,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (tech_str == "generic")
             tech = Technologies::GENERIC;
+        else if (tech_str == "rs_k6n10")
+            tech = Technologies::RS_K6N10;
         else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
 
@@ -223,6 +233,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void script() override
     {
+        if (check_label("begin") && tech != Technologies::GENERIC) {
+            string readArgs;
+            switch (tech) {
+                case Technologies::RS_K6N10: {
+                    readArgs = GET_FILE_PATH(RS_K6N10_DIR, SIM_LIB_FILE);
+                    break;
+                }    
+            }
+            run("read_verilog -lib -specify -nomem2reg" GET_FILE_PATH(COMMON_DIR, SIM_LIB_FILE) + readArgs);
+        }
+
         if (check_label("prepare")) {
             run(stringf("hierarchy -check %s", top_opt.c_str()));
             run("proc");
@@ -249,6 +270,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("map_ffs")) {
+            string techMapArgs = " -map +/techmap.v -map";
+            switch (tech) {
+                case RS_K6N10: {
+                    run("dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PP?_ 0 -cell $_DFFE_PP?P_ 0 -cell $_DFFSR_PPP_ 0 -cell $_DFFSRE_PPPP_ 0 -cell $_DLATCHSR_PPP_ 0");
+                    techMapArgs += GET_FILE_PATH(RS_K6N10_DIR, FFS_MAP_FILE);
+                    break;    
+                }    
+            }
+            run("techmap " + techMapArgs);
             run("opt_expr -mux_undef");
             run("simplemap");
             run("opt_expr");
@@ -256,12 +286,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_dff -nodffe -nosdff");
             run("opt_clean");
             run("opt -nodffe -nosdff");
-            run("opt -fast -full");
-            run("memory_map");
-            run("opt -full");
         }
 
         if (check_label("map_gates")) {
+            run("opt -fast -full");
+            run("memory_map");
+            run("opt -full");
             run("techmap");
             run("opt");
         }
