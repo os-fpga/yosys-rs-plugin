@@ -267,6 +267,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
+            run("techmap");
             run("alumacc");
             run("opt");
             run("memory -nomap");
