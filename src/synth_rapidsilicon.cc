@@ -303,8 +303,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -fast -full");
             run("memory_map");
             run("opt -full");
-            run("techmap");
-            run("opt");
         }
 
         if (check_label("map_luts")) {
