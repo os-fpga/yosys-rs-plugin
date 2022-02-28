@@ -25,7 +25,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
 
-#define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/"#tech_dir"/"#file
+#define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 enum Strategy {
     AREA,
@@ -240,6 +240,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     readArgs = GET_FILE_PATH(RS_K6N10_DIR, SIM_LIB_FILE);
                     break;
                 }    
+                // Just to make compiler happy
+                case Technologies::GENERIC: {
+                    break;
+                }    
             }
             run("read_verilog -lib -specify -nomem2reg" GET_FILE_PATH(COMMON_DIR, SIM_LIB_FILE) + readArgs);
         }
@@ -270,15 +274,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("map_ffs")) {
-            string techMapArgs = " -map +/techmap.v -map";
-            switch (tech) {
-                case RS_K6N10: {
-                    run("dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PP?_ 0 -cell $_DFFE_PP?P_ 0 -cell $_DFFSR_PPP_ 0 -cell $_DFFSRE_PPPP_ 0 -cell $_DLATCHSR_PPP_ 0");
-                    techMapArgs += GET_FILE_PATH(RS_K6N10_DIR, FFS_MAP_FILE);
-                    break;    
-                }    
+            if (tech != Technologies::GENERIC) {
+                string techMapArgs = " -map +/techmap.v -map";
+                switch (tech) {
+                    case RS_K6N10: {
+                        run("dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PP?_ 0 -cell $_DFFE_PP?P_ 0 -cell $_DFFSR_PPP_ 0 -cell $_DFFSRE_PPPP_ 0 -cell $_DLATCHSR_PPP_ 0");
+                        techMapArgs += GET_FILE_PATH(RS_K6N10_DIR, FFS_MAP_FILE);
+                        break;    
+                    }    
+                    // Just to make compiler happy
+                    case Technologies::GENERIC: {
+                        break;
+                    }    
+                }
+                run("techmap " + techMapArgs);
             }
-            run("techmap " + techMapArgs);
             run("opt_expr -mux_undef");
             run("simplemap");
             run("opt_expr");
