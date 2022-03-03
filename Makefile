@@ -45,5 +45,10 @@ install_modules: $(VERILOG_MODULES)
 .PHONY: install
 install: install_plugin install_modules
 
+test:
+	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
+
 clean:
 	rm -f src/*.d src/*.o *.so
+	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
+
