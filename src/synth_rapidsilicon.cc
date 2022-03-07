@@ -228,10 +228,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("proc");
             run("flatten");
             run("tribuf -logic");
+            run("deminout");
             run("opt_expr");
             run("opt_clean");
             run("check");
-            run("deminout");
             run("opt -nodffe -nosdff");
             run("fsm");
             run("opt -sat");
