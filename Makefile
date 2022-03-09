@@ -18,10 +18,10 @@ DATA_DIR ?= $(shell $(YOSYS_CONFIG) --datdir)
 EXTRA_FLAGS ?=
 
 COMMON			= common
-RS_K6N10		= rs_k6n10
+RS_K6N10F		= rs_k6n10f
 VERILOG_MODULES = $(COMMON)/cells_sim.v \
-				  $(RS_K6N10)/cells_sim.v	\
-				  $(RS_K6N10)/ffs_map.v \
+				  $(RS_K6N10F)/cells_sim.v	\
+				  $(RS_K6N10F)/ffs_map.v \
 
 NAME = synth-rs
 SOURCES = src/synth_rapidsilicon.cc 
@@ -52,3 +52,5 @@ clean:
 	rm -f src/*.d src/*.o *.so
 	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
 
+clean_test:
+	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
