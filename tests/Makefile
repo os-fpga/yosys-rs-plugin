@@ -1,6 +1,7 @@
 # Copyright (C) 2022 RapidSilicon..
 
-TESTS = dffs
+TESTS = dffs\
+        latches
 
 # Find yosys-config, throw an error if not found
 YOSYS = $(YOSYS_PATH)/bin/yosys
@@ -56,7 +57,7 @@ all: $(TESTS)
 $(foreach test,$(TESTS),$(eval $(call test_tpl,$(test))))
 
 clean:
-	@rm -rf $(foreach test,$(TESTS),$(test)/$(test).sdc $(test)/$(test)_[0-9].sdc $(test)/$(test).txt $(test)/$(test).eblif $(test)/$(test).json)
 	@find . -name "ok" -or -name "*.log" | xargs rm -rf
 
 dffs_verify = true
+latches_verify = true

@@ -20,7 +20,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define PASS_NAME synth_rs
 #endif
 
-#define RS_K6N10_DIR rs_k6n10
+#define RS_K6N10F_DIR rs_k6n10f
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
@@ -41,7 +41,7 @@ enum EffortLevel {
 
 enum Technologies {
     GENERIC,   
-    RS_K6N10 
+    RS_K6N10F 
 };
 
 struct SynthRapidSiliconPass : public ScriptPass {
@@ -200,8 +200,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (tech_str == "generic")
             tech = Technologies::GENERIC;
-        else if (tech_str == "rs_k6n10")
-            tech = Technologies::RS_K6N10;
+        else if (tech_str == "rs_k6n10f")
+            tech = Technologies::RS_K6N10F;
         else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
 
@@ -236,8 +236,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (check_label("begin") && tech != Technologies::GENERIC) {
             string readArgs;
             switch (tech) {
-                case Technologies::RS_K6N10: {
-                    readArgs = GET_FILE_PATH(RS_K6N10_DIR, SIM_LIB_FILE);
+                case Technologies::RS_K6N10F: {
+                    readArgs = GET_FILE_PATH(RS_K6N10F_DIR, SIM_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
@@ -278,9 +278,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (tech != Technologies::GENERIC) {
                 string techMapArgs = " -map +/techmap.v -map";
                 switch (tech) {
-                    case RS_K6N10: {
-                        run("dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PP?_ 0 -cell $_DFFE_PP?P_ 0 -cell $_DFFSR_PPP_ 0 -cell $_DFFSRE_PPPP_ 0 -cell $_DLATCHSR_PPP_ 0");
-                        techMapArgs += GET_FILE_PATH(RS_K6N10_DIR, FFS_MAP_FILE);
+                    case RS_K6N10F: {
+                        run("stat");
+                        run("shregmap -minlen 8 -maxlen 20");
+                        run("dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0 -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0");
+                        techMapArgs += GET_FILE_PATH(RS_K6N10F_DIR, FFS_MAP_FILE);
                         break;    
                     }    
                     // Just to make compiler happy

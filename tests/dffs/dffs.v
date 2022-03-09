@@ -1,10 +1,5 @@
-// Copyright (C) 2020-2021  The SymbiFlow Authors.
+// Copyright (C) 2022 RapidSilicon
 //
-// Use of this source code is governed by a ISC-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/ISC
-//
-// SPDX-License-Identifier:ISC
 
 module my_dff (
     input d,
@@ -425,28 +420,3 @@ module my_dffsre_nnn (
     else if (!clr) q <= 1'b0;
     else if (en) q <= d;
 endmodule
-
-module my_dffs_clk_p (
-    input d,
-    clk,
-    pre,
-    output reg q
-);
-  initial q <= 0;
-  always @(posedge clk)
-    if (pre) q <= 1'b1;
-    else q <= d;
-endmodule
-
-module my_dffs_clk_n (
-    input d,
-    clk,
-    clr,
-    output reg q
-);
-  initial q <= 0;
-  always @(negedge clk)
-    if (!clr) q <= 1'b0;
-    else q <= d;
-endmodule
-
