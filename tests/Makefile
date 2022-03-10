@@ -1,7 +1,8 @@
 # Copyright (C) 2022 RapidSilicon..
 
 TESTS = dffs\
-        latches
+        latches\
+        shreg
 
 # Find yosys-config, throw an error if not found
 YOSYS = $(YOSYS_PATH)/bin/yosys
@@ -61,3 +62,4 @@ clean:
 
 dffs_verify = true
 latches_verify = true
+shreg_verify = true
