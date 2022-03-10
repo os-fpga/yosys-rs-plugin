@@ -18,10 +18,10 @@ DATA_DIR ?= $(shell $(YOSYS_CONFIG) --datdir)
 EXTRA_FLAGS ?=
 
 COMMON			= common
-RS_K6N10F		= rs_k6n10f
-VERILOG_MODULES = $(COMMON)/cells_sim.v \
-				  $(RS_K6N10F)/cells_sim.v	\
-				  $(RS_K6N10F)/ffs_map.v \
+GENESIS			= genesis
+VERILOG_MODULES	= $(COMMON)/cells_sim.v \
+				  $(GENESIS)/cells_sim.v \
+				  $(GENESIS)/ffs_map.v \
 
 NAME = synth-rs
 SOURCES = src/synth_rapidsilicon.cc 
