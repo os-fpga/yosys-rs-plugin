@@ -24,6 +24,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
+#define ARITH_MAP_FILE arith_map.v
 
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
@@ -267,7 +268,30 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
+//            switch (tech) {
+//                case GENESIS: {
+//#ifdef DEV_BUILD
+//                    run("stat");
+//#endif
+//                    run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
+//#ifdef DEV_BUILD
+//                    run("stat");
+//#endif
+//                    break;    
+//                }    
+//                // Just to make compiler happy
+//                case Technologies::GENERIC: {
+//                    run("techmap");
+//                    break;
+//                }    
+//            }
+#ifdef DEV_BUILD
+            run("stat");
+#endif
             run("techmap");
+#ifdef DEV_BUILD
+            run("stat");
+#endif
             run("alumacc");
             run("opt");
             run("memory -nomap");
