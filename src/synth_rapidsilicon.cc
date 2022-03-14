@@ -231,6 +231,35 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_pop();
     }
 
+    void map_luts() {
+        if (abc_script != "")
+            run("abc -script " + abc_script);
+        else {
+            switch(goal) {
+                case Strategy::AREA:
+                    {
+                        string tmp_file("abc_tmp.scr");
+                        std::ofstream out(tmp_file);
+                        if (cec)
+                            out << "write_eqn input.eqn;";
+                        out << abc_base6_a21;
+                        if (cec)
+                            out << "write_eqn output.eqn; cec input.eqn output.eqn";
+                        out.close();
+                        run("abc -script " + tmp_file);
+                        if (remove(tmp_file.c_str()) != 0)
+                            log("Error deleting file: %s", tmp_file.c_str());
+                        break;
+                    }
+                case Strategy::DELAY:
+                    break;
+                case Strategy::MIXED:
+                    break;
+            }
+        }
+        run("opt");
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -267,12 +296,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
-            run("techmap");
             run("alumacc");
             run("opt");
             run("memory -nomap");
             run("opt_clean");
         }
+
+
+        if (check_label("map_gates")) {
+            run("techmap");
+            run("opt");
+            run("opt -fast -full");
+            run("memory_map");
+            run("opt -full");
+        }
+
+        if (check_label("map_luts"))
+            map_luts();
 
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
@@ -306,42 +346,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -nodffe -nosdff");
         }
 
-        if (check_label("map_gates")) {
-            run("opt -fast -full");
-            run("memory_map");
-            run("opt -full");
-            run("techmap");
-            run("opt");
-        }
-
-        if (check_label("map_luts")) {
-            if (abc_script != "")
-                run("abc -script " + abc_script);
-            else {
-                switch(goal) {
-                    case Strategy::AREA:
-                        {
-                            string tmp_file("abc_tmp.scr");
-                            std::ofstream out(tmp_file);
-                            if (cec)
-                                out << "write_eqn input.eqn;";
-                            out << abc_base6_a21;
-                            if (cec)
-                                out << "write_eqn output.eqn; cec input.eqn output.eqn";
-                            out.close();
-                            run("abc -script " + tmp_file);
-                            if (remove(tmp_file.c_str()) != 0)
-                                log("Error deleting file: %s", tmp_file.c_str());
-                            break;
-                        }
-                    case Strategy::DELAY:
-                        break;
-                    case Strategy::MIXED:
-                        break;
-                }
-            }
-            run("opt");
-        }
+        if (check_label("map_luts_2"))
+            map_luts();
 
         if (check_label("check")) {
             run("hierarchy -check");
