@@ -1,7 +1,8 @@
-name: "CI regression tests"
+name: CI regression tests
 
 on:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
