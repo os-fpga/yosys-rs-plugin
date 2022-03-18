@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-      runs-on: verific-builder
+      runs-on: yosys_rs_plugin_builder
       steps:
         - name: Cancel previous
           uses: styfle/cancel-workflow-action@0.9.1
@@ -19,11 +19,16 @@ jobs:
             rm -rf "${{ github.workspace }}"
             mkdir -p "${{ github.workspace }}"
 
-        - name: Checkout yosys_verific_rs and build yosys+verific
+        - name: Checkout yosys_verific_rs
           run: |
             git clone git@github.com:RapidSilicon/yosys_verific_rs.git
             cd yosys_verific_rs
-            make co_and_build_yosys_verific
+            git submodule update --init --recursive
+
+        - name: Build yosys_verific_rs
+          run: |
+            cd yosys_verific_rs
+            make all
 
         - name: Run tests
           run: |
