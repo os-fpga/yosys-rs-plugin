@@ -28,7 +28,7 @@ jobs:
         - name: Build yosys_verific_rs
           run: |
             cd yosys_verific_rs
-            make all
+            make build_yosys_verific
 
         - name: Run tests
           run: |
