@@ -268,30 +268,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
-//            switch (tech) {
-//                case GENESIS: {
-//#ifdef DEV_BUILD
-//                    run("stat");
-//#endif
-//                    run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
-//#ifdef DEV_BUILD
-//                    run("stat");
-//#endif
-//                    break;    
-//                }    
-//                // Just to make compiler happy
-//                case Technologies::GENERIC: {
-//                    run("techmap");
-//                    break;
-//                }    
-//            }
+            switch (tech) {
+                case GENESIS: {
 #ifdef DEV_BUILD
-            run("stat");
+                    run("stat");
 #endif
-            run("techmap");
+                    run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
 #ifdef DEV_BUILD
-            run("stat");
+                    run("stat");
 #endif
+                    break;    
+                }    
+                // Just to make compiler happy
+                case Technologies::GENERIC: {
+                    run("techmap");
+                    break;
+                }    
+            }
             run("alumacc");
             run("opt");
             run("memory -nomap");
