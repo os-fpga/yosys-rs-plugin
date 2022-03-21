@@ -9,6 +9,7 @@
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
+#include <regex>
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -87,7 +88,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - high   : high\n");
         log("        - medium : medium\n");
         log("        - low    : low\n");
-        log("        By default 'medium' level is used.\n");
+        log("        By default 'high' level is used.\n");
+        log("\n");
+        log("    -de\n");
+        log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
+        log("        Disabled by default.\n");
         log("\n");
 #ifdef DEV_BUILD
         log("    -abc <script>\n");
@@ -122,6 +127,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool cec;
     bool nodsp;
     bool nobram;
+    bool de;
 
     void clear_flags() override
     {
@@ -130,11 +136,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         blif_file = "";
         verilog_file = "";
         goal = Strategy::MIXED;
-        effort = EffortLevel::MEDIUM;
+        effort = EffortLevel::HIGH;
         abc_script = "";
         cec = false;
         nobram = false;
         nodsp = false;
+        de = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -190,6 +197,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 nobram = true;
                 continue;
             }
+            if (args[argidx] == "-de") {
+                de = true;
+                continue;
+            }
 
             break;
         }
@@ -231,6 +242,70 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_pop();
     }
 
+    void map_luts(EffortLevel effort_lvl) {
+        if (abc_script != "")
+            run("abc -script " + abc_script);
+        else {
+            std::string effortStr = "";
+            std::string abcCommands = "";
+            string tmp_file("abc_tmp.scr");
+            std::ofstream out(tmp_file);
+            if (cec)
+                out << "write_eqn in.eqn;";
+            switch(effort_lvl) {
+                case EffortLevel::HIGH:
+                {
+                    if (de)
+                        effortStr = "-1";
+                    break;
+                }
+                case EffortLevel::MEDIUM:
+                case EffortLevel::LOW:
+                {
+                    if (de)
+                        effortStr = "1"; // Some initial value
+                    break;
+                }
+            } 
+            switch(goal) {
+                case Strategy::AREA:
+                {
+                    if (de)
+                        abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "area");
+                    else
+                        abcCommands = abc_base6_a21;
+                    break;
+                }
+                case Strategy::DELAY:
+                {
+                    if (de)
+                        abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "delay");
+                    /* else
+                        out << abc_base6_d1; // Delay optimized abc script. */
+                    break;
+                }
+                case Strategy::MIXED:
+                {
+                    if (de)
+                        abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "mixed");
+                    /* else
+                        out << abc_base6_m1; // Delay and area mixed optimized abc script. */
+                    break;
+                }
+            }
+            if (de)
+                abcCommands = std::regex_replace(abcCommands, std::regex("DEPTH"), effortStr);
+            out << abcCommands;
+            if (cec)
+                out << "write_eqn out.eqn; cec in.eqn out.eqn";
+            out.close();
+            run("abc -script " + tmp_file);
+            if (remove(tmp_file.c_str()) != 0)
+                log("Error deleting file: %s", tmp_file.c_str());
+        }
+        run("opt");
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -267,12 +342,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
-            run("techmap");
             run("alumacc");
             run("opt");
             run("memory -nomap");
             run("opt_clean");
         }
+
+
+        if (check_label("map_gates")) {
+            run("techmap");
+            run("opt");
+            run("opt -fast -full");
+            run("memory_map");
+            run("opt -full");
+        }
+
+        if (check_label("map_luts") && effort != EffortLevel::LOW)
+            map_luts(effort);
 
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
@@ -306,42 +392,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -nodffe -nosdff");
         }
 
-        if (check_label("map_gates")) {
-            run("opt -fast -full");
-            run("memory_map");
-            run("opt -full");
-            run("techmap");
-            run("opt");
-        }
-
-        if (check_label("map_luts")) {
-            if (abc_script != "")
-                run("abc -script " + abc_script);
-            else {
-                switch(goal) {
-                    case Strategy::AREA:
-                        {
-                            string tmp_file("abc_tmp.scr");
-                            std::ofstream out(tmp_file);
-                            if (cec)
-                                out << "write_eqn input.eqn;";
-                            out << abc_base6_a21;
-                            if (cec)
-                                out << "write_eqn output.eqn; cec input.eqn output.eqn";
-                            out.close();
-                            run("abc -script " + tmp_file);
-                            if (remove(tmp_file.c_str()) != 0)
-                                log("Error deleting file: %s", tmp_file.c_str());
-                            break;
-                        }
-                    case Strategy::DELAY:
-                        break;
-                    case Strategy::MIXED:
-                        break;
-                }
-            }
-            run("opt");
-        }
+        if (check_label("map_luts_2"))
+            map_luts(EffortLevel::HIGH);
 
         if (check_label("check")) {
             run("hierarchy -check");
