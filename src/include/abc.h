@@ -8,6 +8,12 @@
 
 #include <string>
 
+// Design Explorer template script. TARGET and DEPTH are the template arguments.
+const std::string de_template = 
+    "write_eqn input.eqn;"
+    "&de -i input.eqn -o netlist.eqn -t TARGET -d DEPTH;"
+    "read_eqn netlist.eqn;";
+
 const std::string abc_base6_a21 =
     "&get -n -m; "
     "&dch ; &if -K 6 -a; &put; mfs2 -W 4 -M 500 -C 7000; &get -n -m; &save -a;"
