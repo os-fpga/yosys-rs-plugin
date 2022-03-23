@@ -325,7 +325,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             std::ofstream out(tmp_file);
                             if (cec)
                                 out << "write_eqn input.eqn;";
-                            out << abc_base6_a21;
+                            out << abc_base6_a21_start.decrypt();
+                            out << abc_base6_a21_end.decrypt();
                             if (cec)
                                 out << "write_eqn output.eqn; cec input.eqn output.eqn";
                             out.close();
