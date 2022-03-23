@@ -9,6 +9,7 @@
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
+#include <regex>
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -24,8 +25,13 @@ PRIVATE_NAMESPACE_BEGIN
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
+#define ARITH_MAP_FILE arith_map.v
 
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+
+#define VERSION_MAJOR 0 // 0 - beta 
+#define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
+#define VERSION_PATCH 32 // 32 - current num of commits
 
 enum Strategy {
     AREA,
@@ -87,7 +93,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - high   : high\n");
         log("        - medium : medium\n");
         log("        - low    : low\n");
-        log("        By default 'medium' level is used.\n");
+        log("        By default 'high' level is used.\n");
+        log("\n");
+        log("    -de\n");
+        log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
+        log("        Disabled by default.\n");
         log("\n");
 #ifdef DEV_BUILD
         log("    -abc <script>\n");
@@ -98,6 +108,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Disabled by default.\n");
         log("\n");
 #endif
+        log("    -carry\n");
+        log("        Infer Carry cells when possible.\n");
+        log("        By default Carry cells are not infered.\n");
+        log("\n");
         log("    -no_dsp\n");
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
@@ -122,6 +136,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool cec;
     bool nodsp;
     bool nobram;
+    bool de;
+    bool infer_carry;
 
     void clear_flags() override
     {
@@ -130,11 +146,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         blif_file = "";
         verilog_file = "";
         goal = Strategy::MIXED;
-        effort = EffortLevel::MEDIUM;
+        effort = EffortLevel::HIGH;
         abc_script = "";
         cec = false;
         nobram = false;
         nodsp = false;
+        de = false;
+        infer_carry = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -182,12 +200,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 continue;
             }
 #endif
+            if (args[argidx] == "-carry") {
+                infer_carry = true;
+                continue;
+            }
             if (args[argidx] == "-no_dsp") {
                 nodsp = true;
                 continue;
             }
             if (args[argidx] == "-no_bram") {
                 nobram = true;
+                continue;
+            }
+            if (args[argidx] == "-de") {
+                de = true;
                 continue;
             }
 
@@ -223,12 +249,77 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
 
-        log_header(design, "Executing synth_rs pass.\n");
+        log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
+            VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
         log_push();
 
         run_script(design, run_from, run_to);
 
         log_pop();
+    }
+
+    void map_luts(EffortLevel effort_lvl) {
+        if (abc_script != "")
+            run("abc -script " + abc_script);
+        else {
+            std::string effortStr = "";
+            std::string abcCommands = "";
+            string tmp_file("abc_tmp.scr");
+            std::ofstream out(tmp_file);
+            if (cec)
+                out << "write_eqn in.eqn;";
+            switch(effort_lvl) {
+                case EffortLevel::HIGH:
+                {
+                    if (de)
+                        effortStr = "-1";
+                    break;
+                }
+                case EffortLevel::MEDIUM:
+                case EffortLevel::LOW:
+                {
+                    if (de)
+                        effortStr = "1"; // Some initial value
+                    break;
+                }
+            } 
+            switch(goal) {
+                case Strategy::AREA:
+                {
+                    if (de)
+                        abcCommands = std::regex_replace(de_template.decrypt(), std::regex("TARGET"), "area");
+                    else
+                        abcCommands = std::string(abc_base6_a21_start.decrypt()) + std::string(abc_base6_a21_end.decrypt());
+                    break;
+                }
+                case Strategy::DELAY:
+                {
+                    if (de)
+                        abcCommands = std::regex_replace(de_template.decrypt(), std::regex("TARGET"), "delay");
+                    /* else
+                        out << abc_base6_d1; // Delay optimized abc script. */
+                    break;
+                }
+                case Strategy::MIXED:
+                {
+                    if (de)
+                        abcCommands = std::regex_replace(de_template.decrypt(), std::regex("TARGET"), "mixed");
+                    /* else
+                        out << abc_base6_m1; // Delay and area mixed optimized abc script. */
+                    break;
+                }
+            }
+            if (de)
+                abcCommands = std::regex_replace(abcCommands, std::regex("DEPTH"), effortStr);
+            out << abcCommands;
+            if (cec)
+                out << "write_eqn out.eqn; cec in.eqn out.eqn";
+            out.close();
+            run("abc -script " + tmp_file);
+            if (remove(tmp_file.c_str()) != 0)
+                log("Error deleting file: %s", tmp_file.c_str());
+        }
+        run("opt");
     }
 
     void script() override
@@ -267,12 +358,42 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
-            run("techmap");
             run("alumacc");
             run("opt");
             run("memory -nomap");
             run("opt_clean");
         }
+
+
+        if (check_label("map_gates")) {
+            switch (tech) {
+                case GENESIS: {
+#ifdef DEV_BUILD
+                    run("stat");
+#endif
+                    if (infer_carry)
+                        run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
+                    else
+                        run("techmap");
+#ifdef DEV_BUILD
+                    run("stat");
+#endif
+                    break;    
+                }    
+                // Just to make compiler happy
+                case Technologies::GENERIC: {
+                    run("techmap");
+                    break;
+                }    
+            }
+            run("opt");
+            run("opt -fast -full");
+            run("memory_map");
+            run("opt -full");
+        }
+
+        if (check_label("map_luts") && effort != EffortLevel::LOW)
+            map_luts(effort);
 
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
@@ -343,6 +464,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             run("opt");
         }
+        if (check_label("map_luts_2"))
+            map_luts(EffortLevel::HIGH);
 
         if (check_label("check")) {
             run("hierarchy -check");

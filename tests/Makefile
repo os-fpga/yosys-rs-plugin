@@ -2,7 +2,8 @@
 
 TESTS = dffs\
         latches\
-        shreg
+        shreg\
+        full_adder
 
 # Find yosys-config, throw an error if not found
 YOSYS = $(YOSYS_PATH)/bin/yosys
@@ -63,3 +64,4 @@ clean:
 dffs_verify = true
 latches_verify = true
 shreg_verify = true
+full_adder_verify = true
