@@ -25,8 +25,13 @@ PRIVATE_NAMESPACE_BEGIN
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
+#define ARITH_MAP_FILE arith_map.v
 
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+
+#define VERSION_MAJOR 0 // 0 - beta 
+#define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
+#define VERSION_PATCH 32 // 32 - current num of commits
 
 enum Strategy {
     AREA,
@@ -103,6 +108,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Disabled by default.\n");
         log("\n");
 #endif
+        log("    -carry\n");
+        log("        Infer Carry cells when possible.\n");
+        log("        By default Carry cells are not infered.\n");
+        log("\n");
         log("    -no_dsp\n");
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
@@ -128,6 +137,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nodsp;
     bool nobram;
     bool de;
+    bool infer_carry;
 
     void clear_flags() override
     {
@@ -142,6 +152,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nobram = false;
         nodsp = false;
         de = false;
+        infer_carry = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -189,6 +200,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 continue;
             }
 #endif
+            if (args[argidx] == "-carry") {
+                infer_carry = true;
+                continue;
+            }
             if (args[argidx] == "-no_dsp") {
                 nodsp = true;
                 continue;
@@ -234,7 +249,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
 
-        log_header(design, "Executing synth_rs pass.\n");
+        log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
+            VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
         log_push();
 
         run_script(design, run_from, run_to);
@@ -350,7 +366,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
 
         if (check_label("map_gates")) {
-            run("techmap");
+            switch (tech) {
+                case GENESIS: {
+#ifdef DEV_BUILD
+                    run("stat");
+#endif
+                    if (infer_carry)
+                        run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
+                    else
+                        run("techmap");
+#ifdef DEV_BUILD
+                    run("stat");
+#endif
+                    break;    
+                }    
+                // Just to make compiler happy
+                case Technologies::GENERIC: {
+                    run("techmap");
+                    break;
+                }    
+            }
             run("opt");
             run("opt -fast -full");
             run("memory_map");
