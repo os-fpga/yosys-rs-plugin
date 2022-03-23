@@ -6,11 +6,11 @@ yosys -import  ;# ingest plugin commands
 
 # Equivalence check for adder synthesis for qlf-k6n10
 read_verilog -icells -DWIDTH=4 $::env(DESIGN_TOP).v
-#hierarchy -check -top full_adder
-#yosys proc
-#equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area
-synth_rs -tech genesis -goal area -top full_adder
-#design -load postopt
+hierarchy -check -top full_adder
+yosys proc
+equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -carry
+#synth_rs -tech genesis -goal area -top full_adder -carry
+design -load postopt
 yosys cd full_adder
 stat
 select -assert-count 6 t:adder_carry
@@ -21,7 +21,7 @@ design -reset
 read_verilog -icells -DWIDTH=4 $::env(DESIGN_TOP).v
 hierarchy -check -top subtractor
 yosys proc
-equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area
+equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -carry
 design -load postopt
 yosys cd subtractor
 stat
@@ -33,7 +33,7 @@ design -reset
 read_verilog -icells -DWIDTH=4 $::env(DESIGN_TOP).v
 hierarchy -check -top comparator
 yosys proc
-equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area
+equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -carry
 design -load postopt
 yosys cd comparator
 stat
