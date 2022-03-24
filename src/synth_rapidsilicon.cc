@@ -31,7 +31,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 32 // 32 - current num of commits
+#define VERSION_PATCH 33
 
 enum Strategy {
     AREA,
