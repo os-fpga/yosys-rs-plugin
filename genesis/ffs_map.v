@@ -559,3 +559,73 @@ module \$__SHREG_DFF_P_ (D, Q, C);
    endgenerate
 
 endmodule
+
+// Sync reset
+module \$_SDFF_PP0_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    sdffr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .R(R));
+endmodule
+
+module \$_SDFF_PN0_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    sdffr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .R(!R));
+endmodule
+
+module \$_SDFF_NP0_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    sdffr #(.IS_C_INVERTED(1'b1)) _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .R(R));
+endmodule
+
+module \$_SDFF_NN0_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    sdffr #(.IS_C_INVERTED(1'b1)) _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .R(!R));
+endmodule
+
+// Sync set
+module \$_SDFF_PP1_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    sdffs _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .S(R));
+endmodule
+
+module \$_SDFF_PN1_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    sdffs _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .S(!R));
+endmodule
+
+module \$_SDFF_NP1_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    sdffs #(.IS_C_INVERTED(1'b1)) _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .S(R));
+endmodule
+
+module \$_SDFF_NN1_ (D, C, R, Q);
+    input D;
+    input C;
+    input R;
+    output Q;
+    sdffs #(.IS_C_INVERTED(1'b1)) _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .S(!R));
+endmodule
