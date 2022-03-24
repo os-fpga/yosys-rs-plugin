@@ -6,6 +6,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#define KEY 0x55
+
 template<int... I>
 struct Indexes { using type = Indexes<I..., sizeof...(I)>; };
 
@@ -34,7 +36,7 @@ struct MetaString<Indexes<I...>>
     }
     
     private:
-    constexpr char encrypt(char c) const { return c ^ 0x55; }
+    constexpr char encrypt(char c) const { return c ^ KEY; }
     constexpr char decrypt(char c) const { return encrypt(c); }
     
     private:
