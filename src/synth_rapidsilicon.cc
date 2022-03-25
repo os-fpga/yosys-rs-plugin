@@ -287,15 +287,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Strategy::AREA:
                 {
                     if (de)
-                        abcCommands = std::regex_replace(de_template.decrypt(), std::regex("TARGET"), "area");
+                        abcCommands = std::regex_replace(DEOBFUSCATED(de_template), std::regex("TARGET"), "area");
                     else
-                        abcCommands = std::string(abc_base6_a21_start.decrypt()) + std::string(abc_base6_a21_end.decrypt());
+                        abcCommands = DEOBFUSCATED(abc_base6_a21_start) + DEOBFUSCATED(abc_base6_a21_end);
                     break;
                 }
                 case Strategy::DELAY:
                 {
                     if (de)
-                        abcCommands = std::regex_replace(de_template.decrypt(), std::regex("TARGET"), "delay");
+                        abcCommands = std::regex_replace(DEOBFUSCATED(de_template), std::regex("TARGET"), "delay");
                     /* else
                         out << abc_base6_d1; // Delay optimized abc script. */
                     break;
@@ -303,7 +303,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Strategy::MIXED:
                 {
                     if (de)
-                        abcCommands = std::regex_replace(de_template.decrypt(), std::regex("TARGET"), "mixed");
+                        abcCommands = std::regex_replace(DEOBFUSCATED(de_template), std::regex("TARGET"), "mixed");
                     /* else
                         out << abc_base6_m1; // Delay and area mixed optimized abc script. */
                     break;
