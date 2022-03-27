@@ -9,7 +9,7 @@
 #include "util.h"
 
 // Design Explorer template script. TARGET and DEPTH are the template arguments.
-auto de_template = OBFUSCATED(
+auto de_template_encrypt = OBFUSCATED(
     "write_eqn input.eqn;"
     "&de -i input.eqn -o netlist.eqn -t TARGET -d DEPTH;"
     "read_eqn netlist.eqn;");
@@ -52,5 +52,8 @@ auto abc_base6_a21_end = OBFUSCATED(
     "lutpack;"
     "&get -m -n ; &ps;"
     "&put;");
+
+std::string de_template = DEOBFUSCATED(de_template_encrypt);
+std::string abc_base6_a21 = DEOBFUSCATED(abc_base6_a21_start) + DEOBFUSCATED(abc_base6_a21_end);
 
 #endif

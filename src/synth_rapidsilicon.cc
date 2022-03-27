@@ -31,7 +31,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 32 // 32 - current num of commits
+#define VERSION_PATCH 33
 
 enum Strategy {
     AREA,
@@ -287,15 +287,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Strategy::AREA:
                 {
                     if (de)
-                        abcCommands = std::regex_replace(DEOBFUSCATED(de_template), std::regex("TARGET"), "area");
+                        abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "area");
                     else
-                        abcCommands = DEOBFUSCATED(abc_base6_a21_start) + DEOBFUSCATED(abc_base6_a21_end);
+                        abcCommands = abc_base6_a21;
                     break;
                 }
                 case Strategy::DELAY:
                 {
                     if (de)
-                        abcCommands = std::regex_replace(DEOBFUSCATED(de_template), std::regex("TARGET"), "delay");
+                        abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "delay");
                     /* else
                         out << abc_base6_d1; // Delay optimized abc script. */
                     break;
@@ -303,7 +303,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Strategy::MIXED:
                 {
                     if (de)
-                        abcCommands = std::regex_replace(DEOBFUSCATED(de_template), std::regex("TARGET"), "mixed");
+                        abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "mixed");
                     /* else
                         out << abc_base6_m1; // Delay and area mixed optimized abc script. */
                     break;
@@ -404,7 +404,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("shregmap -minlen 8 -maxlen 20");
-                        run("dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0 -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0");
+                        run(
+                            "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                            " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
+#ifdef DEV_BUILD
+                            " -cell $_SDFF_???_ 0"
+#endif
+                            );
 #ifdef DEV_BUILD
                         run("stat");
 #endif

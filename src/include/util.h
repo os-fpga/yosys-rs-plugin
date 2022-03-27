@@ -25,7 +25,7 @@
     template<int... I>
     struct MetaString<Indexes<I...>>
     {
-        constexpr MetaString(const char* str)
+        constexpr inline MetaString(const char* str)
         	: buffer_ {encrypt(str[I])...} { }
         
         inline const char* decrypt()
