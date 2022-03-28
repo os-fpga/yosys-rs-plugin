@@ -31,7 +31,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 33
+#define VERSION_PATCH 34
 
 enum Strategy {
     AREA,
@@ -158,6 +158,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nodsp = false;
         de = false;
         infer_carry = false;
+        sdffr = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -414,15 +415,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         run("shregmap -minlen 8 -maxlen 20");
                         if (sdffr){
-                        run(
-                            "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                            " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
-                            " -cell $_SDFF_???_ 0"
-                            );
+                            run(
+                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
+                                " -cell $_SDFF_???_ 0"
+                               );
                         }else{  
                             run(
-                            "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                            " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0");
+                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
+                               );
                         }         
 #ifdef DEV_BUILD
                         run("stat");
