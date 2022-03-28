@@ -2,7 +2,7 @@
 //
 
 (* techmap_celltype = "$alu" *)
-module _80_quicklogic_alu (A, B, CI, BI, X, Y, CO);
+module _80_rs_alu (A, B, CI, BI, X, Y, CO);
 	parameter A_SIGNED = 0;
 	parameter B_SIGNED = 0;
 	parameter A_WIDTH = 1;

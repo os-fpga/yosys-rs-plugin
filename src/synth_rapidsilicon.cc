@@ -31,7 +31,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 33
+#define VERSION_PATCH 34
 
 enum Strategy {
     AREA,
@@ -112,6 +112,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Infer Carry cells when possible.\n");
         log("        By default Carry cells are not infered.\n");
         log("\n");
+        log("    -sdffr\n");
+        log("        Infer synchroneous set/reset DFFs when possible.\n");
+        log("        By default synchroneous set/reset DFFs are not infered.\n");
+        log("\n");
         log("    -no_dsp\n");
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
@@ -138,6 +142,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nobram;
     bool de;
     bool infer_carry;
+    bool sdffr;
 
     void clear_flags() override
     {
@@ -153,6 +158,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nodsp = false;
         de = false;
         infer_carry = false;
+        sdffr = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -202,6 +208,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
             if (args[argidx] == "-carry") {
                 infer_carry = true;
+                continue;
+            }
+            if (args[argidx] == "-sdffr") {
+                sdffr = true;
                 continue;
             }
             if (args[argidx] == "-no_dsp") {
@@ -404,13 +414,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("shregmap -minlen 8 -maxlen 20");
-                        run(
-                            "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                            " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
-#ifdef DEV_BUILD
-                            " -cell $_SDFF_???_ 0"
-#endif
-                            );
+                        if (sdffr){
+                            run(
+                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
+                                " -cell $_SDFF_???_ 0"
+                               );
+                        }else{  
+                            run(
+                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
+                               );
+                        }         
 #ifdef DEV_BUILD
                         run("stat");
 #endif
