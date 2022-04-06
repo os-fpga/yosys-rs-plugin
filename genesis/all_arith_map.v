@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 (* techmap_celltype = "$alu" *)
-module _80_quicklogic_alu (A, B, CI, BI, X, Y, CO);
+module _80_rs_alu (A, B, CI, BI, X, Y, CO);
 	parameter A_SIGNED = 0;
 	parameter B_SIGNED = 0;
 	parameter A_WIDTH = 2;
@@ -74,7 +74,6 @@ module _80_quicklogic_alu (A, B, CI, BI, X, Y, CO);
 	genvar i;
 	generate if (Y_WIDTH > 2) begin
 	  for (i = 0; i < Y_WIDTH-2; i = i + 1) begin:slice
-        if (_TECHMAP_CONSTMSK_A_ == 0 && _TECHMAP_CONSTMSK_B_ == 0) begin
 		adder_carry  my_adder (
 			.cin(C[i]),
 			.g(AA[i]),
@@ -82,9 +81,6 @@ module _80_quicklogic_alu (A, B, CI, BI, X, Y, CO);
 			.cout(C[i+1]),
 		        .sumout(Y[i])
 		);
-	      end else begin
-             wire _TECHMAP_FAIL_ = 1;
-        end
     end
 	end endgenerate
 	generate
