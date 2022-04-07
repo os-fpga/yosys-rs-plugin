@@ -1,5 +1,7 @@
 // Copyright (C) 2022 RapidSilicon
-// 
+//
+
+(* techmap_celltype = "$alu" *)
 module _80_rs_alu (A, B, CI, BI, X, Y, CO);
 	parameter A_SIGNED = 0;
 	parameter B_SIGNED = 0;
