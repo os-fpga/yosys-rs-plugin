@@ -62,7 +62,6 @@ module _80_rs_alu (A, B, CI, BI, X, Y, CO);
 	genvar i;
 	generate if (Y_WIDTH > 2) begin
 	  for (i = 0; i < Y_WIDTH-2; i = i + 1) begin:slice
-        if (_TECHMAP_CONSTMSK_A_ == 0 && _TECHMAP_CONSTMSK_B_ == 0) begin
 		adder_carry  my_adder (
 			.cin(C[i]),
 			.g(AA[i]),
@@ -70,9 +69,6 @@ module _80_rs_alu (A, B, CI, BI, X, Y, CO);
 			.cout(C[i+1]),
 		        .sumout(Y[i])
 		);
-	      end else begin
-             wire _TECHMAP_FAIL_ = 1;
-        end
     end
 	end endgenerate
 	generate
