@@ -23,6 +23,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/cells_sim.v \
 				  $(GENESIS)/ffs_map.v \
 				  $(GENESIS)/arith_map.v \
+				  $(GENESIS)/all_arith_map.v\
 
 NAME = synth-rs
 SOURCES = src/synth_rapidsilicon.cc 

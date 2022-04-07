@@ -26,12 +26,12 @@ PRIVATE_NAMESPACE_BEGIN
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
-
+#define ALL_ARITH_MAP_FILE all_arith_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 34
+#define VERSION_PATCH 35
 
 enum Strategy {
     AREA,
@@ -48,6 +48,11 @@ enum EffortLevel {
 enum Technologies {
     GENERIC,   
     GENESIS
+};
+enum CarryMode {
+    NO_CONST,
+    ALL,
+    NO
 };
 
 struct SynthRapidSiliconPass : public ScriptPass {
@@ -108,9 +113,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Disabled by default.\n");
         log("\n");
 #endif
-        log("    -carry\n");
+        log("    -carry <sub-mode>\n");
         log("        Infer Carry cells when possible.\n");
-        log("        By default Carry cells are not infered.\n");
+        log("        Supported values:\n");
+        log("        - all      : Infer all the carries.\n");
+        log("        - no_const : Infer carries only with non const inputs.\n");
+        log("        - no       : Do not infer any carries.\n");
+        log("        By default 'no_const' mode is used.\n");
         log("\n");
         log("    -sdffr\n");
         log("        Infer synchroneous set/reset DFFs when possible.\n");
@@ -141,7 +150,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nodsp;
     bool nobram;
     bool de;
-    bool infer_carry;
+    CarryMode infer_carry;
     bool sdffr;
 
     void clear_flags() override
@@ -157,7 +166,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nobram = false;
         nodsp = false;
         de = false;
-        infer_carry = false;
+        infer_carry = CarryMode::NO_CONST;
         sdffr = false;
     }
 
@@ -168,6 +177,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string tech_str;
         string goal_str;
         string effort_str;
+        string carry_str;
         clear_flags();
 
         size_t argidx;
@@ -207,7 +217,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
 #endif
             if (args[argidx] == "-carry") {
-                infer_carry = true;
+                carry_str = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-sdffr") {
@@ -258,6 +268,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
             effort = EffortLevel::LOW;
         else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
+
+        if (carry_str == "no_const")
+            infer_carry = CarryMode::NO_CONST;
+        else if (carry_str == "all")
+            infer_carry = CarryMode::ALL;
+        else if (carry_str == "no")
+            infer_carry = CarryMode::NO;
+        else if (carry_str != "")
+            log_cmd_error("Invalid carry sub-mode specified: '%s'\n", carry_str.c_str());
+
 
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
             VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
@@ -374,17 +394,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean");
         }
 
-
         if (check_label("map_gates")) {
             switch (tech) {
                 case GENESIS: {
 #ifdef DEV_BUILD
                     run("stat");
 #endif
-                    if (infer_carry)
-                        run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
-                    else
-                        run("techmap");
+                    switch (infer_carry){
+                        case CarryMode::NO_CONST: {
+                            run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
+                            break;
+                            }
+                        case CarryMode::ALL: {
+                            run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
+                            break;
+                            }
+                        case CarryMode::NO: {
+                            run("techmap");
+                            break;
+                            }
+                    }
 #ifdef DEV_BUILD
                     run("stat");
 #endif
