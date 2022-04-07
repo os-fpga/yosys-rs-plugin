@@ -394,7 +394,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean");
         }
 
-        run("opt -full");
         if (check_label("map_gates")) {
             switch (tech) {
                 case GENESIS: {
