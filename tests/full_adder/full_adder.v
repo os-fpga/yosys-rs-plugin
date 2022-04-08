@@ -4,7 +4,7 @@
 module full_adder (
     input  wire [`WIDTH-1:0] A,
     input  wire [`WIDTH-1:0] B,
-    output wire [`WIDTH  :0] S,
+    output wire [`WIDTH  :0] S
 );
 
     // Implicit adder
@@ -15,7 +15,7 @@ endmodule
 module subtractor (
     input  wire [`WIDTH-1:0] A,
     input  wire [`WIDTH-1:0] B,
-    output wire [`WIDTH  :0] S,
+    output wire [`WIDTH  :0] S
 );
 
     // Implicit subtractor
@@ -26,7 +26,7 @@ endmodule
 module comparator (
     input  wire [`WIDTH-1:0] A,
     input  wire [`WIDTH-1:0] B,
-    output wire CO,
+    output wire CO
 );
     assign CO = (A <= B) ? 1'b1 : 1'b0;
 

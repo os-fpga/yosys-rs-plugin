@@ -216,7 +216,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 continue;
             }
 #endif
-            if (args[argidx] == "-carry") {
+            if (args[argidx] == "-carry" && argidx + 1 < args.size()) {
                 carry_str = args[++argidx];
                 continue;
             }
