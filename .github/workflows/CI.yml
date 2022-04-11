@@ -6,38 +6,41 @@ on:
 
 jobs:
   build:
-      runs-on: yosys_rs_plugin_builder
-      steps:
-        - name: Cancel previous
-          uses: styfle/cancel-workflow-action@0.9.1
-          with:
-            access_token: ${{ github.token }}
+    runs-on: yosys_rs_plugin_builder
+    steps:
+      - name: Cancel previous
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
-        - name: Runner workspace path
-          run: |
-            echo "Cleaning up previous run"
-            rm -rf "${{ github.workspace }}"
-            mkdir -p "${{ github.workspace }}"
+      - name: Runner workspace path
+        run: |
+          echo "Cleaning up previous run"
+          rm -rf "${{ github.workspace }}"
+          mkdir -p "${{ github.workspace }}"
 
-        - name: Checkout yosys_verific_rs
-          run: |
-            git clone git@github.com:RapidSilicon/yosys_verific_rs.git
-            cd yosys_verific_rs
-            git submodule update --init --recursive
+      - name: Checkout yosys_verific_rs
+        run: |
+          git clone git@github.com:RapidSilicon/yosys_verific_rs.git
+          cd yosys_verific_rs
+          git submodule update --init --recursive
 
-        - name: Build yosys_verific_rs
-          run: |
-            cd yosys_verific_rs
-            make release
+      - name: Configure shell
+        run: |
+          echo "/usr/local/bin" >> $GITHUB_PATH
 
-        - name: Export environment variables
-          run: |
-            echo "ABC=$GITHUB_WORKSPACE/yosys_verific_rs/build/logic_synthesis-rs/bin/abc" >> $GITHUB_ENV
-            echo "DE=$GITHUB_WORKSPACE/yosys_verific_rs/build/logic_synthesis-rs/bin/de" >> $GITHUB_ENV
-            echo "LSORACLE=$GITHUB_WORKSPACE/yosys_verific_rs/build/logic_synthesis-rs/bin/lsoracle" >> $GITHUB_ENV
+      - name: Build yosys_verific_rs
+        run: |
+          cd yosys_verific_rs
+          make release
 
-        - name: Run tests
-          run: |
-            cd yosys_verific_rs/yosys-rs-plugin
-            make test YOSYS_PATH=$(realpath ../yosys/install)
+      - name: Export environment variables
+        run: |
+          echo "ABC=$GITHUB_WORKSPACE/yosys_verific_rs/build/logic_synthesis-rs/bin/abc" >> $GITHUB_ENV
+          echo "DE=$GITHUB_WORKSPACE/yosys_verific_rs/build/logic_synthesis-rs/bin/de" >> $GITHUB_ENV
+          echo "LSORACLE=$GITHUB_WORKSPACE/yosys_verific_rs/build/logic_synthesis-rs/bin/lsoracle" >> $GITHUB_ENV
 
+      - name: Run tests
+        run: |
+          cd yosys_verific_rs/yosys-rs-plugin
+          make test YOSYS_PATH=$(realpath ../yosys/install)
