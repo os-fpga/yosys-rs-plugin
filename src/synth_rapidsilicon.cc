@@ -55,6 +55,11 @@ enum CarryMode {
     NO
 };
 
+enum Encoding {
+    BINARY,
+    ONEHOT
+};
+
 struct SynthRapidSiliconPass : public ScriptPass {
 
     SynthRapidSiliconPass() : ScriptPass(STR(PASS_NAME), "Synthesis for RapidSilicon FPGAs") {}
@@ -133,6 +138,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -fsm_encoding <encoding>\n");
+        log("        Supported values:\n");
+        log("        - binary : compact encoding using minimum of registers to cover the N states\n");
+        log("                   (n registers such that 2^(n-1) < N < 2^n).\n");
+        log("        - onehot : one hot encoding . N registers for N states,\n");
+        log("                   each register at 1 representing one state.\n");
+        log("        By default 'binary' is used, when 'goal' is area, otherwise 'onehot' is used.\n");
+        log("\n");
         log("\n");
         log("The following commands are executed by this synthesis command:\n");
         help_script();
@@ -144,6 +157,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string blif_file; 
     string verilog_file;
     Strategy goal;
+    Encoding fsm_encoding;
     EffortLevel effort;
     string abc_script;
     bool cec;
@@ -160,6 +174,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         blif_file = "";
         verilog_file = "";
         goal = Strategy::MIXED;
+        fsm_encoding = Encoding::BINARY;
         effort = EffortLevel::HIGH;
         abc_script = "";
         cec = false;
@@ -176,6 +191,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string run_to;
         string tech_str;
         string goal_str;
+        string encoding_str;
         string effort_str;
         string carry_str;
         clear_flags();
@@ -200,6 +216,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-goal" && argidx + 1 < args.size()) {
                 goal_str = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-fsm_encoding" && argidx + 1 < args.size()) {
+                encoding_str = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-effort" && argidx + 1 < args.size()) {
@@ -259,6 +279,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
             goal = Strategy::MIXED;
         else if (goal_str != "")
             log_cmd_error("Invalid goal specified: '%s'\n", goal_str.c_str());
+
+        if (encoding_str == "binary")
+            fsm_encoding = Encoding::BINARY;
+        else if (encoding_str == "onehot")
+            fsm_encoding = Encoding::ONEHOT;
+        else if (encoding_str != "")
+            log_cmd_error("Invalid fsm_encoding specified: '%s'\n", encoding_str.c_str());
+        else if (goal_str == "area")
+            fsm_encoding = Encoding::BINARY;
+        else
+            fsm_encoding = Encoding::ONEHOT;
 
         if (effort_str == "high")
             effort = EffortLevel::HIGH;
@@ -379,7 +410,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean");
             run("check");
             run("opt -nodffe -nosdff");
-            run("fsm");
+
+            if (fsm_encoding == Encoding::BINARY)
+                run("fsm -encoding binary");
+            else
+                run("fsm -encoding one-hot");
+
             run("opt -sat");
             run("wreduce -keepdc");
             run("peepopt");
