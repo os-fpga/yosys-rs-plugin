@@ -5,7 +5,7 @@ TESTS = dffs\
         shreg\
         full_adder
 
-# Find yosys-config, throw an error if not found
+# Find yosys, throw an error if not found
 YOSYS = $(YOSYS_PATH)/bin/yosys
 ifeq (,$(wildcard $(YOSYS)))
 $(error "Didn't find 'yosys' under '$(YOSYS_PATH)'")
