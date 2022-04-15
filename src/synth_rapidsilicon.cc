@@ -467,6 +467,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -full");
         }
 
+        run("abc -dff");
+
         if (check_label("map_luts") && effort != EffortLevel::LOW)
             map_luts(effort);
 
