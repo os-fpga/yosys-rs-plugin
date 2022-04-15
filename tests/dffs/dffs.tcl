@@ -13,7 +13,7 @@ equiv_opt -assert -async2sync -map +/rapidsilicon/genesis/cells_sim.v synth_rs -
 design -load postopt
 yosys cd my_dff
 stat
-select -assert-count 1 t:dff
+select -assert-count 1 t:dffsre
 design -reset
 
 # DFFR (posedge RST)
@@ -100,7 +100,7 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis -goal area -de -top my_dffn
 yosys cd my_dffn
 stat
-select -assert-count 1 t:dffn
+select -assert-count 1 t:dffnsre
 design -reset
 
 # DFFNR (negedge CLK posedge RST)
