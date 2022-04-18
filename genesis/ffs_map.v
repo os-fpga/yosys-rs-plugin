@@ -2,12 +2,20 @@
 //
 
 // Basic DFF
+//
+// Disabling basic dff inferance as it is errored on VPR.
+//module \$_DFF_P_ (D, C, Q);
+//    input D;
+//    input C;
+//    output Q;
+//    dff _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C));
+//endmodule
 
 module \$_DFF_P_ (D, C, Q);
     input D;
     input C;
     output Q;
-    dff _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C));
+    dffsre _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .E(1'b1), .R(1'b1), .S(1'b1));
 endmodule
 
 // Async reset
@@ -301,12 +309,21 @@ module  \$_DLATCHSR_NPP_ (input E, S, R, D, output Q);
     latchnsre _TECHMAP_REPLACE_ (.D(D), .Q(Q), .E(1'b1), .G(E),  .R(!R), .S(!S));
 endmodule
 
+// Disabling basic dff inferance as it is errored on VPR.
+//module \$_DFF_N_ (D, C, Q);
+//    input D;
+//    input C;
+//    output Q;
+//    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+//    dffn _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C));
+//endmodule
+
 module \$_DFF_N_ (D, C, Q);
     input D;
     input C;
     output Q;
     parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
-    dffn _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C));
+    dffnsre _TECHMAP_REPLACE_ (.Q(Q), .D(D), .C(C), .E(1'b1), .R(1'b1), .S(1'b1));
 endmodule
 
 module \$_DFF_NP0_ (D, C, R, Q);
