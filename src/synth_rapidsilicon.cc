@@ -26,6 +26,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define SIM_LIB_FILE cells_sim.v
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
+#define DSP_MAP_FILE dsp_map.v
+#define DSP_FINAL_MAP_FILE dsp_final_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
 #define BRAM_MAP_FILE brams_map.v
@@ -150,7 +152,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
         log("\n");
         log("The following commands are executed by this synthesis command:\n");
+#ifdef DEV_BUILD
         help_script();
+#endif
         log("\n");
     }
 
@@ -426,6 +430,44 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("coarse")) {
+            if(!nodsp){
+                switch (tech) {
+                    case GENESIS:{
+#ifdef DEV_BUILD
+                               run("stat");
+#endif
+                               run("wreduce t:$mul");
+                               run("rs_dsp_macc");
+                               struct DspParams {
+                                   size_t a_maxwidth;
+                                   size_t b_maxwidth;
+                                   size_t a_minwidth;
+                                   size_t b_minwidth;
+                                   std::string type;
+                               };
+
+                               const std::vector<DspParams> dsp_rules = {
+                                   {20, 18, 11, 10, "$__RS_MUL20X18"},
+                                   {10, 9, 4, 4, "$__RS_MUL10X9"},
+                               };
+                               for (const auto &rule : dsp_rules) {
+                                   run(stringf("techmap -map +/mul2dsp.v "
+                                                 "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                                 "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                                 "-D DSP_NAME=%s",
+                                                 rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                                     run("chtype -set $mul t:$__soft_mul");
+                                    }
+                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
+                               run("rs_dsp_simd");
+                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+                                     break;
+                                 }
+                    case GENERIC: {
+                                      break;
+                                  }
+                }
+            }
             run("alumacc");
             run("opt");
             run("memory -nomap");
