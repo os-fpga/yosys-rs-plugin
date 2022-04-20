@@ -27,11 +27,13 @@ PRIVATE_NAMESPACE_BEGIN
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
+#define BRAM_TXT brams.txt
+#define BRAM_MAP_FILE brams_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 36
+#define VERSION_PATCH 37
 
 enum Strategy {
     AREA,
@@ -428,8 +430,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt");
             run("memory -nomap");
             run("opt_clean");
-        }
+        }   
 
+        if (!nobram){
+            run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+        }
         if (check_label("map_gates")) {
             switch (tech) {
                 case GENESIS: {
