@@ -1007,7 +1007,6 @@ module TDP36K (
         .FMODE_i(ram_fmode2)
     );
 endmodule
-`default_nettype none
 
 (* blackbox *)
 module RS_DSP1 (
