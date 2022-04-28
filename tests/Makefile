@@ -3,7 +3,10 @@
 TESTS = dffs\
         latches\
         shreg\
-        full_adder
+        full_adder\
+		dsp_macc\
+		dsp_mult\
+		dsp_simd
 
 # Find yosys, throw an error if not found
 YOSYS = $(YOSYS_PATH)/bin/yosys
@@ -65,3 +68,6 @@ dffs_verify = true
 latches_verify = true
 shreg_verify = true
 full_adder_verify = true
+dsp_macc_verify = true
+dsp_mult_verify = true
+dsp_simd_verify = true
