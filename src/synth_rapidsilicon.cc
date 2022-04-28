@@ -509,7 +509,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -full");
         }
 
-        run("abc -dff");
+        // This is causing non deterministic behaviour, so I'm disabling it till YosysHQ fix.
+        //run("abc -dff");
 
         if (check_label("map_luts") && effort != EffortLevel::LOW)
             map_luts(effort);
