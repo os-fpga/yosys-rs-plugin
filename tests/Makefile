@@ -95,8 +95,3 @@ clean:
 	@find . -name "*.eqn" | xargs rm -rf
 
 valgrind: $(VALGRIND_TESTS)
-
-dffs_verify = true
-latches_verify = true
-shreg_verify = true
-full_adder_verify = true
