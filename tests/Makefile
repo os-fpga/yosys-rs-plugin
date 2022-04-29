@@ -6,7 +6,9 @@ TESTS = dffs\
         full_adder\
 		dsp_macc\
 		dsp_mult\
-		dsp_simd
+		dsp_simd\
+		bram_tdp\
+		bram_sdp
 
 # Find yosys, throw an error if not found
 YOSYS = $(YOSYS_PATH)/bin/yosys
@@ -71,3 +73,5 @@ full_adder_verify = true
 dsp_macc_verify = true
 dsp_mult_verify = true
 dsp_simd_verify = true
+bram_tdp_verify = true
+bram_sdp_verify = true
