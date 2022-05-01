@@ -6,6 +6,7 @@
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
+#include "kernel/yosys.h"
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
@@ -325,7 +326,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else {
             std::string effortStr = "";
             std::string abcCommands = "";
-            string tmp_file("abc_tmp.scr");
+            string tmp_file = get_shared_tmp_dirname() + "/" + "abc_tmp.scr";
             std::ofstream out(tmp_file);
             if (cec)
                 out << "write_eqn in.eqn;";
@@ -370,8 +371,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     break;
                 }
             }
-            if (de)
+            if (de) {
                 abcCommands = std::regex_replace(abcCommands, std::regex("DEPTH"), effortStr);
+                abcCommands = std::regex_replace(abcCommands, std::regex("TMP_PATH"), get_shared_tmp_dirname());
+            }
             out << abcCommands;
             if (cec)
                 out << "write_eqn out.eqn; cec in.eqn out.eqn";
