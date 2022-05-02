@@ -2,12 +2,12 @@
 
 TESTS = dffs\
 		latches\
-        shreg\
+		shreg\
 		full_adder
 
 VALGRIND_TESTS = valgrind/dffs\
 				 valgrind/latches\
-                 valgrind/shreg\
+				 valgrind/shreg\
 				 valgrind/full_adder
 
 OPTION_1 = "--tool=memcheck"
@@ -33,16 +33,16 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 	@set +e; \
 	cd $(1); \
 	echo "source $(TEST_UTILS)" > run-$$(notdir $(1)).tcl ;\
+	cp $$(notdir $(1)).tcl $$(notdir $(1))_test$(3).tcl; \
+	sed -i "s/$$$$::env(DESIGN_TOP)/$$(notdir $(1))/g" $$(notdir $(1))_test$(3).tcl; \
+	echo "source $$(notdir $(1))_test$(3).tcl" >> run-$$(notdir $(1)).tcl ;\
+	$(3) $(4) $(5) $(YOSYS) -c "run-$$(notdir $(1)).tcl" -q -q -l $$(notdir $(1)).log; \
+	RETVAL=$$$$?;\
 	if [ ! -z $(3) ]; then\
-		cp $$(notdir $(1)).tcl $$(notdir $(1))_valgrind.tcl; \
-		sed -i "s/$$$$::env(DESIGN_TOP)/$$(notdir $(1))/g" $$(notdir $(1))_valgrind.tcl; \
-		echo "source $$(notdir $(1))_valgrind.tcl" >> run-$$(notdir $(1)).tcl ;\
-		$(3) $(4) $(5) $(YOSYS) -c "run-$$(notdir $(1)).tcl" -q -q -l $$(notdir $(1)).log; \
-		RETVALUE=$$$$?;\
-		if [ $$$$RETVALUE -eq 0 ]; then \
+		if [ $$$$RETVAL -eq 0 ]; then \
 			grep "ERROR SUMMARY: 0" valgrind.log; \
-			RETVALUE=$$$$?;\
-			if [ $$$$RETVALUE -ne 0 ]; then \
+			RETVAL=$$$$?;\
+			if [ $$$$RETVAL -ne 0 ]; then \
 				printf "Test %-20s \e[31;1mFAILED\e[0m @ %s\n" $(3)/$(1) $(CURDIR); \
 				false; \
 			else \
@@ -52,14 +52,7 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 			printf "Test %-20s \e[31;1mFAILED\e[0m @ %s\n" $(3)/$(1) $(CURDIR); \
 			false;\
 		fi; \
-		rm -f run-$$(notdir $(1)).tcl; \
-		rm -f $$(notdir $(1))_valgrind.tcl; \
 	else \
-		cp $$(notdir $(1)).tcl $$(notdir $(1))_test.tcl; \
-		sed -i "s/$$$$::env(DESIGN_TOP)/$$(notdir $(1))/g" $$(notdir $(1))_test.tcl; \
-		echo "source $$(notdir $(1))_test.tcl" >> run-$$(notdir $(1)).tcl ;\
-		$(YOSYS) -c "run-$$(notdir $(1)).tcl" -q -q -l $$(notdir $(1)).log; \
-		RETVAL=$$$$?; \
 		if [ ! -z "$$($(1)_negative)" ] && [ $$($(1)_negative) -eq 1 ]; then \
 			if [ $$$$RETVAL -ne 0 ]; then \
 				printf "Negative test %-20s \e[32mPASSED\e[0m @ %s\n" $(1) $(CURDIR); \
@@ -70,15 +63,15 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 			fi; \
 		else \
 			if [ $$$$RETVAL -ne 0 ]; then \
-			    printf "Test %-20s \e[31;1mFAILED\e[0m @ %s\n" $(1) $(CURDIR); \
+				printf "Test %-20s \e[31;1mFAILED\e[0m @ %s\n" $(1) $(CURDIR); \
 				false; \
 			else \
 				touch $(CURDIR)/$(1)/ok; \
 			fi; \
-			rm -f run-$$(notdir $(1)).tcl; \
-			rm -f $$(notdir $(1))_test.tcl; \
 		fi \
-	fi 
+	fi;\
+	rm -f run-$$(notdir $(1)).tcl; \
+	rm -f $$(notdir $(1))_test$(3).tcl;
 endef
 
 all: $(TESTS)
