@@ -1,7 +1,6 @@
 name: Increment Version
 
 on:
-  workflow_dispatch:
   pull_request:
     types: [opened]
 
