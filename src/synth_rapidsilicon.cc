@@ -321,12 +321,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
     }
 
     void map_luts(EffortLevel effort_lvl) {
+        static int index = 1;
         if (abc_script != "")
             run("abc -script " + abc_script);
         else {
             std::string effortStr = "";
             std::string abcCommands = "";
-            string tmp_file = get_shared_tmp_dirname() + "/" + "abc_tmp.scr";
+            std::string scriptName = "abc_tmp_" + std::to_string(index++) + ".scr";
+            string tmp_file = get_shared_tmp_dirname() + "/" + scriptName;
             std::ofstream out(tmp_file);
             if (cec)
                 out << "write_eqn in.eqn;";
