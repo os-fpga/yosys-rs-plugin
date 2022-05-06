@@ -28,41 +28,43 @@ yosys -import
 plugin -i synth-rs
 yosys -import  ;# ingest plugin commands
 
-read_verilog dsp_mult.v
-design -save read
+yosys read -sv dsp_mult.v
 
-set TOP "mult_16x16"
-design -load read
-check_equiv ${TOP}
+check_equiv mult_16x16
 design -load postopt
-yosys cd ${TOP}
+yosys cd mult_16x16
 select -assert-count 1 t:RS_DSP2
 
-set TOP "mult_20x18"
-design -load read
-check_equiv ${TOP}
+design -reset
+
+yosys read -sv dsp_mult.v
+check_equiv mult_20x18
 design -load postopt
-yosys cd ${TOP}
+yosys cd mult_20x18
 select -assert-count 1 t:RS_DSP2
 
-set TOP "mult_8x8"
-design -load read
-check_equiv ${TOP}
+design -reset
+
+yosys read -sv dsp_mult.v 
+check_equiv mult_8x8
 design -load postopt
-yosys cd ${TOP}
+yosys cd mult_8x8
 select -assert-count 1 t:RS_DSP2
 
-set TOP "mult_10x9"
-design -load read
-check_equiv ${TOP}
+design -reset
+
+yosys read -sv dsp_mult.v 
+check_equiv mult_10x9
 design -load postopt
-yosys cd ${TOP}
+yosys cd mult_10x9
 select -assert-count 1 t:RS_DSP2
 
-set TOP "mult_8x8_s"
-design -load read
-check_equiv ${TOP}
+design -reset
+
+yosys read -sv dsp_mult.v 
+check_equiv mult_8x8_s
 design -load postopt
-yosys cd ${TOP}
+yosys cd mult_8x8_s
 select -assert-count 1 t:RS_DSP2
 
+design -reset
