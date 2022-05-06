@@ -35,7 +35,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 38
+#define VERSION_PATCH 41
 
 enum Strategy {
     AREA,
@@ -515,8 +515,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -full");
         }
 
-        // This is causing non deterministic behaviour, so I'm disabling it till YosysHQ fix.
-        //run("abc -dff");
+        run("abc -dff");
 
         if (check_label("map_luts") && effort != EffortLevel::LOW)
             map_luts(effort);
