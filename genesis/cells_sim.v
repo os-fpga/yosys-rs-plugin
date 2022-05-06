@@ -121,7 +121,7 @@ module io_scff(
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
 
-    always @(posedge C or negedge R)
+    always @(posedge clk or negedge R)
         if (!R)
             Q <= SI;
         else 
