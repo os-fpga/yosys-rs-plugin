@@ -475,11 +475,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             run("alumacc");
             run("opt");
+#ifdef DEV_BUILD
             run("stat");
+#endif
             run("memory -nomap");
+#ifdef DEV_BUILD
             run("stat");
+#endif
             run("opt_clean");
-        }   
+        }
 
         if (!nobram){
             run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
