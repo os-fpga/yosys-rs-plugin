@@ -470,7 +470,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             run("alumacc");
             run("opt");
+            run("stat");
             run("memory -nomap");
+            run("stat");
             run("opt_clean");
         }   
 
