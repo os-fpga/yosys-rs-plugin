@@ -67,6 +67,9 @@ install_modules: $(VERILOG_MODULES)
 .PHONY: install
 install: install_plugin install_modules
 
+valgrind:
+	$(MAKE) -C tests valgrind YOSYS_PATH=$(YOSYS_PATH)
+
 test:
 	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
 

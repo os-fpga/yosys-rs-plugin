@@ -6,6 +6,7 @@
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
+#include "kernel/yosys.h"
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
@@ -33,7 +34,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define VERSION_MAJOR 0 // 0 - beta 
 #define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
-#define VERSION_PATCH 37
+#define VERSION_PATCH 42
 
 enum Strategy {
     AREA,
@@ -324,12 +325,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
     }
 
     void map_luts(EffortLevel effort_lvl) {
+        static int index = 1;
         if (abc_script != "")
             run("abc -script " + abc_script);
         else {
             std::string effortStr = "";
             std::string abcCommands = "";
-            string tmp_file("abc_tmp.scr");
+            std::string scriptName = "abc_tmp_" + std::to_string(index++) + ".scr";
+            string tmp_file = get_shared_tmp_dirname() + "/" + scriptName;
             std::ofstream out(tmp_file);
             if (cec)
                 out << "write_eqn in.eqn;";
@@ -374,8 +377,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     break;
                 }
             }
-            if (de)
+            if (de) {
                 abcCommands = std::regex_replace(abcCommands, std::regex("DEPTH"), effortStr);
+                abcCommands = std::regex_replace(abcCommands, std::regex("TMP_PATH"), get_shared_tmp_dirname());
+            }
             out << abcCommands;
             if (cec)
                 out << "write_eqn out.eqn; cec in.eqn out.eqn";
@@ -509,8 +514,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -full");
         }
 
-        // This is causing non deterministic behaviour, so I'm disabling it till YosysHQ fix.
-        //run("abc -dff");
+        run("abc -dff");
 
         if (check_label("map_luts") && effort != EffortLevel::LOW)
             map_luts(effort);
