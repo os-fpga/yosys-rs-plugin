@@ -1,7 +1,6 @@
 // Copyright (C) 2022 RapidSilicon
 //
 
-//(* abc9_flop, lib_whitebox *)
 //module dff(
 //    output reg Q,
 //    input D,
@@ -70,7 +69,6 @@ module dffnsre(
         
 endmodule
 
-(* abc9_flop, lib_whitebox *)
 module latchsre (
     output reg Q,
     input S,
@@ -90,7 +88,6 @@ module latchsre (
             Q <= D;
 endmodule
 
-(* abc9_flop, lib_whitebox *)
 module latchnsre (
     output reg Q,
     input S,
@@ -129,7 +126,6 @@ module io_scff(
             
 endmodule
 
-(* abc9_flop, lib_whitebox *)
 module scff(
     output reg Q,
     output reg SO,
@@ -163,7 +159,6 @@ module scff(
             
 endmodule
 
-(* abc9_flop, lib_whitebox *)
 module sh_dff(
     output reg Q,
     input D,
@@ -177,7 +172,6 @@ module sh_dff(
         Q <= D;
 endmodule
 
-(* abc9_box, lib_blackbox *)
 module adder_carry(
     output sumout,
     output cout,
