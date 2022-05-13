@@ -3,12 +3,22 @@
 TESTS = dffs\
 		latches\
 		shreg\
-		full_adder
+		full_adder\
+		dsp_macc\
+		dsp_mult\
+		dsp_simd\
+		bram_tdp\
+		bram_sdp
 
 VALGRIND_TESTS = valgrind/dffs\
 				 valgrind/latches\
 				 valgrind/shreg\
-				 valgrind/full_adder
+				 valgrind/full_adder\
+				 valgrind/dsp_macc\
+				 valgrind/dsp_mult\
+				 valgrind/dsp_simd\
+				 valgrind/bram_tdp\
+				 valgrind/bram_sdp
 
 OPTION_1 = "--tool=memcheck"
 OPTION_2 = "--log-file=valgrind.log"
