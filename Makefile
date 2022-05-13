@@ -22,18 +22,40 @@ GENESIS			= genesis
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/cells_sim.v \
 				  $(GENESIS)/ffs_map.v \
+				  $(GENESIS)/dsp_map.v \
+				  $(GENESIS)/dsp_final_map.v \
 				  $(GENESIS)/arith_map.v \
-				  $(GENESIS)/all_arith_map.v\
+				  $(GENESIS)/all_arith_map.v \
+				  $(GENESIS)/brams_map.v \
+				  $(GENESIS)/brams.txt \
 
 NAME = synth-rs
-SOURCES = src/synth_rapidsilicon.cc 
+SOURCES = src/rs-dsp.cc \
+		  src/rs-dsp-macc.cc \
+		  src/rs-dsp-simd.cc \
+		  src/synth_rapidsilicon.cc 
+
+DEPS = pmgen/rs-dsp-pm.h \
+	   pmgen/rs-dsp-macc.h
+
+pmgen:
+	mkdir -p pmgen
+
+pmgen/rs-dsp-pm.h: pmgen.py rs_dsp.pmg | pmgen
+	python3 pmgen.py -o $@ -p rs_dsp rs_dsp.pmg
+
+pmgen/rs-dsp-macc.h: pmgen.py rs-dsp-macc.pmg | pmgen
+	python3 pmgen.py -o $@ -p rs_dsp_macc rs-dsp-macc.pmg
+
+pmgen.py:
+	wget -nc -O $@ https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py
 
 OBJS := $(SOURCES:cc=o)
 
 all: $(NAME).so
 
-$(OBJS): %.o: %.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) -c -o $@ $^
+$(OBJS): %.o: %.cc $(DEPS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) -c -o $@ $(filter %.cc, $^)
 
 $(NAME).so: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
@@ -54,7 +76,7 @@ test:
 	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
-	rm -f src/*.d src/*.o *.so
+	rm -rf src/*.d src/*.o *.so pmgen*
 	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:
