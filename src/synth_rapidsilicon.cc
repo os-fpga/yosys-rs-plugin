@@ -35,7 +35,12 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 #define VERSION_MAJOR 0 // 0 - beta 
-#define VERSION_MINOR 2 // 0 - initial version, 1 - dff_inference, 2 - carry_inference
+// 0 - initial version 
+// 1 - dff inference 
+// 2 - carry inference
+// 3 - dsp inference
+// 4 - bram inference
+#define VERSION_MINOR 4
 #define VERSION_PATCH 43
 
 enum Strategy {
