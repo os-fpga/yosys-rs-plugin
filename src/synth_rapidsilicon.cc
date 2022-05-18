@@ -531,11 +531,31 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -full");
         }
 
+        // Perform a small loop of successive "abc -dff" calls. It helps to fix 
+        // some big losers versus Vivado such as:
+        // 	- wrapper_io_reg_max (vivado :, Yosys before: 489, after this fix : 299) 
+        // 	- wrapper_io_reg_tc1 (vivado :, Yosys before: 572, after this fix : 384)
+        // 	- wrapper_multi_enc_decx2x4 (vivado :, Yosys before: 2131, after this fix : 1221)
+        // 	- keymgr (vivado :, Yosys before: 593, after this fix : 277) 
+        //
+        //  Improves indirectly "alu4" (reduce by 48%) but because "alu4" is very sensitive
+        //
+        for (int n=1; n <= 3; n++) { // perform 3 calls
+          run("abc -dff");
+        }
+        run("opt_ffinv");
+        run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
+
         run("abc -dff");
+        run("opt_ffinv");
 
         if (check_label("map_luts") && effort != EffortLevel::LOW)
+        if (check_label("map_luts") && effort != EffortLevel::LOW) {
             map_luts(effort);
 
+            run("opt_ffinv"); // help for "trial1" to gain further luts
+        }
+        
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
                 string techMapArgs = " -map +/techmap.v -map";
