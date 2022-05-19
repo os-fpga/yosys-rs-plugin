@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 45
+#define VERSION_PATCH 46
 
 enum Strategy {
     AREA,
@@ -338,11 +338,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else {
             std::string effortStr = "";
             std::string abcCommands = "";
-            std::string scriptName = "abc_tmp_" + std::to_string(index++) + ".scr";
+            std::string scriptName = "abc_tmp_" + std::to_string(index) + ".scr";
             string tmp_file = get_shared_tmp_dirname() + "/" + scriptName;
             std::ofstream out(tmp_file);
+            std::string in_eqn_file = "in_" + std::to_string(index) + ".eqn";
+            std::string out_eqn_file = "out_" + std::to_string(index) + ".eqn";
             if (cec)
-                out << "write_eqn in.eqn;";
+                out << "write_eqn " + in_eqn_file + ";";
             switch(effort_lvl) {
                 case EffortLevel::HIGH:
                 {
@@ -390,9 +392,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             out << abcCommands;
             if (cec)
-                out << "write_eqn out.eqn; cec in.eqn out.eqn";
+                out << "write_eqn " + out_eqn_file + "; cec " + in_eqn_file + " " + out_eqn_file;
             out.close();
             run("abc -script " + tmp_file);
+            index++;
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
