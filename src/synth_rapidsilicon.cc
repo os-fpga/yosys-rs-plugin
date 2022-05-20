@@ -114,10 +114,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - medium : medium\n");
         log("        - low    : low\n");
         log("        By default 'high' level is used.\n");
-        log("    -fast\n");
-        log("        Used to speed up Design Explorer\n");
-        log("        Disabled by default.\n");
         log("\n");
+        log("    -fast\n");
+        log("        Used to speed up synthesis flow\n");
+        log("        Disabled by default.\n");
         log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
@@ -331,12 +331,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (carry_str != "")
             log_cmd_error("Invalid carry sub-mode specified: '%s'\n", carry_str.c_str());
 
-        if(fast && effort == EffortLevel::LOW)
-            log_warning("\"-effort low\" and \"-fast\" options are set - expect reduced QoR.");
-
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
             VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
         log_push();
+
+        if(fast && effort == EffortLevel::LOW)
+            log_warning("\"-effort low\" and \"-fast\" options are set.");
 
         run_script(design, run_from, run_to);
 
@@ -447,8 +447,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             else
                 run("fsm -encoding one-hot");
 
-            if (!fast)
+            if (fast)
+                run("opt -fast");
+            else
                 run("opt -sat");
+
             run("wreduce -keepdc");
             run("peepopt");
             run("pmuxtree");
@@ -560,18 +563,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
           run("abc -dff");
         }
         run("opt_ffinv");
-        if (!fast)
+
+        if (fast)
+            run("opt -fast");
+        else
             run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
 
         run("abc -dff");
         run("opt_ffinv");
 
-        if (check_label("map_luts") && effort != EffortLevel::LOW)
-        if (check_label("map_luts") && effort != EffortLevel::LOW) {
-            if(fast) 
-                map_luts(EffortLevel::LOW);
-            else
-                map_luts(effort);
+        if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
+            map_luts(effort);
 
             run("opt_ffinv"); // help for "trial1" to gain further luts
         }
