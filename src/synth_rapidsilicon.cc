@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 46
+#define VERSION_PATCH 47
 
 enum Strategy {
     AREA,
@@ -115,6 +115,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - low    : low\n");
         log("        By default 'high' level is used.\n");
         log("\n");
+        log("    -fast\n");
+        log("        Used to speed up synthesis flow\n");
+        log("        Disabled by default.\n");
+        log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
         log("        Disabled by default.\n");
@@ -176,6 +180,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nodsp;
     bool nobram;
     bool de;
+    bool fast;
     CarryMode infer_carry;
     bool sdffr;
 
@@ -190,6 +195,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         effort = EffortLevel::HIGH;
         abc_script = "";
         cec = false;
+        fast = false;
         nobram = false;
         nodsp = false;
         de = false;
@@ -236,6 +242,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-effort" && argidx + 1 < args.size()) {
                 effort_str = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-fast") {
+                fast = true;
                 continue;
             }
 #ifdef DEV_BUILD
@@ -321,10 +331,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (carry_str != "")
             log_cmd_error("Invalid carry sub-mode specified: '%s'\n", carry_str.c_str());
 
-
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
             VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
         log_push();
+
+        if(fast && effort == EffortLevel::LOW)
+            log_warning("\"-effort low\" and \"-fast\" options are set.");
 
         run_script(design, run_from, run_to);
 
@@ -435,7 +447,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             else
                 run("fsm -encoding one-hot");
 
-            run("opt -sat");
+            if (fast)
+                run("opt -fast");
+            else
+                run("opt -sat");
+
             run("wreduce -keepdc");
             run("peepopt");
             run("pmuxtree");
@@ -547,13 +563,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
           run("abc -dff");
         }
         run("opt_ffinv");
-        run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
+
+        if (fast)
+            run("opt -fast");
+        else
+            run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
 
         run("abc -dff");
         run("opt_ffinv");
 
-        if (check_label("map_luts") && effort != EffortLevel::LOW)
-        if (check_label("map_luts") && effort != EffortLevel::LOW) {
+        if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
             map_luts(effort);
 
             run("opt_ffinv"); // help for "trial1" to gain further luts
@@ -602,8 +621,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -nodffe -nosdff");
         }
 
-        if (check_label("map_luts_2"))
-            map_luts(EffortLevel::HIGH);
+        if (check_label("map_luts_2")) {
+            if(fast) 
+                map_luts(EffortLevel::LOW);
+            else
+                map_luts(EffortLevel::HIGH);
+        }
 
         if (check_label("check")) {
             run("hierarchy -check");
