@@ -357,21 +357,25 @@ struct SynthRapidSiliconPass : public ScriptPass {
             std::string out_eqn_file = "out_" + std::to_string(index) + ".eqn";
             if (cec)
                 out << "write_eqn " + in_eqn_file + ";";
-            switch(effort_lvl) {
-                case EffortLevel::HIGH:
-                {
-                    if (de)
-                        effortStr = "-1";
-                    break;
-                }
-                case EffortLevel::MEDIUM:
-                case EffortLevel::LOW:
-                {
-                    if (de)
-                        effortStr = "1"; // Some initial value
-                    break;
-                }
-            } 
+            if (fast && de) {
+                effortStr = "0";
+            } else {
+                switch(effort_lvl) {
+                    case EffortLevel::HIGH:
+                        {
+                            if (de)
+                                effortStr = "-1";
+                            break;
+                        }
+                    case EffortLevel::MEDIUM:
+                    case EffortLevel::LOW:
+                        {
+                            if (de)
+                                effortStr = "1"; // Some initial value
+                            break;
+                        }
+                } 
+            }
             switch(goal) {
                 case Strategy::AREA:
                 {
@@ -412,6 +416,37 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 log("Error deleting file: %s", tmp_file.c_str());
         }
         run("opt");
+    }
+
+    // "simplify" helps to recover partially or totally versus Vivado on some designs :
+    //      - wrapper_io_reg_max 
+    //      - wrapper_io_reg_tc1 
+    //      - wrapper_multi_enc_decx2x4 
+    //      - keymgr 
+    //      - ...
+    //                                                                                           
+    // Need a good trade-off between logic simplification and runtime used (need small loop)
+    //
+    void simplify() 
+    {
+        if (fast)
+            run("opt -fast");
+        else
+            run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
+
+        for (int n=1; n <= 2; n++) { 
+            run("abc -dff");
+        }
+
+        // "opt_inv" needs to always be called after "abc -dff" which can introdce redundant
+        // inverters
+        //
+        run("opt_ffinv"); 
+
+        if (fast)
+            run("opt -fast");
+        else
+            run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
     }
 
     void script() override
@@ -550,27 +585,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt -full");
         }
 
-        // Perform a small loop of successive "abc -dff" calls. It helps to fix 
-        // some big losers versus Vivado such as:
-        // 	- wrapper_io_reg_max (vivado :, Yosys before: 489, after this fix : 299) 
-        // 	- wrapper_io_reg_tc1 (vivado :, Yosys before: 572, after this fix : 384)
-        // 	- wrapper_multi_enc_decx2x4 (vivado :, Yosys before: 2131, after this fix : 1221)
-        // 	- keymgr (vivado :, Yosys before: 593, after this fix : 277) 
-        //
-        //  Improves indirectly "alu4" (reduce by 48%) but because "alu4" is very sensitive
-        //
-        for (int n=1; n <= 3; n++) { // perform 3 calls
-          run("abc -dff");
-        }
-        run("opt_ffinv");
-
-        if (fast)
-            run("opt -fast");
-        else
-            run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
-
-        run("abc -dff");
-        run("opt_ffinv");
+        // "simplify" helps to recover partially or totally versus Vivado on some designs 
+        // like :
+        //      - wrapper_io_reg_max 
+        //      - wrapper_io_reg_tc1 
+        //      - wrapper_multi_enc_decx2x4 
+        //      - keymgr 
+        //      - ...
+        //                                                                                           
+        simplify(); 
+        simplify(); 
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
             map_luts(effort);
@@ -622,10 +646,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (check_label("map_luts_2")) {
-            if(fast) 
-                map_luts(EffortLevel::LOW);
-            else
-                map_luts(EffortLevel::HIGH);
+            map_luts(EffortLevel::HIGH);
         }
 
         if (check_label("check")) {
