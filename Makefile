@@ -33,7 +33,8 @@ NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
 		  src/rs-dsp-macc.cc \
 		  src/rs-dsp-simd.cc \
-		  src/synth_rapidsilicon.cc 
+		  src/synth_rapidsilicon.cc \
+          src/rs-dsp-io-regs.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h
