@@ -490,6 +490,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
                                run("rs_dsp_simd");
                                run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+                               run("rs_dsp_io_regs");
                                      break;
                                  }
                     case GENERIC: {
