@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 49
+#define VERSION_PATCH 50
 
 enum Strategy {
     AREA,
@@ -355,8 +355,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             std::ofstream out(tmp_file);
             std::string in_eqn_file = "in_" + std::to_string(index) + ".eqn";
             std::string out_eqn_file = "out_" + std::to_string(index) + ".eqn";
+
             if (cec)
                 out << "write_eqn " + in_eqn_file + ";";
+
             switch(effort_lvl) {
                 case EffortLevel::HIGH:
                 {
@@ -372,6 +374,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     break;
                 }
             } 
+
+            if (fast) {
+               effortStr = "0"; // tell DE to not iterate
+            }
+
             switch(goal) {
                 case Strategy::AREA:
                 {
@@ -400,18 +407,43 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (de) {
                 abcCommands = std::regex_replace(abcCommands, std::regex("DEPTH"), effortStr);
-                abcCommands = std::regex_replace(abcCommands, std::regex("TMP_PATH"), get_shared_tmp_dirname());
+                abcCommands = std::regex_replace(abcCommands, std::regex("TMP_PATH"), 
+                                                 get_shared_tmp_dirname());
             }
             out << abcCommands;
             if (cec)
                 out << "write_eqn " + out_eqn_file + "; cec " + in_eqn_file + " " + out_eqn_file;
             out.close();
+
             run("abc -script " + tmp_file);
+
             index++;
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
         run("opt");
+    }
+
+    // Perform a small loop of successive "abc -dff" calls.  
+    // This "simplify" pass may have some big QoR impact on this list of designs:
+    // 	- wrapper_io_reg_max 
+    // 	- wrapper_io_reg_tc1 
+    // 	- wrapper_multi_enc_decx2x4
+    // 	- keymgr 
+    // 	- kmac 
+    // 	- alu4 
+    // 	- s38417
+    //
+    void simplify() 
+    {
+           run("opt -sat");
+
+           for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
+             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
+           }
+           run("opt_ffinv");
+
+           run("opt -sat"); 
     }
 
     void script() override
@@ -497,15 +529,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                   }
                 }
             }
+
             run("alumacc");
-            run("opt");
+
+            if (!fast) {
+              run("opt");
+            }
+
 #ifdef DEV_BUILD
             run("stat");
 #endif
+
             run("memory -nomap");
+
 #ifdef DEV_BUILD
             run("stat");
 #endif
+
             run("opt_clean");
         }
 
@@ -513,6 +553,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
             run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
         }
+
         if (check_label("map_gates")) {
             switch (tech) {
                 case GENESIS: {
@@ -544,35 +585,45 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     break;
                 }    
             }
-            run("opt");
-            run("opt -fast -full");
+
+            if (!fast) {
+              run("opt");
+              run("opt -fast -full");
+            }
+
             run("memory_map");
-            run("opt -full");
+
+            if (!fast) {
+              run("opt -full");
+            }
         }
 
-        // Perform a small loop of successive "abc -dff" calls. It helps to fix 
-        // some big losers versus Vivado such as:
-        // 	- wrapper_io_reg_max (vivado :, Yosys before: 489, after this fix : 299) 
-        // 	- wrapper_io_reg_tc1 (vivado :, Yosys before: 572, after this fix : 384)
-        // 	- wrapper_multi_enc_decx2x4 (vivado :, Yosys before: 2131, after this fix : 1221)
-        // 	- keymgr (vivado :, Yosys before: 593, after this fix : 277) 
-        //
-        //  Improves indirectly "alu4" (reduce by 48%) but because "alu4" is very sensitive
-        //
-        for (int n=1; n <= 3; n++) { // perform 3 calls
-          run("abc -dff");
-        }
-        run("opt_ffinv");
+#if 1
+        string techMapArgs = " -map +/techmap.v";
+        run("techmap " + techMapArgs);
+#endif
 
-        if (fast)
+        if (fast) {
+
             run("opt -fast");
-        else
-            run("opt -sat"); // Help for "s38417", Yosys before : 1847, Yosys after : 1354)
 
-        run("abc -dff");
-        run("opt_ffinv");
+        } else {
+
+           // Perform a small loop of successive "abc -dff" calls.  
+           // This simplify pass may have some big QoR impact on this list of designs:
+           // 	- wrapper_io_reg_max 
+           // 	- wrapper_io_reg_tc1 
+           // 	- wrapper_multi_enc_decx2x4
+           // 	- keymgr 
+           // 	- kmac 
+           // 	- alu4 
+           // 	- s38417
+           //
+           simplify();
+        }
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
+
             map_luts(effort);
 
             run("opt_ffinv"); // help for "trial1" to gain further luts
