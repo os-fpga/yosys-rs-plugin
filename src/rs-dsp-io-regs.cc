@@ -14,7 +14,7 @@ void rs_dsp_io_regs_pass(RTLIL::Module *module)
 
     for (auto cell : module->cells_) {
         std::string cell_type = cell.second->type.str();
-        if (cell_type == RTLIL::escape_id("rs_DSP2")) {
+        if (cell_type == RTLIL::escape_id("RS_DSP2")) {
             auto dsp = cell.second;
             bool del_clk = false;
 
