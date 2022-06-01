@@ -1004,46 +1004,46 @@ endmodule
 
 (* blackbox *)
 module RS_DSP1 (
-    input  [19:0] a,
-    input  [17:0] b,
+    input wire [19:0] a,
+    input wire [17:0] b,
     (* clkbuf_sink *)
-    input  clk0,
+    input wire clk0,
     (* clkbuf_sink *)
-    input  clk1,
-    input  [ 1:0] feedback0,
-    input  [ 1:0] feedback1,
-    input  load_acc0,
-    input  load_acc1,
-    input  reset0,
-    input  reset1,
+    input wire clk1,
+    input wire [ 1:0] feedback0,
+    input wire [ 1:0] feedback1,
+    input wire load_acc0,
+    input wire load_acc1,
+    input wire reset0,
+    input wire reset1,
     output reg [37:0] z
 );
     parameter MODE_BITS = 27'b00000000000000000000000000;
 endmodule  /* RS_DSP1 */
 
 module RS_DSP2 ( // TODO: Name subject to change
-      input  [19:0] a,
-      input  [17:0] b,
-      input  [ 5:0] acc_fir,
-      output [37:0] z,
-      output [17:0] dly_b,
+      input  wire [19:0] a,
+      input  wire [17:0] b,
+      input  wire [ 5:0] acc_fir,
+      output wire [37:0] z,
+      output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
-    input         clk,
-    input         reset,
+    input wire        clk,
+    input wire        reset,
 
-    input  [2:0]  feedback,
-    input         load_acc,
-    input         unsigned_a,
-    input         unsigned_b,
+    input wire [2:0] feedback,
+    input wire        load_acc,
+    input wire        unsigned_a,
+    input wire        unsigned_b,
 
-    input         f_mode,
-    input  [2:0]  output_select,
-    input         saturate_enable,
-    input  [5:0]  shift_right,
-    input         round,
-    input         subtract,
-    input         register_inputs
+    input wire        f_mode,
+    input wire [2:0] output_select,
+    input wire        saturate_enable,
+    input wire [5:0] shift_right,
+    input wire        round,
+    input wire        subtract,
+    input wire        register_inputs
 );
 
     parameter [79:0] MODE_BITS = 80'd0;
@@ -1172,37 +1172,638 @@ module RS_DSP2 ( // TODO: Name subject to change
         );
 endmodule
 
+module RS_DSP2_MULT ( // TODO: Name subject to change
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    // Port not available in architecture file
+    input  wire       reset,
+
+    input  wire       unsigned_a,
+    input  wire       unsigned_b,
+
+    input  wire       f_mode,
+    input  wire [2:0] output_select,
+    input  wire       register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+	.reset(reset),
+
+        .f_mode(f_mode),
+
+        .feedback(3'b0),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .output_select(3'b0),	// unregistered output: a * b (0)
+        .register_inputs(1'b0)  // unregistered inputs
+    );
+endmodule
+
+module RS_DSP2_MULT_REGIN ( // TODO: Name subject to change
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire       clk,
+    // Port not available in architecture file
+    input  wire       reset,
+
+    input  wire       unsigned_a,
+    input  wire       unsigned_b,
+
+    input  wire       f_mode,
+    input  wire [2:0] output_select,
+    input  wire       register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(3'b0),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(3'b0),	// unregistered output: a * b (0)
+        .register_inputs(1'b1)  // registered inputs
+    );
+endmodule
+
+module RS_DSP2_MULT_REGOUT ( // TODO: Name subject to change
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire       clk,
+    // Port not available in architecture file
+    input  wire       reset,
+
+    input  wire       unsigned_a,
+    input  wire       unsigned_b,
+    input  wire       f_mode,
+    input  wire [2:0] output_select,
+    input  wire       register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(3'b0),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(3'b100),	// registered output: a * b (4)
+        .register_inputs(1'b0)  // unregistered inputs
+    );
+endmodule
+
+module RS_DSP2_MULT_REGIN_REGOUT ( // TODO: Name subject to change
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire       clk,
+    // Port not available in architecture file
+    input  wire       reset,
+
+    input  wire       unsigned_a,
+    input  wire       unsigned_b,
+    input  wire       f_mode,
+    input  wire [2:0] output_select,
+    input  wire       register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(3'b0),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(3'b100),	// registered output: a * b (4)
+        .register_inputs(1'b1)  // registered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTADD (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    // begin: Ports not available in architecture file
+    (* clkbuf_sink *)
+    input  wire        clk,
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    // end: Ports not available in architecture file
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+        .load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(output_select),	// unregistered output: ACCin (2, 3)
+        .subtract(subtract),
+        .register_inputs(1'b0)  // unregistered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTADD_REGIN (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // Port not available in architecture file
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+        .load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(output_select),	// unregistered output: ACCin (2, 3)
+        .subtract(subtract),
+        .register_inputs(1'b1)  // registered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTADD_REGOUT (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // Port not available in architecture file
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+        .load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(output_select),	// registered output: ACCin (6, 7)
+        .subtract(subtract),
+        .register_inputs(1'b0)  // unregistered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTADD_REGIN_REGOUT (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // Port not available in architecture file
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+        .load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(output_select),	// registered output: ACCin (6, 7)
+        .subtract(subtract),
+        .register_inputs(1'b1)  // registered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTACC (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // begin: Ports not available in architecture file
+    input  wire        reset,
+
+    input  wire        load_acc,
+    // end: Ports not available in architecture file
+    input  wire [ 2:0] feedback,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+	.feedback(feedback),
+	.load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+        .reset(reset),
+
+        .output_select(1'b1),	// unregistered output: ACCout (1)
+        .subtract(subtract),
+        .register_inputs(1'b0)  // unregistered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTACC_REGIN (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // Port not available in architecture file
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+        .load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(1'b1),	// unregistered output: ACCout (1)
+        .subtract(subtract),
+        .register_inputs(1'b1)  // registered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTACC_REGOUT (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // Port not available in architecture file
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+	.load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(3'b101),	// registered output: ACCout (5)
+        .subtract(subtract),
+        .register_inputs(1'b0)  // unregistered inputs
+    );
+endmodule
+
+module RS_DSP2_MULTACC_REGIN_REGOUT (
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    output wire [37:0] z,
+
+    (* clkbuf_sink *)
+    input  wire        clk,
+    // Port not available in architecture file
+    input  wire        reset,
+
+    input  wire [ 2:0] feedback,
+    input  wire        load_acc,
+    input  wire        unsigned_a,
+    input  wire        unsigned_b,
+
+    input  wire        f_mode,
+    input  wire [ 2:0] output_select,
+    input  wire        subtract,
+    input  wire        register_inputs
+);
+
+    parameter [79:0] MODE_BITS = 80'd0;
+
+    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
+    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
+    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
+    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+
+    RS_DSP2 #(
+        .MODE_BITS({COEFF_3, COEFF_2, COEFF_1, COEFF_0})
+    ) dsp (
+        .a(a),
+        .b(b),
+        .z(z),
+
+        .f_mode(f_mode),
+
+        .feedback(feedback),
+        .load_acc(load_acc),
+
+        .unsigned_a(unsigned_a),
+        .unsigned_b(unsigned_b),
+
+        .clk(clk),
+	.reset(reset),
+
+        .output_select(3'b101),	// registered output: ACCout (5)
+        .subtract(subtract),
+        .register_inputs(1'b1)  // registered inputs
+    );
+endmodule
+
 module dsp_t1_sim # (
     parameter NBITS_ACC  = 64,
     parameter NBITS_A    = 20,
     parameter NBITS_B    = 18,
     parameter NBITS_Z    = 38
 )(
-    input [NBITS_A-1:0] a_i,
-    input [NBITS_B-1:0] b_i,
-    output [NBITS_Z-1:0] z_o,
+    input wire [NBITS_A-1:0] a_i,
+    input wire [NBITS_B-1:0] b_i,
+    output wire [NBITS_Z-1:0] z_o,
     output reg [NBITS_B-1:0] dly_b_o,
 
-    input [5:0] acc_fir_i,
-    input [2:0] feedback_i,
-    input load_acc_i,
+    input wire [5:0] acc_fir_i,
+    input wire [2:0] feedback_i,
+    input wire load_acc_i,
 
-    input unsigned_a_i,
-    input unsigned_b_i,
+    input wire unsigned_a_i,
+    input wire unsigned_b_i,
 
-    input clock_i,
-    input s_reset,
+    input wire clock_i,
+    input wire s_reset,
 
-    input saturate_enable_i,
-    input [2:0] output_select_i,
-    input round_i,
-    input [5:0] shift_right_i,
-    input subtract_i,
-    input register_inputs_i,
-    input [NBITS_A-1:0] coef_0_i,
-    input [NBITS_A-1:0] coef_1_i,
-    input [NBITS_A-1:0] coef_2_i,
-    input [NBITS_A-1:0] coef_3_i
+    input wire saturate_enable_i,
+    input wire [2:0] output_select_i,
+    input wire round_i,
+    input wire [5:0] shift_right_i,
+    input wire subtract_i,
+    input wire register_inputs_i,
+    input wire [NBITS_A-1:0] coef_0_i,
+    input wire [NBITS_A-1:0] coef_1_i,
+    input wire [NBITS_A-1:0] coef_2_i,
+    input wire [NBITS_A-1:0] coef_3_i
 );
 
 // FIXME: The version of Icarus Verilog from Conda seems not to recognize the
@@ -1406,27 +2007,27 @@ module dsp_t1_sim # (
 endmodule
 
 module dsp_t1_20x18x64 (
-    input  [19:0] a_i,
-    input  [17:0] b_i,
-    input  [ 5:0] acc_fir_i,
-    output [37:0] z_o,
-    output [17:0] dly_b_o,
+    input  wire [19:0] a_i,
+    input  wire [17:0] b_i,
+    input  wire [ 5:0] acc_fir_i,
+    output wire [37:0] z_o,
+    output wire [17:0] dly_b_o,
 
     (* clkbuf_sink *)
-    input         clock_i,
-    input         reset_i,
+    input  wire       clock_i,
+    input  wire       reset_i,
 
-    input  [2:0]  feedback_i,
-    input         load_acc_i,
-    input         unsigned_a_i,
-    input         unsigned_b_i,
+    input  wire [2:0] feedback_i,
+    input  wire       load_acc_i,
+    input  wire       unsigned_a_i,
+    input  wire       unsigned_b_i,
 
-    input  [2:0]  output_select_i,
-    input         saturate_enable_i,
-    input  [5:0]  shift_right_i,
-    input         round_i,
-    input         subtract_i,
-    input         register_inputs_i
+    input  wire [2:0] output_select_i,
+    input  wire       saturate_enable_i,
+    input  wire [5:0] shift_right_i,
+    input  wire       round_i,
+    input  wire       subtract_i,
+    input  wire       register_inputs_i
 );
 
     parameter [19:0] COEFF_0 = 20'd0;
@@ -1464,27 +2065,27 @@ module dsp_t1_20x18x64 (
 endmodule
 
 module dsp_t1_10x9x32 (
-    input  [ 9:0] a_i,
-    input  [ 8:0] b_i,
-    input  [ 5:0] acc_fir_i,
-    output [18:0] z_o,
-    output [ 8:0] dly_b_o,
+    input  wire [ 9:0] a_i,
+    input  wire [ 8:0] b_i,
+    input  wire [ 5:0] acc_fir_i,
+    output wire [18:0] z_o,
+    output wire [ 8:0] dly_b_o,
 
     (* clkbuf_sink *)
-    input         clock_i,
-    input         reset_i,
+    input  wire        clock_i,
+    input  wire        reset_i,
 
-    input  [2:0]  feedback_i,
-    input         load_acc_i,
-    input         unsigned_a_i,
-    input         unsigned_b_i,
+    input  wire [2:0] feedback_i,
+    input  wire        load_acc_i,
+    input  wire        unsigned_a_i,
+    input  wire        unsigned_b_i,
 
-    input  [2:0]  output_select_i,
-    input         saturate_enable_i,
-    input  [5:0]  shift_right_i,
-    input         round_i,
-    input         subtract_i,
-    input         register_inputs_i
+    input  wire [2:0] output_select_i,
+    input  wire        saturate_enable_i,
+    input  wire [5:0] shift_right_i,
+    input  wire        round_i,
+    input  wire        subtract_i,
+    input  wire        register_inputs_i
 );
 
     parameter [9:0] COEFF_0 = 10'd0;
