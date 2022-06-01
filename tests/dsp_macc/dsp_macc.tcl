@@ -35,7 +35,7 @@ yosys proc
 check_equiv macc_simple
 design -load postopt
 yosys cd macc_simple
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULTACC
 #select -assert-count 1 t:*
 
 design -reset
@@ -45,7 +45,7 @@ hierarchy -check -top macc_simple_clr
 check_equiv macc_simple_clr
 design -load postopt
 yosys cd macc_simple_clr
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULTACC
 #select -assert-count 1 t:*
 
 design -reset
@@ -55,8 +55,28 @@ hierarchy -top macc_simple_arst
 check_equiv macc_simple_arst
 design -load postopt
 yosys cd macc_simple_arst
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULTACC
 #select -assert-count 1 t:*
+
+design -reset
+
+yosys read -sv dsp_macc.v
+hierarchy -check -top macc_simple_ena
+check_equiv macc_simple_ena
+design -load postopt
+yosys cd macc_simple_ena
+select -assert-count 1 t:RS_DSP2_MULTACC
+select -assert-count 1 t:*
+
+design -reset
+
+yosys read -sv dsp_macc.v
+hierarchy -check -top macc_simple_arst_clr_ena
+check_equiv macc_simple_arst_clr_ena
+design -load postopt
+yosys cd macc_simple_arst_clr_ena
+select -assert-count 1 t:RS_DSP2_MULTACC
+select -assert-count 1 t:*
 
 design -reset
 
@@ -65,7 +85,7 @@ hierarchy -check -top macc_simple_preacc
 check_equiv macc_simple_preacc
 design -load postopt
 yosys cd macc_simple_preacc
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULTADD
 #select -assert-count 1 t:*
 
 design -reset 
@@ -75,7 +95,8 @@ hierarchy -check -top macc_simple_preacc_clr
 check_equiv macc_simple_preacc_clr
 design -load postopt
 yosys cd macc_simple_preacc_clr
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULTADD
 #select -assert-count 1 t:*
 
 design -reset
+
