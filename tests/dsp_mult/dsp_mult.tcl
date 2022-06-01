@@ -33,7 +33,7 @@ yosys read -sv dsp_mult.v
 check_equiv mult_16x16
 design -load postopt
 yosys cd mult_16x16
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULT
 
 design -reset
 
@@ -41,7 +41,7 @@ yosys read -sv dsp_mult.v
 check_equiv mult_20x18
 design -load postopt
 yosys cd mult_20x18
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULT
 
 design -reset
 
@@ -49,7 +49,7 @@ yosys read -sv dsp_mult.v
 check_equiv mult_8x8
 design -load postopt
 yosys cd mult_8x8
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULT
 
 design -reset
 
@@ -57,7 +57,7 @@ yosys read -sv dsp_mult.v
 check_equiv mult_10x9
 design -load postopt
 yosys cd mult_10x9
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULT
 
 design -reset
 
@@ -65,6 +65,6 @@ yosys read -sv dsp_mult.v
 check_equiv mult_8x8_s
 design -load postopt
 yosys cd mult_8x8_s
-select -assert-count 1 t:RS_DSP2
+select -assert-count 1 t:RS_DSP2_MULT
 
 design -reset
