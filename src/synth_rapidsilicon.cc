@@ -416,12 +416,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
             out.close();
 
             run("abc -script " + tmp_file);
-
-            index++;
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
         run("opt");
+
+        if (cec) {
+            std::string writeCommand = "write_verilog after_techmap_ffsi_map" + std::to_string(index) + ".v";
+            run(writeCommand);
+        }
+        index++;
     }
 
     // Perform a small loop of successive "abc -dff" calls.  
@@ -444,6 +448,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
            run("opt_ffinv");
 
            run("opt -sat"); 
+
+           if (cec)
+              run("write_verilog after_simplify.v");
+
     }
 
     void script() override
@@ -465,12 +473,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (check_label("prepare")) {
             run(stringf("hierarchy -check %s", top_opt.c_str()));
+
+            if (cec)
+                run("write_verilog after_hierarchy_check.v");
+
             run("proc");
             run("flatten");
             run("tribuf -logic");
             run("deminout");
             run("opt_expr");
             run("opt_clean");
+
+            if (cec)
+                run("write_verilog after_opt_clean.v");
+
             run("check");
             run("opt -nodffe -nosdff");
 
@@ -478,6 +494,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("fsm -encoding binary");
             else
                 run("fsm -encoding one-hot");
+
+            if (cec)
+                run("write_verilog after_fsm.v");
 
             if (fast)
                 run("opt -fast");
@@ -523,6 +542,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                run("rs_dsp_simd");
                                run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
                                run("rs_dsp_io_regs");
+
+                               if (cec)
+                                   run("write_verilog after_dsp.v");
                                      break;
                                  }
                     case GENERIC: {
@@ -532,6 +554,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
 
             run("alumacc");
+
+            if (cec)
+                run("write_verilog after_alumacc.v");
 
             if (!fast) {
               run("opt");
@@ -553,6 +578,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (!nobram){
             run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
             run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+
+            if (cec)
+                run("write_verilog after_bram.v");
         }
 
         if (check_label("map_gates")) {
@@ -591,6 +619,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
               run("opt");
               run("opt -fast -full");
             }
+
+            if (cec)
+                run("write_verilog after_opt_fast_full.v");
 
             run("memory_map");
 
@@ -650,7 +681,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
                                );
-                        }         
+                        }
+
+                        if (cec)
+                            run("write_verilog after_dfflegalize.v");
+
 #ifdef DEV_BUILD
                         run("stat");
 #endif
@@ -663,6 +698,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     }    
                 }
                 run("techmap " + techMapArgs);
+
+                if (cec)
+                    run("write_verilog after_techmap_ffsi_map.v");
             }
             run("opt_expr -mux_undef");
             run("simplemap");
