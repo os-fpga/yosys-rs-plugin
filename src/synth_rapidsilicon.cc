@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 50
+#define VERSION_PATCH 52
 
 enum Strategy {
     AREA,
@@ -522,6 +522,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
                                run("rs_dsp_simd");
                                run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+                               run("rs_dsp_io_regs");
                                      break;
                                  }
                     case GENERIC: {
