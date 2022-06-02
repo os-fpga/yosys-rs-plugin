@@ -60,7 +60,7 @@ enum Technologies {
     GENESIS
 };
 enum CarryMode {
-    NO_CONST,
+    AUTO,
     ALL,
     NO
 };
@@ -136,9 +136,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Infer Carry cells when possible.\n");
         log("        Supported values:\n");
         log("        - all      : Infer all the carries.\n");
-        log("        - no_const : Infer carries only with non const inputs.\n");
+        log("        - auto     : Infer carries only with non const inputs.\n");
         log("        - no       : Do not infer any carries.\n");
-        log("        By default 'no_const' mode is used.\n");
+        log("        By default 'auto' mode is used.\n");
         log("\n");
         log("    -sdffr\n");
         log("        Infer synchroneous set/reset DFFs when possible.\n");
@@ -199,7 +199,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nobram = false;
         nodsp = false;
         de = false;
-        infer_carry = CarryMode::NO_CONST;
+        infer_carry = CarryMode::AUTO;
         sdffr = false;
     }
 
@@ -322,8 +322,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
 
-        if (carry_str == "no_const")
-            infer_carry = CarryMode::NO_CONST;
+        if (carry_str == "auto")
+            infer_carry = CarryMode::AUTO;
         else if (carry_str == "all")
             infer_carry = CarryMode::ALL;
         else if (carry_str == "no")
@@ -561,7 +561,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     run("stat");
 #endif
                     switch (infer_carry){
-                        case CarryMode::NO_CONST: {
+                        case CarryMode::AUTO: {
                             run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
                             break;
                             }
