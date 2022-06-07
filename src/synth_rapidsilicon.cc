@@ -136,7 +136,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Infer Carry cells when possible.\n");
         log("        Supported values:\n");
         log("        - all      : Infer all the carries.\n");
-        log("        - auto     : Infer carries only with non const inputs.\n");
+        log("        - auto     : Infer carries based on internal heuristics.\n");
         log("        - no       : Do not infer any carries.\n");
         log("        By default 'auto' mode is used.\n");
         log("\n");
