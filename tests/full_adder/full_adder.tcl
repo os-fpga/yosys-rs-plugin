@@ -49,12 +49,13 @@ yosys read -define WIDTH=4
 yosys read -sv full_adder.v
 hierarchy -check -top full_adder
 yosys proc
-equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -de -carry no_const
+equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -de -carry auto
 #synth_rs -tech genesis -goal area -de -top full_adder -carry
 design -load postopt
 yosys cd full_adder
 stat
-select -assert-count 5 t:adder_carry
+select -assert-count 0 t:adder_carry
+select -assert-count 6 t:\$lut
 
 design -reset
 
@@ -63,11 +64,12 @@ yosys read -define WIDTH=4
 yosys read -sv full_adder.v
 hierarchy -check -top subtractor
 yosys proc
-equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -de -carry no_const
+equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -de -carry auto
 design -load postopt
 yosys cd subtractor
 stat
-select -assert-count 5 t:adder_carry
+select -assert-count 0 t:adder_carry
+select -assert-count 6 t:\$lut
 
 design -reset
 
@@ -76,11 +78,12 @@ yosys read -define WIDTH=4
 yosys read -sv full_adder.v
 hierarchy -check -top comparator
 yosys proc
-equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -de -carry no_const
+equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesis -goal area -de -carry auto
 design -load postopt
 yosys cd comparator
 stat
-select -assert-count 4 t:adder_carry
+select -assert-count 0 t:adder_carry
+select -assert-count 2 t:\$lut
 
 design -reset
 
