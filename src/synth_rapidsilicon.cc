@@ -611,21 +611,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                     switch (infer_carry){
                         case CarryMode::AUTO: {
-                            run("techmap -map +/techmap.v");
+                            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
 
                             if (cec)
                                 run("write_verilog -noattr -nohex after_carry_map1.v");
 
-                            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
+                            run("techmap -map +/techmap.v");
                             break;
                             }
                         case CarryMode::ALL: {
-                            run("techmap -map +/techmap.v");
+                            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
 
                             if (cec)
                                 run("write_verilog -noattr -nohex after_carry_map1.v");
 
-                            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
+                            run("techmap -map +/techmap.v");
                             break;
                             }
                         case CarryMode::NO: {
@@ -698,10 +698,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
-                run("techmap -map +/techmap.v");
-
-                if (cec)
-                    run("write_verilog -noattr -nohex after_techmap_ff_map1.v");
 
                 string techMapArgs = " -map";
                 switch (tech) {
@@ -741,6 +737,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                 if (cec)
                     run("write_verilog -noattr -nohex after_techmap_ff_map.v");
+
+                run("techmap -map +/techmap.v");
+
+                if (cec)
+                    run("write_verilog -noattr -nohex after_techmap_ff_map1.v");
             }
             run("opt_expr -mux_undef");
             run("simplemap");
