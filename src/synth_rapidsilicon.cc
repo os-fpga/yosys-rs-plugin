@@ -183,6 +183,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool fast;
     CarryMode infer_carry;
     bool sdffr;
+    RTLIL::Design *_design;
 
     void clear_flags() override
     {
@@ -213,6 +214,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string effort_str;
         string carry_str;
         clear_flags();
+        _design = design;
 
         size_t argidx;
         for (argidx = 1; argidx < args.size(); argidx++) {
@@ -444,13 +446,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
-
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
         run("opt_ffinv");
 
         run("opt -sat"); 
+    }
+
+    void prepare()
+    {
+        // Mimic what is done in write_verilog prelude
+        //
+        run("bmuxmap");
+        run("demuxmap");
+        run("clean_zerowidth");
+        _design->sort();
     }
 
     void script() override
@@ -476,6 +487,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec)
                 run("write_verilog -noattr -nohex after_proc.v");
+            else
+                prepare();
 
             run("flatten");
             run("tribuf -logic");
@@ -509,6 +522,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt_clean2.v");
+            else
+                prepare();
         }
 
         if (check_label("coarse")) {
@@ -601,7 +616,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_bram_map.v");
         }
 
-        run("memory_map");
+        //run("memory_map");
 
         if (check_label("map_gates")) {
             switch (tech) {
@@ -656,7 +671,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
 
-#if 0
+#if 1
             run("memory_map");
 
             if (!fast) {
@@ -665,7 +680,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
         }
 
-#if 0
+#if 1
         string techMapArgs = " -map +/techmap.v";
         run("techmap " + techMapArgs);
 #endif
@@ -687,6 +702,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec)
                 run("write_verilog -noattr -nohex after_simplify.v");
+            else
+                prepare();
         }
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
