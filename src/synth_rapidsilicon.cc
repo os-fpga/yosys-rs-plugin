@@ -183,6 +183,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool fast;
     CarryMode infer_carry;
     bool sdffr;
+    RTLIL::Design *_design;
 
     void clear_flags() override
     {
@@ -214,6 +215,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string carry_str;
         clear_flags();
 
+        _design = design;
         size_t argidx;
         for (argidx = 1; argidx < args.size(); argidx++) {
             if (args[argidx] == "-top" && argidx + 1 < args.size()) {
@@ -343,6 +345,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_pop();
     }
 
+    int getNumberOfInstances() {
+        return (_design->top_module()->cells_.size());
+    }
+
     void map_luts(EffortLevel effort_lvl) {
         static int index = 1;
         if (abc_script != "")
@@ -436,14 +442,33 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void simplify() 
     {
-           run("opt -sat");
+        run("opt -sat");
 
-           for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
-             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
-           }
-           run("opt_ffinv");
+        for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
 
-           run("opt -sat"); 
+            int nbInstBefore = getNumberOfInstances();
+
+            run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
+
+            int nbInstAfter = getNumberOfInstances();
+
+            if (nbInstAfter == nbInstBefore) {
+                break;
+            }
+        }
+        run("opt_ffinv");
+
+        run("opt -sat"); 
+    }
+
+    void transform()
+    {
+        // Mimic what is done in write verilog prelude
+        //
+        run("bmuxmap");
+        run("demuxmap");
+        run("clean_zerowidth");
+        _design->sort();
     }
 
     void script() override
@@ -465,8 +490,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (check_label("prepare")) {
             run(stringf("hierarchy -check %s", top_opt.c_str()));
+
             run("proc");
+
+            transform();
+
             run("flatten");
+
+            // Mimic what is done in write verilog prelude
+            //
+            transform();
+
             run("tribuf -logic");
             run("deminout");
             run("opt_expr");
@@ -489,6 +523,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("pmuxtree");
             run("opt_clean");
         }
+
+        transform();
 
         if (check_label("coarse")) {
             if(!nodsp){
@@ -555,6 +591,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
         }
 
+        run("memory_map");
+
         if (check_label("map_gates")) {
             switch (tech) {
                 case GENESIS: {
@@ -591,12 +629,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
               run("opt");
               run("opt -fast -full");
             }
-
-            run("memory_map");
-
-            if (!fast) {
-              run("opt -full");
-            }
         }
 
 #if 1
@@ -622,6 +654,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
            //
            simplify();
         }
+
+        transform();
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
