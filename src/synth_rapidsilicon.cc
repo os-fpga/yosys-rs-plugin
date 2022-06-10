@@ -152,6 +152,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -no_simplify\n");
+        log("        By default call simplify.\n");
+        log("        Specifying this switch turns it off.\n");
+        log("\n");
         log("    -fsm_encoding <encoding>\n");
         log("        Supported values:\n");
         log("        - binary : compact encoding using minimum of registers to cover the N states\n");
@@ -183,6 +187,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool fast;
     CarryMode infer_carry;
     bool sdffr;
+    bool nosimplify;
 
     void clear_flags() override
     {
@@ -198,6 +203,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         fast = false;
         nobram = false;
         nodsp = false;
+        nosimplify = false;
         de = false;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
@@ -276,6 +282,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-de") {
                 de = true;
+                continue;
+            }
+            if (args[argidx] == "-no_simplify") {
+                nosimplify = true;
                 continue;
             }
 
@@ -620,14 +630,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
            // 	- alu4 
            // 	- s38417
            //
-           simplify();
+           if(!nosimplify)
+               simplify();
         }
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
             map_luts(effort);
 
-            run("opt_ffinv"); // help for "trial1" to gain further luts
+            if(!nosimplify)
+                run("opt_ffinv"); // help for "trial1" to gain further luts
         }
         
         if (check_label("map_ffs")) {
