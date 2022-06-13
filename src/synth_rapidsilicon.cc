@@ -630,7 +630,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
            // 	- alu4 
            // 	- s38417
            //
-           if(!nosimplify)
+           if (!nosimplify)
                simplify();
         }
 
@@ -638,7 +638,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             map_luts(effort);
 
-            if(!nosimplify)
+            if (!nosimplify)
                 run("opt_ffinv"); // help for "trial1" to gain further luts
         }
         
