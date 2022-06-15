@@ -128,7 +128,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Use a specific ABC script instead of the embedded one.\n");
         log("\n");
         log("    -cec\n");
-        log("        Use internal equivalence checking (ABC based) during optimization.\n");
+        log("        Use internal equivalence checking (ABC based) during optimization\n");
+        log("        and dump Verilog after key phases.\n");
         log("        Disabled by default.\n");
         log("\n");
 #endif
@@ -150,6 +151,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
         log("    -no_bram\n");
         log("        By default use Block RAM in output netlist.\n");
+        log("        Specifying this switch turns it off.\n");
+        log("\n");
+        log("    -no_simplify\n");
+        log("        By default call simplify.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
         log("    -fsm_encoding <encoding>\n");
@@ -183,6 +188,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool fast;
     CarryMode infer_carry;
     bool sdffr;
+    bool nosimplify;
 
     void clear_flags() override
     {
@@ -198,6 +204,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         fast = false;
         nobram = false;
         nodsp = false;
+        nosimplify = false;
         de = false;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
@@ -276,6 +283,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-de") {
                 de = true;
+                continue;
+            }
+            if (args[argidx] == "-no_simplify") {
+                nosimplify = true;
                 continue;
             }
 
@@ -360,15 +371,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 out << "write_eqn " + in_eqn_file + ";";
 
             switch(effort_lvl) {
-                case EffortLevel::HIGH:
-                {
+                case EffortLevel::HIGH: {
                     if (de)
                         effortStr = "-1";
                     break;
                 }
                 case EffortLevel::MEDIUM:
-                case EffortLevel::LOW:
-                {
+                case EffortLevel::LOW: {
                     if (de)
                         effortStr = "1"; // Some initial value
                     break;
@@ -380,24 +389,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
 
             switch(goal) {
-                case Strategy::AREA:
-                {
+                case Strategy::AREA: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "area");
                     else
                         abcCommands = abc_base6_a21;
                     break;
                 }
-                case Strategy::DELAY:
-                {
+                case Strategy::DELAY: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "delay");
                     /* else
                         out << abc_base6_d1; // Delay optimized abc script. */
                     break;
                 }
-                case Strategy::MIXED:
-                {
+                case Strategy::MIXED: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "mixed");
                     /* else
@@ -515,55 +521,55 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 switch (tech) {
                     case GENESIS:{
 #ifdef DEV_BUILD
-                        run("stat");
+                               run("stat");
 #endif
-                        run("wreduce t:$mul");
-                        run("rs_dsp_macc");
-                        struct DspParams {
-                            size_t a_maxwidth;
-                            size_t b_maxwidth;
-                            size_t a_minwidth;
-                            size_t b_minwidth;
-                            std::string type;
-                        };
+                               run("wreduce t:$mul");
+                               run("rs_dsp_macc");
+                               struct DspParams {
+                                   size_t a_maxwidth;
+                                   size_t b_maxwidth;
+                                   size_t a_minwidth;
+                                   size_t b_minwidth;
+                                   std::string type;
+                               };
 
-                        const std::vector<DspParams> dsp_rules = {
-                            {20, 18, 11, 10, "$__RS_MUL20X18"},
-                            {10, 9, 4, 4, "$__RS_MUL10X9"},
-                        };
-                        for (const auto &rule : dsp_rules) {
-                            run(stringf("techmap -map +/mul2dsp.v "
-                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                        "-D DSP_NAME=%s",
-                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                               const std::vector<DspParams> dsp_rules = {
+                                   {20, 18, 11, 10, "$__RS_MUL20X18"},
+                                   {10, 9, 4, 4, "$__RS_MUL10X9"},
+                               };
+                               for (const auto &rule : dsp_rules) {
+                                   run(stringf("techmap -map +/mul2dsp.v "
+                                               "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                               "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                               "-D DSP_NAME=%s",
+                                               rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
-                            if (cec)
-                                run("write_verilog -noattr -nohex after_dsp_map1.v");
+                                   if (cec)
+                                       run("write_verilog -noattr -nohex after_dsp_map1.v");
 
-                            run("chtype -set $mul t:$__soft_mul");
-                        }
-                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
+                                   run("chtype -set $mul t:$__soft_mul");
+                               }
+                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
 
-                        if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map2.v");
+                               if (cec)
+                                   run("write_verilog -noattr -nohex after_dsp_map2.v");
 
-                        run("rs_dsp_simd");
-                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+                               run("rs_dsp_simd");
+                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
 
-                        if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map3.v");
+                               if (cec)
+                                   run("write_verilog -noattr -nohex after_dsp_map3.v");
 
-                        run("rs_dsp_io_regs");
+                               run("rs_dsp_io_regs");
 
-                        if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map4.v");
+                               if (cec)
+                                   run("write_verilog -noattr -nohex after_dsp_map4.v");
 
-                        break;
-                    }
+                               break;
+                           }
                     case GENERIC: {
-                        break;
-                    }
+                               break;
+                           }
                 }
             }
 
@@ -599,8 +605,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_bram_map.v");
         }
-
-        run("memory_map");
 
         if (check_label("map_gates")) {
             switch (tech) {
@@ -654,7 +658,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
+
+            run("memory_map");
+
+            if (!fast) {
+                run("opt -full");
+            }
         }
+
+#if 1
+        string techMapArgs = " -map +/techmap.v";
+        run("techmap " + techMapArgs);
+#endif
 
         if (fast) {
             run("opt -fast");
@@ -669,17 +684,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
             // 	- alu4 
             // 	- s38417
             //
-            simplify();
+            if (!nosimplify) {
+                simplify();
 
-            if (cec)
-                run("write_verilog -noattr -nohex after_simplify.v");
+                if (cec)
+                    run("write_verilog -noattr -nohex after_simplify.v");
+            }
         }
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
             map_luts(effort);
 
-            run("opt_ffinv"); // help for "trial1" to gain further luts
+            if (!nosimplify)
+                run("opt_ffinv"); // help for "trial1" to gain further luts
         }
         
         if (check_label("map_ffs")) {
