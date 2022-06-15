@@ -427,10 +427,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         run("opt");
 
-        if (cec) {
-            std::string writeCommand = "write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v";
-            run(writeCommand);
-        }
+        if (cec)
+            run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
+
         index++;
     }
 
@@ -447,14 +446,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void simplify() 
     {
         run("opt -sat");
-
         for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
+
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
         run("opt_ffinv");
-
         run("opt -sat"); 
     }
 
@@ -519,57 +517,57 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (check_label("coarse")) {
             if(!nodsp){
                 switch (tech) {
-                    case GENESIS:{
+                    case GENESIS: {
 #ifdef DEV_BUILD
-                               run("stat");
+                        run("stat");
 #endif
-                               run("wreduce t:$mul");
-                               run("rs_dsp_macc");
-                               struct DspParams {
-                                   size_t a_maxwidth;
-                                   size_t b_maxwidth;
-                                   size_t a_minwidth;
-                                   size_t b_minwidth;
-                                   std::string type;
-                               };
+                        run("wreduce t:$mul");
+                        run("rs_dsp_macc");
+                        struct DspParams {
+                            size_t a_maxwidth;
+                            size_t b_maxwidth;
+                            size_t a_minwidth;
+                            size_t b_minwidth;
+                            std::string type;
+                        };
 
-                               const std::vector<DspParams> dsp_rules = {
-                                   {20, 18, 11, 10, "$__RS_MUL20X18"},
-                                   {10, 9, 4, 4, "$__RS_MUL10X9"},
-                               };
-                               for (const auto &rule : dsp_rules) {
-                                   run(stringf("techmap -map +/mul2dsp.v "
-                                               "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                               "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                               "-D DSP_NAME=%s",
-                                               rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                        const std::vector<DspParams> dsp_rules = {
+                            {20, 18, 11, 10, "$__RS_MUL20X18"},
+                            {10, 9, 4, 4, "$__RS_MUL10X9"},
+                        };
+                        for (const auto &rule : dsp_rules) {
+                            run(stringf("techmap -map +/mul2dsp.v "
+                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                        "-D DSP_NAME=%s",
+                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
-                                   if (cec)
-                                       run("write_verilog -noattr -nohex after_dsp_map1.v");
+                            if (cec)
+                                run("write_verilog -noattr -nohex after_dsp_map1.v");
 
-                                   run("chtype -set $mul t:$__soft_mul");
-                               }
-                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
+                            run("chtype -set $mul t:$__soft_mul");
+                        }
+                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
 
-                               if (cec)
-                                   run("write_verilog -noattr -nohex after_dsp_map2.v");
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map2.v");
 
-                               run("rs_dsp_simd");
-                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+                        run("rs_dsp_simd");
+                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
 
-                               if (cec)
-                                   run("write_verilog -noattr -nohex after_dsp_map3.v");
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map3.v");
 
-                               run("rs_dsp_io_regs");
+                        run("rs_dsp_io_regs");
 
-                               if (cec)
-                                   run("write_verilog -noattr -nohex after_dsp_map4.v");
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map4.v");
 
-                               break;
-                           }
+                        break;
+                    }
                     case GENERIC: {
-                               break;
-                           }
+                        break;
+                    }
                 }
             }
 
@@ -579,7 +577,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-              run("opt");
+                run("opt");
             }
 
 #ifdef DEV_BUILD
@@ -612,7 +610,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                     run("stat");
 #endif
-                    switch (infer_carry){
+                    switch (infer_carry) {
                         case CarryMode::AUTO: {
                             run("techmap -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
 
@@ -621,7 +619,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                             run("techmap -map +/techmap.v");
                             break;
-                            }
+                        }
                         case CarryMode::ALL: {
                             run("techmap -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
 
@@ -630,11 +628,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                             run("techmap -map +/techmap.v");
                             break;
-                            }
+                        }
                         case CarryMode::NO: {
                             run("techmap");
                             break;
-                            }
+                        }
                     }
 #ifdef DEV_BUILD
                     run("stat");
@@ -652,8 +650,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-              run("opt");
-              run("opt -fast -full");
+                run("opt");
+                run("opt -fast -full");
             }
 
             if (cec)
@@ -710,13 +708,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("shregmap -minlen 8 -maxlen 20");
-                        if (sdffr){
+                        if (sdffr) {
                             run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
                                 " -cell $_SDFF_???_ 0"
                                );
-                        }else{  
+                        } else {
                             run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
@@ -740,12 +738,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("techmap " + techMapArgs);
 
                 if (cec)
-                    run("write_verilog -noattr -nohex after_techmap_ff_map.v");
+                    run("write_verilog -noattr -nohex after_techmap_ff_map1v");
 
                 run("techmap -map +/techmap.v");
 
                 if (cec)
-                    run("write_verilog -noattr -nohex after_techmap_ff_map1.v");
+                    run("write_verilog -noattr -nohex after_techmap_ff_map2.v");
             }
             run("opt_expr -mux_undef");
             run("simplemap");
