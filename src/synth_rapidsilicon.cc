@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 56
+#define VERSION_PATCH 57
 
 enum Strategy {
     AREA,
@@ -128,7 +128,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Use a specific ABC script instead of the embedded one.\n");
         log("\n");
         log("    -cec\n");
-        log("        Use internal equivalence checking (ABC based) during optimization.\n");
+        log("        Use internal equivalence checking (ABC based) during optimization\n");
+        log("        and dump Verilog after key phases.\n");
         log("        Disabled by default.\n");
         log("\n");
 #endif
@@ -370,15 +371,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 out << "write_eqn " + in_eqn_file + ";";
 
             switch(effort_lvl) {
-                case EffortLevel::HIGH:
-                {
+                case EffortLevel::HIGH: {
                     if (de)
                         effortStr = "-1";
                     break;
                 }
                 case EffortLevel::MEDIUM:
-                case EffortLevel::LOW:
-                {
+                case EffortLevel::LOW: {
                     if (de)
                         effortStr = "1"; // Some initial value
                     break;
@@ -390,24 +389,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
 
             switch(goal) {
-                case Strategy::AREA:
-                {
+                case Strategy::AREA: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "area");
                     else
                         abcCommands = abc_base6_a21;
                     break;
                 }
-                case Strategy::DELAY:
-                {
+                case Strategy::DELAY: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "delay");
                     /* else
                         out << abc_base6_d1; // Delay optimized abc script. */
                     break;
                 }
-                case Strategy::MIXED:
-                {
+                case Strategy::MIXED: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "mixed");
                     /* else
@@ -426,12 +422,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
             out.close();
 
             run("abc -script " + tmp_file);
-
-            index++;
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
         run("opt");
+
+        if (cec)
+            run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
+
+        index++;
     }
 
     // Perform a small loop of successive "abc -dff" calls.  
@@ -446,14 +445,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void simplify() 
     {
-           run("opt -sat");
+        run("opt -sat");
+        for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
+            run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
 
-           for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
-             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
-           }
-           run("opt_ffinv");
-
-           run("opt -sat"); 
+            if (cec)
+                run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
+        }
+        run("opt_ffinv");
+        run("opt -sat"); 
     }
 
     void script() override
@@ -476,11 +476,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (check_label("prepare")) {
             run(stringf("hierarchy -check %s", top_opt.c_str()));
             run("proc");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_proc.v");
+
             run("flatten");
             run("tribuf -logic");
             run("deminout");
             run("opt_expr");
             run("opt_clean");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_opt_clean1.v");
+
             run("check");
             run("opt -nodffe -nosdff");
 
@@ -488,6 +496,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("fsm -encoding binary");
             else
                 run("fsm -encoding one-hot");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_fsm.v");
 
             if (fast)
                 run("opt -fast");
@@ -498,53 +509,75 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("peepopt");
             run("pmuxtree");
             run("opt_clean");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_opt_clean2.v");
         }
 
         if (check_label("coarse")) {
             if(!nodsp){
                 switch (tech) {
-                    case GENESIS:{
+                    case GENESIS: {
 #ifdef DEV_BUILD
-                               run("stat");
+                        run("stat");
 #endif
-                               run("wreduce t:$mul");
-                               run("rs_dsp_macc");
-                               struct DspParams {
-                                   size_t a_maxwidth;
-                                   size_t b_maxwidth;
-                                   size_t a_minwidth;
-                                   size_t b_minwidth;
-                                   std::string type;
-                               };
+                        run("wreduce t:$mul");
+                        run("rs_dsp_macc");
+                        struct DspParams {
+                            size_t a_maxwidth;
+                            size_t b_maxwidth;
+                            size_t a_minwidth;
+                            size_t b_minwidth;
+                            std::string type;
+                        };
 
-                               const std::vector<DspParams> dsp_rules = {
-                                   {20, 18, 11, 10, "$__RS_MUL20X18"},
-                                   {10, 9, 4, 4, "$__RS_MUL10X9"},
-                               };
-                               for (const auto &rule : dsp_rules) {
-                                   run(stringf("techmap -map +/mul2dsp.v "
-                                                 "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                                 "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                                 "-D DSP_NAME=%s",
-                                                 rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
-                                     run("chtype -set $mul t:$__soft_mul");
-                                    }
-                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
-                               run("rs_dsp_simd");
-                               run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
-                               run("rs_dsp_io_regs");
-                                     break;
-                                 }
+                        const std::vector<DspParams> dsp_rules = {
+                            {20, 18, 11, 10, "$__RS_MUL20X18"},
+                            {10, 9, 4, 4, "$__RS_MUL10X9"},
+                        };
+                        for (const auto &rule : dsp_rules) {
+                            run(stringf("techmap -map +/mul2dsp.v "
+                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                        "-D DSP_NAME=%s",
+                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+
+                            if (cec)
+                                run("write_verilog -noattr -nohex after_dsp_map1.v");
+
+                            run("chtype -set $mul t:$__soft_mul");
+                        }
+                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map2.v");
+
+                        run("rs_dsp_simd");
+                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map3.v");
+
+                        run("rs_dsp_io_regs");
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map4.v");
+
+                        break;
+                    }
                     case GENERIC: {
-                                      break;
-                                  }
+                        break;
+                    }
                 }
             }
 
             run("alumacc");
 
+            if (cec)
+                run("write_verilog -noattr -nohex after_alumacc.v");
+
             if (!fast) {
-              run("opt");
+                run("opt");
             }
 
 #ifdef DEV_BUILD
@@ -558,11 +591,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
 
             run("opt_clean");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_opt_clean3.v");
         }
 
         if (!nobram){
             run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
             run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_bram_map.v");
         }
 
         if (check_label("map_gates")) {
@@ -571,19 +610,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                     run("stat");
 #endif
-                    switch (infer_carry){
+                    switch (infer_carry) {
                         case CarryMode::AUTO: {
                             run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
                             break;
-                            }
+                        }
                         case CarryMode::ALL: {
                             run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
                             break;
-                            }
+                        }
                         case CarryMode::NO: {
                             run("techmap");
                             break;
-                            }
+                        }
                     }
 #ifdef DEV_BUILD
                     run("stat");
@@ -597,15 +636,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 }    
             }
 
+            if (cec)
+                run("write_verilog -noattr -nohex after_carry_map.v");
+
             if (!fast) {
-              run("opt");
-              run("opt -fast -full");
+                run("opt");
+                run("opt -fast -full");
             }
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_opt-fast-full.v");
 
             run("memory_map");
 
             if (!fast) {
-              run("opt -full");
+                run("opt -full");
             }
         }
 
@@ -615,23 +660,24 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
 
         if (fast) {
-
             run("opt -fast");
-
         } else {
+            // Perform a small loop of successive "abc -dff" calls.  
+            // This simplify pass may have some big QoR impact on this list of designs:
+            // 	- wrapper_io_reg_max 
+            // 	- wrapper_io_reg_tc1 
+            // 	- wrapper_multi_enc_decx2x4
+            // 	- keymgr 
+            // 	- kmac 
+            // 	- alu4 
+            // 	- s38417
+            //
+            if (!nosimplify) {
+                simplify();
 
-           // Perform a small loop of successive "abc -dff" calls.  
-           // This simplify pass may have some big QoR impact on this list of designs:
-           // 	- wrapper_io_reg_max 
-           // 	- wrapper_io_reg_tc1 
-           // 	- wrapper_multi_enc_decx2x4
-           // 	- keymgr 
-           // 	- kmac 
-           // 	- alu4 
-           // 	- s38417
-           //
-           if (!nosimplify)
-               simplify();
+                if (cec)
+                    run("write_verilog -noattr -nohex after_simplify.v");
+            }
         }
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
@@ -644,6 +690,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
+
                 string techMapArgs = " -map +/techmap.v -map";
                 switch (tech) {
                     case GENESIS: {
@@ -651,18 +698,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("shregmap -minlen 8 -maxlen 20");
-                        if (sdffr){
+                        if (sdffr) {
                             run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
                                 " -cell $_SDFF_???_ 0"
                                );
-                        }else{  
+                        } else {
                             run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
                                );
-                        }         
+                        }
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dfflegalize.v");
+
 #ifdef DEV_BUILD
                         run("stat");
 #endif
@@ -675,6 +726,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     }    
                 }
                 run("techmap " + techMapArgs);
+
+                if (cec)
+                    run("write_verilog -noattr -nohex after_techmap_ff_map.v");
             }
             run("opt_expr -mux_undef");
             run("simplemap");
@@ -682,6 +736,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_merge");
             run("opt_dff -nodffe -nosdff");
             run("opt_clean");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_opt_clean4.v");
+
             run("opt -nodffe -nosdff");
         }
 
