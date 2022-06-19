@@ -123,6 +123,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
         log("        Disabled by default.\n");
         log("\n");
+        log("    -de_max_threads\n");
+        log("        Maximum number of threads in DE.\n");
+        log("        Supported values: 4 to 64.\n");
+        log("        By default '-1' (automatic)\n");
+        log("\n");
 #ifdef DEV_BUILD
         log("    -abc <script>\n");
         log("        Use a specific ABC script instead of the embedded one.\n");
@@ -189,6 +194,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
+    int de_max_threads;
 
     void clear_flags() override
     {
@@ -206,6 +212,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nodsp = false;
         nosimplify = false;
         de = false;
+        de_max_threads = -1;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
     }
@@ -289,6 +296,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 nosimplify = true;
                 continue;
             }
+            if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
+                de_max_threads = stoi(args[++argidx]);
+                continue;
+            }
 
             break;
         }
@@ -341,6 +352,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             infer_carry = CarryMode::NO;
         else if (carry_str != "")
             log_cmd_error("Invalid carry sub-mode specified: '%s'\n", carry_str.c_str());
+
+        if (de_max_threads < 4 && de_max_threads > 64) {
+            de_max_threads = -1;
+            log_cmd_error("Invalid max number of threads for DE is specified: '%i'\n", de_max_threads);
+        }
 
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
             VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
@@ -415,8 +431,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 abcCommands = std::regex_replace(abcCommands, std::regex("DEPTH"), effortStr);
                 abcCommands = std::regex_replace(abcCommands, std::regex("TMP_PATH"), 
                                                  get_shared_tmp_dirname());
+                abcCommands = std::regex_replace(abcCommands, std::regex("THREAD_NUMBER"), std::to_string(de_max_threads));
             }
             out << abcCommands;
+
             if (cec)
                 out << "write_eqn " + out_eqn_file + "; cec " + in_eqn_file + " " + out_eqn_file;
             out.close();
