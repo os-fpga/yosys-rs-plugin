@@ -353,7 +353,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (carry_str != "")
             log_cmd_error("Invalid carry sub-mode specified: '%s'\n", carry_str.c_str());
 
-        if (de_max_threads < 4 && de_max_threads > 64) {
+        if (de_max_threads < 2 && de_max_threads > 64) {
             de_max_threads = -1;
             log_cmd_error("Invalid max number of threads for DE is specified: '%i'\n", de_max_threads);
         }
