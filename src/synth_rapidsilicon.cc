@@ -481,7 +481,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_proc.v");
 
             run("flatten");
-            run("tribuf -logic");
+            //run("tribuf -logic");
             run("deminout");
             run("opt_expr");
             run("opt_clean");
