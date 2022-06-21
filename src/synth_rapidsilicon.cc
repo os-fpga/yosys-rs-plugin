@@ -425,7 +425,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
-        run("opt");
+        run("opt -nosdff");
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -445,7 +445,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void simplify() 
     {
-        run("opt -sat");
+        run("opt -sat -nosdff");
         for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
 
@@ -453,7 +453,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
         run("opt_ffinv");
-        run("opt -sat"); 
+        run("opt -sat -nosdff"); 
     }
 
     void script() override
@@ -501,9 +501,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_fsm.v");
 
             if (fast)
-                run("opt -fast");
+                run("opt -fast -nosdff");
             else
-                run("opt -sat");
+                run("opt -sat -nosdff");
 
             run("wreduce -keepdc");
             run("peepopt");
@@ -640,8 +640,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run("opt");
-                run("opt -fast -full");
+                run("opt -nosdff");
+                run("opt -fast -full -nosdff");
             }
 
             if (cec)
@@ -650,7 +650,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("memory_map");
 
             if (!fast) {
-                run("opt -full");
+                run("opt -full -nosdff");
             }
         }
 
@@ -660,7 +660,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
 
         if (fast) {
-            run("opt -fast");
+            run("opt -fast -nosdff");
         } else {
             // Perform a small loop of successive "abc -dff" calls.  
             // This simplify pass may have some big QoR impact on this list of designs:
