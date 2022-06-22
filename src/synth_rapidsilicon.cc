@@ -125,7 +125,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
         log("    -de_max_threads <value>\n");
         log("        Maximum number of threads in DE.\n");
-        log("        Supported values: 4 to 64.\n");
+        log("        Supported values: 2 to 64.\n");
         log("        By default '-1' (automatic)\n");
         log("\n");
 #ifdef DEV_BUILD
