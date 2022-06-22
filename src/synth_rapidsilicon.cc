@@ -123,7 +123,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
         log("        Disabled by default.\n");
         log("\n");
-        log("    -de_max_threads\n");
+        log("    -de_max_threads <value>\n");
         log("        Maximum number of threads in DE.\n");
         log("        Supported values: 4 to 64.\n");
         log("        By default '-1' (automatic)\n");
@@ -354,7 +354,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             log_cmd_error("Invalid carry sub-mode specified: '%s'\n", carry_str.c_str());
 
         if (de_max_threads < 2 && de_max_threads > 64) {
-            de_max_threads = -1;
             log_cmd_error("Invalid max number of threads for DE is specified: '%i'\n", de_max_threads);
         }
 
