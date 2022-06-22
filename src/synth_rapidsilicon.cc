@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 57
+#define VERSION_PATCH 58
 
 enum Strategy {
     AREA,
@@ -195,6 +195,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sdffr;
     bool nosimplify;
     int de_max_threads;
+    RTLIL::Design *_design;
 
     void clear_flags() override
     {
@@ -227,6 +228,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string effort_str;
         string carry_str;
         clear_flags();
+
+        _design = design;
 
         size_t argidx;
         for (argidx = 1; argidx < args.size(); argidx++) {
@@ -369,6 +372,82 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_pop();
     }
 
+    void step(string msg)
+    {
+        log("STEP : %s\n", msg.c_str());
+        getchar();
+    }
+
+    int getNumberOfInstances() {
+        return (_design->top_module()->cells_.size());
+    }
+
+    void run_opt_speed() {
+
+        run("opt_expr");
+        run("opt_merge -nomux");
+
+        int iteration = 1;
+
+        while (iteration) {
+
+            iteration++;
+
+            int nbInstBefore = getNumberOfInstances();
+
+            run("opt_muxtree");                                                                        
+            run("opt_reduce");
+
+            if (iteration % 2) {
+                run("opt_merge");
+            }
+
+            run("opt_share");
+            run("opt_dff");
+            run("opt_clean");
+            run("opt_expr");
+
+            int nbInstAfter = getNumberOfInstances();
+
+            if (nbInstAfter == nbInstBefore) {
+                break;
+            }
+        }
+
+        log("MAX OPT ITERATION = %d\n", iteration);
+    }
+
+    void run_opt() {
+
+        run("opt_expr");
+        run("opt_merge -nomux");
+
+        int iteration = 0;
+
+        while (1) {
+
+            iteration++;
+
+            int nbInstBefore = getNumberOfInstances();
+
+            run("opt_muxtree");                                                                        
+            run("opt_reduce");
+            run("opt_merge");
+            run("opt_share");
+            run("opt_dff");
+            run("opt_clean");
+            run("opt_expr");
+
+            int nbInstAfter = getNumberOfInstances();
+
+            if (nbInstAfter == nbInstBefore) {
+                break;
+            }
+        }
+
+        log("MAX OPT ITERATION = %d\n", iteration);
+    }
+
     void map_luts(EffortLevel effort_lvl) {
         static int index = 1;
         if (abc_script != "")
@@ -442,7 +521,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
-        run("opt");
+        run_opt();
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -473,6 +552,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("opt -sat"); 
     }
 
+    void transform(int bmuxmap)
+    {
+        if (bmuxmap) { // we can map the "$bmux" (otherwise they may be translated
+                       // during call to "memory" through "memory_bmux2rom" and we can
+                       // screw up the ROM inference: ex "wrapper_KeyExapantion").
+                       //
+            run("bmuxmap");
+        }
+        run("demuxmap");
+        run("clean_zerowidth");
+        _design->sort();
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -497,7 +589,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_proc.v");
 
+            transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
+
             run("flatten");
+
+            transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
+
             run("tribuf -logic");
             run("deminout");
             run("opt_expr");
@@ -524,12 +621,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             run("wreduce -keepdc");
             run("peepopt");
-            run("pmuxtree");
             run("opt_clean");
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt_clean2.v");
         }
+
+        transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
         if (check_label("coarse")) {
             if(!nodsp){
@@ -594,7 +692,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-                run("opt");
+                run_opt();
             }
 
 #ifdef DEV_BUILD
@@ -606,6 +704,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
             run("stat");
 #endif
+            run("muxpack");
 
             run("opt_clean");
 
@@ -620,6 +719,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_bram_map.v");
         }
+
+        run("pmuxtree");
+
+        run("muxpack");
+
+        run("memory_map");
 
         if (check_label("map_gates")) {
             switch (tech) {
@@ -657,18 +762,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run("opt");
+                run_opt();
                 run("opt -fast -full");
             }
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
-
-            run("memory_map");
-
-            if (!fast) {
-                run("opt -full");
-            }
         }
 
 #if 1
@@ -696,6 +795,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     run("write_verilog -noattr -nohex after_simplify.v");
             }
         }
+
+        transform(1 /* bmuxmap*/); // we can map $bmux now because
+                                   // "memory" has been called
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
