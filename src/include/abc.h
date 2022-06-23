@@ -11,7 +11,7 @@
 // Design Explorer template script. TARGET and DEPTH are the template arguments.
 const std::string de_template = 
     "write_eqn TMP_PATH/input.eqn;"
-    "&de -i TMP_PATH/input.eqn -o TMP_PATH/netlist.eqn -t TARGET -d DEPTH -p TMP_PATH;"
+    "&de -i TMP_PATH/input.eqn -o TMP_PATH/netlist.eqn -t TARGET -d DEPTH -p TMP_PATH -n THREAD_NUMBER;"
     "read_eqn TMP_PATH/netlist.eqn;";
 
 const std::string abc_base6_a21 =
