@@ -601,8 +601,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void script() override
     {
-        int early_enable_extract = 1; // early -> 1 (default), late -> 0
-
         if (check_label("begin") && tech != Technologies::GENERIC) {
             string readArgs;
             switch (tech) {
@@ -652,7 +650,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (fast)
                 run("opt -fast");
-            else if (clke_strategy == ClockEnableStrategy::EARLY)
+            else if (clke_strategy == ClockEnableStrategy::EARLY) {
                 run("opt -sat" + nosdff_str);
             } else {
                 run("opt -sat -nodffe" + nosdff_str);
