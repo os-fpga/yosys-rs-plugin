@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 59
+#define VERSION_PATCH 60
 
 enum Strategy {
     AREA,
@@ -59,6 +59,7 @@ enum Technologies {
     GENERIC,   
     GENESIS
 };
+
 enum CarryMode {
     AUTO,
     ALL,
@@ -68,6 +69,11 @@ enum CarryMode {
 enum Encoding {
     BINARY,
     ONEHOT
+};
+
+enum ClockEnableStrategy {
+    EARLY,
+    LATE
 };
 
 struct SynthRapidSiliconPass : public ScriptPass {
@@ -170,6 +176,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("                   each register at 1 representing one state.\n");
         log("        By default 'binary' is used, when 'goal' is area, otherwise 'onehot' is used.\n");
         log("\n");
+        log("    -clock_enable_strategy <strategy>\n");
+        log("        Run synthesis with specified extraction strategy for FFs with clock enable.\n");
+        log("        Supported values:\n");
+        log("        - early\n");
+        log("        - late\n");
+        log("        By default 'early' is used.\n");
+        log("\n");
         log("\n");
         log("The following commands are executed by this synthesis command:\n");
 #ifdef DEV_BUILD
@@ -196,6 +209,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nosimplify;
     int de_max_threads;
     RTLIL::Design *_design;
+    string nosdff_str;
+    ClockEnableStrategy clke_strategy;
 
     void clear_flags() override
     {
@@ -216,6 +231,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         de_max_threads = -1;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
+        nosdff_str = " -nosdff";
+        clke_strategy = ClockEnableStrategy::EARLY;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -227,6 +244,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string encoding_str;
         string effort_str;
         string carry_str;
+        string clke_strategy_str;
         clear_flags();
 
         _design = design;
@@ -281,6 +299,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-sdffr") {
                 sdffr = true;
+                nosdff_str = "";
                 continue;
             }
             if (args[argidx] == "-no_dsp") {
@@ -301,6 +320,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
                 de_max_threads = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-clock_enable_strategy" && argidx + 1 < args.size()) {
+                clke_strategy_str = args[++argidx];
                 continue;
             }
 
@@ -359,6 +382,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (de_max_threads < 2 && de_max_threads > 64) {
             log_cmd_error("Invalid max number of threads for DE is specified: '%i'\n", de_max_threads);
         }
+
+        if (clke_strategy_str == "early")
+            clke_strategy = ClockEnableStrategy::EARLY;
+        else if (clke_strategy_str == "late")
+            clke_strategy = ClockEnableStrategy::LATE;
+        else if (clke_strategy_str != "")
+            log_cmd_error("Invalid clock enable extraction strategy specified: '%s'\n", clke_strategy_str.c_str());
 
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
             VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
@@ -434,7 +464,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_reduce");
             run("opt_merge");
             run("opt_share");
-            run("opt_dff");
+            run("opt_dff -nodffe" + nosdff_str);
             run("opt_clean");
             run("opt_expr");
 
@@ -479,7 +509,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             } 
 
             if (fast) {
-               effortStr = "0"; // tell DE to not iterate
+                effortStr = "0"; // tell DE to not iterate
             }
 
             switch(goal) {
@@ -541,15 +571,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void simplify() 
     {
-        run("opt -sat");
+        // Do not extract DFFE before simplify : it may have been done earlier
+        //
+        run("opt -nodffe -sat" + nosdff_str);
+
         for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
+
             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
 
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
         run("opt_ffinv");
-        run("opt -sat"); 
+        run("opt -sat" + nosdff_str);
     }
 
     void transform(int bmuxmap)
@@ -616,8 +650,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (fast)
                 run("opt -fast");
-            else
-                run("opt -sat");
+            else if (clke_strategy == ClockEnableStrategy::EARLY) {
+                run("opt -sat" + nosdff_str);
+            } else {
+                run("opt -sat -nodffe" + nosdff_str);
+            }
 
             run("wreduce -keepdc");
             run("peepopt");
@@ -763,7 +800,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!fast) {
                 run_opt();
-                run("opt -fast -full");
+                run("opt -nodffe -fast -full" + nosdff_str);
             }
 
             if (cec)
