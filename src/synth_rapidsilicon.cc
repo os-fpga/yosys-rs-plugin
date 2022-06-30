@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 60
+#define VERSION_PATCH 61
 
 enum Strategy {
     AREA,
@@ -138,12 +138,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -abc <script>\n");
         log("        Use a specific ABC script instead of the embedded one.\n");
         log("\n");
+#endif
         log("    -cec\n");
         log("        Use internal equivalence checking (ABC based) during optimization\n");
         log("        and dump Verilog after key phases.\n");
         log("        Disabled by default.\n");
         log("\n");
-#endif
         log("    -carry <sub-mode>\n");
         log("        Infer Carry cells when possible.\n");
         log("        Supported values:\n");
@@ -152,10 +152,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - no       : Do not infer any carries.\n");
         log("        By default 'auto' mode is used.\n");
         log("\n");
+#ifdef DEV_BUILD
         log("    -sdffr\n");
         log("        Infer synchroneous set/reset DFFs when possible.\n");
         log("        By default synchroneous set/reset DFFs are not infered.\n");
         log("\n");
+#endif
         log("    -no_dsp\n");
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
@@ -183,11 +185,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - late\n");
         log("        By default 'early' is used.\n");
         log("\n");
-        log("\n");
-        log("The following commands are executed by this synthesis command:\n");
-#ifdef DEV_BUILD
-        help_script();
-#endif
         log("\n");
     }
 
@@ -288,20 +285,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 abc_script = args[++argidx];
                 continue;
             }
+#endif
             if (args[argidx] == "-cec") {
                 cec = true;
                 continue;
             }
-#endif
             if (args[argidx] == "-carry" && argidx + 1 < args.size()) {
                 carry_str = args[++argidx];
                 continue;
             }
+#ifdef DEV_BUILD
             if (args[argidx] == "-sdffr") {
                 sdffr = true;
                 nosdff_str = "";
                 continue;
             }
+#endif
             if (args[argidx] == "-no_dsp") {
                 nodsp = true;
                 continue;
