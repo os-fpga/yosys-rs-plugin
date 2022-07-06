@@ -411,42 +411,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return (_design->top_module()->cells_.size());
     }
 
-    void run_opt_speed() {
+    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter) {
 
-        run("opt_expr");
-        run("opt_merge -nomux");
+        string nodffe_str = "";
+        string sat_str = "";
 
-        int iteration = 1;
-
-        while (iteration) {
-
-            iteration++;
-
-            int nbInstBefore = getNumberOfInstances();
-
-            run("opt_muxtree");                                                                        
-            run("opt_reduce");
-
-            if (iteration % 2) {
-                run("opt_merge");
-            }
-
-            run("opt_share");
-            run("opt_dff");
-            run("opt_clean");
-            run("opt_expr");
-
-            int nbInstAfter = getNumberOfInstances();
-
-            if (nbInstAfter == nbInstBefore) {
-                break;
-            }
+        if (nodffe) {
+           nodffe_str = " -nodffe ";
         }
 
-        log("MAX OPT ITERATION = %d\n", iteration);
-    }
-
-    void run_opt() {
+        if (sat) {
+           sat_str = " -sat ";
+        }
 
         run("opt_expr");
         run("opt_merge -nomux");
@@ -462,8 +438,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_muxtree");                                                                        
             run("opt_reduce");
             run("opt_merge");
-            run("opt_share");
-            run("opt_dff -nodffe" + nosdff_str);
+            if (share) {
+               run("opt_share");
+            }
+            if (nosdff) {
+               run("opt_dff -nosdff " + nodffe_str + sat_str);
+            } else {
+               run("opt_dff " + nosdff_str + nodffe_str + sat_str);
+            }
             run("opt_clean");
             run("opt_expr");
 
@@ -472,7 +454,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (nbInstAfter == nbInstBefore) {
                 break;
             }
+
+            if (iteration == max_iter) {
+                break;
+            }
+
+            if ((nbInstAfter >= 80000) && (iteration >= 4)) {
+                break;
+            }
+
         }
+
+        _design->optimize();
+        _design->sort();
+        _design->check();
 
         log("MAX OPT ITERATION = %d\n", iteration);
     }
@@ -550,7 +545,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
-        run_opt();
+        run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -572,7 +567,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     {
         // Do not extract DFFE before simplify : it may have been done earlier
         //
-        run("opt -nodffe -sat" + nosdff_str);
+        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10);
 
         for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
 
@@ -582,7 +577,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
         run("opt_ffinv");
-        run("opt -sat" + nosdff_str);
+
+        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
     }
 
     void transform(int bmuxmap)
@@ -637,7 +633,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
 
             run("check");
-            run("opt -nodffe -nosdff");
+            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
 
             if (fsm_encoding == Encoding::BINARY)
                 run("fsm -encoding binary");
@@ -650,9 +646,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (fast)
                 run("opt -fast");
             else if (clke_strategy == ClockEnableStrategy::EARLY) {
-                run("opt -sat" + nosdff_str);
+                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
             } else {
-                run("opt -sat -nodffe" + nosdff_str);
+                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
             }
 
             run("wreduce -keepdc");
@@ -728,7 +724,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-                run_opt();
+                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
             }
 
 #ifdef DEV_BUILD
@@ -798,8 +794,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run_opt();
-                run("opt -nodffe -fast -full" + nosdff_str);
+                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+
+                run("opt_expr -full");
             }
 
             if (cec)
@@ -895,7 +892,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
-            run("opt -nodffe -nosdff");
+            run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
 
         if (check_label("map_luts_2")) {
