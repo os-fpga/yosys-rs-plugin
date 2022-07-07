@@ -12,6 +12,10 @@
 #include <fstream>
 #include <regex>
 
+#ifdef LICENSE_ON
+#include "License_manager.hpp"
+#endif
+
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
@@ -234,6 +238,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
     {
+#ifdef LICENSE_ON
+	License_Manager license(License_Manager::LicensedProductName::YOSYS_RS_PLUGIN);
+#endif
         string run_from; 
         string run_to;
         string tech_str;
