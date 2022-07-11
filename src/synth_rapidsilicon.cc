@@ -12,7 +12,7 @@
 #include <fstream>
 #include <regex>
 
-#ifdef LICENSE_ON
+#ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
 #endif
 
@@ -238,8 +238,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
     {
-#ifdef LICENSE_ON
-	License_Manager license(License_Manager::LicensedProductName::YOSYS_RS_PLUGIN);
+#ifdef PRODUCTION_BUILD
+        License_Manager license(License_Manager::LicensedProductName::YOSYS_RS_PLUGIN);
 #endif
         string run_from; 
         string run_to;
