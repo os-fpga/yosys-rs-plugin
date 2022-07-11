@@ -41,7 +41,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 62
+#define VERSION_PATCH 63
 
 enum Strategy {
     AREA,
@@ -170,6 +170,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default call simplify.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -keep_tribuf\n");
+        log("        By default translate TBUF into logic.\n");
+        log("        Specify this to keep TBUF primitives.\n");
+        log("\n");
         log("    -fsm_encoding <encoding>\n");
         log("        Supported values:\n");
         log("        - binary : compact encoding using minimum of registers to cover the N states\n");
@@ -204,6 +208,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
+    bool keep_tribuf;
     int de_max_threads;
     RTLIL::Design *_design;
     string nosdff_str;
@@ -224,6 +229,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nobram = false;
         nodsp = false;
         nosimplify = false;
+        keep_tribuf = false;
         de = false;
         de_max_threads = -1;
         infer_carry = CarryMode::AUTO;
@@ -315,6 +321,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-no_simplify") {
                 nosimplify = true;
+                continue;
+            }
+            if (args[argidx] == "-keep_tribuf") {
+                keep_tribuf = true;
                 continue;
             }
             if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
@@ -624,7 +634,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
-            run("tribuf -logic");
+            if (keep_tribuf)
+                run("tribuf -logic");
+            else
+                run("tribuf -logic -formal");
+
             run("deminout");
             run("opt_expr");
             run("opt_clean");
