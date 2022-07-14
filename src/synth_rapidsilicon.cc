@@ -12,6 +12,10 @@
 #include <fstream>
 #include <regex>
 
+#ifdef PRODUCTION_BUILD
+#include "License_manager.hpp"
+#endif
+
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
@@ -41,7 +45,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 63
+#define VERSION_PATCH 64
 
 enum Strategy {
     AREA,
@@ -240,6 +244,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
     {
+#ifdef PRODUCTION_BUILD
+        License_Manager license(License_Manager::LicensedProductName::YOSYS_RS_PLUGIN);
+#endif
         string run_from; 
         string run_to;
         string tech_str;
@@ -399,6 +406,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (clke_strategy_str != "")
             log_cmd_error("Invalid clock enable extraction strategy specified: '%s'\n", clke_strategy_str.c_str());
 
+        // For Jul 22 release required to enable DE.
+        //
+        if (!de) {
+            log_cmd_error("This version of synth_rs works only with DE enabled.\n"
+                    "Please provide '-de' option to enable DE.");
+        }
+
+
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
             VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
         log_push();
@@ -520,8 +535,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Strategy::AREA: {
                     if (de)
                         abcCommands = std::regex_replace(de_template, std::regex("TARGET"), "area");
+                    /* Disable static ABC script support for Jul 22 release.
+                     *
                     else
                         abcCommands = abc_base6_a21;
+                    */
                     break;
                 }
                 case Strategy::DELAY: {
