@@ -14,6 +14,8 @@ const std::string de_template =
     "&de -i TMP_PATH/input.eqn -o TMP_PATH/netlist.eqn -t TARGET -d DEPTH -p TMP_PATH -n THREAD_NUMBER;"
     "read_eqn TMP_PATH/netlist.eqn;";
 
+/* Disable static ABC script support for Jul 2022 release
+ *
 const std::string abc_base6_a21 =
     "&get -n -m; "
     "&dch ; &if -K 6 -a; &put; mfs2 -W 4 -M 500 -C 7000; &get -n -m; &save -a;"
@@ -50,5 +52,6 @@ const std::string abc_base6_a21 =
     "lutpack;"
     "&get -m -n ; &ps;"
     "&put;";
+*/
 
 #endif
