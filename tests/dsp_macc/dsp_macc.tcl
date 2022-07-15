@@ -6,12 +6,20 @@ proc check_equiv {top} {
 
     design -save preopt
     synth_rs -tech genesis -goal area -de -top ${top}
+    if {${use_cfg_params} == 1} {
+        synth_rs -tech genesis -goal area -de -top ${top} -use_dsp_cfg_params
+    } else {
+        stat
+        synth_rs -tech genesis -goal area -de -top ${top}
+    }
+
     design -stash postopt
 
     design -copy-from preopt  -as gold A:top
     design -copy-from postopt -as gate A:top
 
     techmap -wb -autoproc -map +/rapidsilicon/genesis/cells_sim.v
+    techmap -wb -autoproc -map +/rapidsilicon/genesis/dsp_sim.v
     yosys proc
     opt_expr
     opt_clean -purge
@@ -24,79 +32,49 @@ proc check_equiv {top} {
     return
 }
 
+# Test inference of 2 available DSP variants
+# * top - design name
+# * expected_cell_suffix - suffix of the cell that should be the result
+#           of the inference, eg. _MULT, _MACC_REGIN, MADD_REGIN_REGOUT
+proc test_dsp_design {top expected_cell_suffix} {
+    set TOP ${top}
+    # Infer DSP with configuration bits passed through ports
+    # We expect QL_DSP2 cells inferred
+    set USE_DSP_CFG_PARAMS 0
+    design -load read
+    hierarchy -top $TOP
+    check_equiv ${TOP} ${USE_DSP_CFG_PARAMS}
+    design -load postopt
+    yosys cd ${top}
+    select -assert-count 1 t:QL_DSP2${expected_cell_suffix}
+    select -assert-count 1 t:*
+
+    # Infer DSP with configuration bits passed through parameters
+    # We expect QL_DSP3 cells inferred
+    set USE_DSP_CFG_PARAMS 1
+    design -load read
+    hierarchy -top $TOP
+    check_equiv ${TOP} ${USE_DSP_CFG_PARAMS}
+    design -load postopt
+    yosys cd ${TOP}
+    select -assert-count 1 t:QL_DSP3${expected_cell_suffix}
+    select -assert-count 1 t:*
+
+    return
+}
+
 yosys -import
 plugin -i synth-rs
 yosys -import  ;# ingest plugin commands
 
 yosys read -sv dsp_macc.v
+design -save read
 
-hierarchy -check -top macc_simple
-yosys proc
-check_equiv macc_simple
-design -load postopt
-yosys cd macc_simple
-select -assert-count 1 t:RS_DSP2_MULTACC
-#select -assert-count 1 t:*
-
-design -reset
-
-yosys read -sv dsp_macc.v
-hierarchy -check -top macc_simple_clr
-check_equiv macc_simple_clr
-design -load postopt
-yosys cd macc_simple_clr
-select -assert-count 1 t:RS_DSP2_MULTACC
-#select -assert-count 1 t:*
-
-design -reset
-
-yosys read -sv dsp_macc.v
-hierarchy -top macc_simple_arst 
-check_equiv macc_simple_arst
-design -load postopt
-yosys cd macc_simple_arst
-select -assert-count 1 t:RS_DSP2_MULTACC
-#select -assert-count 1 t:*
-
-design -reset
-
-yosys read -sv dsp_macc.v
-hierarchy -check -top macc_simple_ena
-check_equiv macc_simple_ena
-design -load postopt
-yosys cd macc_simple_ena
-select -assert-count 1 t:RS_DSP2_MULTACC
-select -assert-count 1 t:*
-
-design -reset
-
-yosys read -sv dsp_macc.v
-hierarchy -check -top macc_simple_arst_clr_ena
-check_equiv macc_simple_arst_clr_ena
-design -load postopt
-yosys cd macc_simple_arst_clr_ena
-select -assert-count 1 t:RS_DSP2_MULTACC
-select -assert-count 1 t:*
-
-design -reset
-
-yosys read -sv dsp_macc.v
-hierarchy -check -top macc_simple_preacc
-check_equiv macc_simple_preacc
-design -load postopt
-yosys cd macc_simple_preacc
-select -assert-count 1 t:RS_DSP2_MULTADD
-#select -assert-count 1 t:*
-
-design -reset 
-
-yosys read -sv dsp_macc.v
-hierarchy -check -top macc_simple_preacc_clr
-check_equiv macc_simple_preacc_clr
-design -load postopt
-yosys cd macc_simple_preacc_clr
-select -assert-count 1 t:RS_DSP2_MULTADD
-#select -assert-count 1 t:*
-
-design -reset
+test_dsp_design "macc_simple"               "_MULTACC"
+test_dsp_design "macc_simple_clr"           "_MULTACC"
+test_dsp_design "macc_simple_arst"          "_MULTACC"
+test_dsp_design "macc_simple_ena"           "_MULTACC"
+test_dsp_design "macc_simple_arst_clr_ena"  "_MULTACC"
+test_dsp_design "macc_simple_preacc"        "_MULTADD"
+test_dsp_design "macc_simple_preacc_clr"    "_MULTADD"
 
