@@ -29,6 +29,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_DIR genesis
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
+#define DSP_SIM_LIB_FILE dsp_sim.v
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
@@ -642,7 +643,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             string readArgs;
             switch (tech) {
                 case Technologies::GENESIS: {
-                    readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE);
+                    readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) GET_FILE_PATH(GENESIS_DIR, DSP_SIM_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
