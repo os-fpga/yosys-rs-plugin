@@ -29,6 +29,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_DIR genesis
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
+#define DSP_SIM_LIB_FILE dsp_sim.v
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
@@ -45,7 +46,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 64
+#define VERSION_PATCH 65
 
 enum Strategy {
     AREA,
@@ -166,6 +167,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
         log("\n");
+#ifdef DEV_BUILD
+        log("    -use_dsp_cfg_params\n");
+        log("        By default use DSP blocks with configuration bits available at module ports.\n");
+        log("        Specifying this forces usage of DSP block with configuration bits available as module parameters\n");
+        log("\n");
+#endif
         log("    -no_bram\n");
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
@@ -217,6 +224,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
+    string use_dsp_cfg_params;
 
     void clear_flags() override
     {
@@ -240,6 +248,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         sdffr = false;
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
+        use_dsp_cfg_params = "";
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -318,6 +327,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 nodsp = true;
                 continue;
             }
+#ifdef DEV_BUILD
+            if (args[argidx] == "-use_dsp_cfg_params") {
+                use_dsp_cfg_params = " -use_dsp_cfg_params";
+                continue;
+            }
+#endif
             if (args[argidx] == "-no_bram") {
                 nobram = true;
                 continue;
@@ -628,7 +643,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             string readArgs;
             switch (tech) {
                 case Technologies::GENESIS: {
-                    readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE);
+                    readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) GET_FILE_PATH(GENESIS_DIR, DSP_SIM_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
@@ -701,7 +716,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("wreduce t:$mul");
-                        run("rs_dsp_macc");
+                        run("rs_dsp_macc" + use_dsp_cfg_params);
                         struct DspParams {
                             size_t a_maxwidth;
                             size_t b_maxwidth;
@@ -726,8 +741,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                             run("chtype -set $mul t:$__soft_mul");
                         }
-                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE));
-
+                        if (use_dsp_cfg_params.empty())
+                            run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
+                                    " -D USE_DSP_CFG_PARAMS=0");
+                        else
+                            run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
+                                    " -D USE_DSP_CFG_PARAMS=1");
+                            
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map2.v");
 

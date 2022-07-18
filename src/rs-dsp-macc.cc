@@ -12,7 +12,9 @@ PRIVATE_NAMESPACE_BEGIN
 
 // ============================================================================
 
-void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
+bool use_dsp_cfg_params;
+
+static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
 {
     auto &st = pm.st_rs_dsp_macc;
 
@@ -82,16 +84,21 @@ void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     size_t tgt_b_width;
     size_t tgt_z_width;
 
+    string cell_base_name = "dsp_t1";
+    string cell_size_name = "";
+    string cell_cfg_name = "";
+    string cell_full_name = "";
+
     if (min_width <= 2 && max_width <= 2 && z_width <= 4) {
         // Too narrow
         return;
     } else if (min_width <= 9 && max_width <= 10 && z_width <= 19) {
-        type = RTLIL::escape_id("dsp_t1_10x9x32");
+        cell_size_name = "_10x9x32";
         tgt_a_width = 10;
         tgt_b_width = 9;
         tgt_z_width = 19;
     } else if (min_width <= 18 && max_width <= 20 && z_width <= 38) {
-        type = RTLIL::escape_id("dsp_t1_20x18x64");
+        cell_size_name = "_20x18x64";
         tgt_a_width = 20;
         tgt_b_width = 18;
         tgt_z_width = 38;
@@ -100,6 +107,14 @@ void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
         return;
     }
 
+    if (use_dsp_cfg_params)
+        cell_cfg_name = "_cfg_params";
+    else
+        cell_cfg_name = "_cfg_ports";
+
+    cell_full_name = cell_base_name + cell_size_name + cell_cfg_name;
+
+    type = RTLIL::escape_id(cell_full_name);
     log("Inferring MACC %zux%zu->%zu as %s from:\n", a_width, b_width, z_width, RTLIL::unescape_id(type).c_str());
 
     for (auto cell : {st.mul, st.add, st.mux, st.ff}) {
@@ -203,18 +218,25 @@ void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     cell->setPort(RTLIL::escape_id("unsigned_a_i"), RTLIL::SigSpec(a_signed ? RTLIL::S0 : RTLIL::S1));
     cell->setPort(RTLIL::escape_id("unsigned_b_i"), RTLIL::SigSpec(b_signed ? RTLIL::S0 : RTLIL::S1));
 
-    // Connect config ports
-    cell->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
-    cell->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
-    cell->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
-    cell->setPort(RTLIL::escape_id("register_inputs_i"), RTLIL::SigSpec(RTLIL::S0));
+    // Connect config bits
+    if (use_dsp_cfg_params) {
+        cell->setParam(RTLIL::escape_id("SATURATE_ENABLE"), RTLIL::Const(RTLIL::S0));
+        cell->setParam(RTLIL::escape_id("SHIFT_RIGHT"), RTLIL::Const(RTLIL::S0, 6));
+        cell->setParam(RTLIL::escape_id("ROUND"), RTLIL::Const(RTLIL::S0));
+        cell->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
+        // 3 - output post acc; 1 - output pre acc
+        cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
+    } else {
+        cell->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
+        cell->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
+        cell->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
+        cell->setPort(RTLIL::escape_id("register_inputs_i"), RTLIL::SigSpec(RTLIL::S0));
+        // 3 - output post acc; 1 - output pre acc
+        cell->setPort(RTLIL::escape_id("output_select_i"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
+    }
 
     bool subtract = (st.add->type == RTLIL::escape_id("$sub"));
     cell->setPort(RTLIL::escape_id("subtract_i"), RTLIL::SigSpec(subtract ? RTLIL::S1 : RTLIL::S0));
-
-    // 3 - output post acc
-    // 1 - output pre acc
-    cell->setPort(RTLIL::escape_id("output_select_i"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
 
     // Mark the cells for removal
     pm.autoremove(st.mul);
@@ -234,7 +256,13 @@ struct RSDspMacc : public Pass {
         log("\n");
         log("    rs_dsp_macc [options] [selection]\n");
         log("\n");
+        log("    -use_dsp_cfg_params\n");
+        log("        By default use DSP blocks with configuration bits available at module ports.\n");
+        log("        Specifying this forces usage of DSP block with configuration bits available as module parameters\n");
+        log("\n");
     }
+
+    void clear_flags() override { use_dsp_cfg_params = false; }
 
     void execute(std::vector<std::string> a_Args, RTLIL::Design *a_Design) override
     {
@@ -242,6 +270,11 @@ struct RSDspMacc : public Pass {
 
         size_t argidx;
         for (argidx = 1; argidx < a_Args.size(); argidx++) {
+            if (a_Args[argidx] == "-use_dsp_cfg_params") {
+                use_dsp_cfg_params = true;
+                continue;
+            }
+
             break;
         }
         extra_args(a_Args, argidx, a_Design);
