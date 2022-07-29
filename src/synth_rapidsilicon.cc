@@ -46,7 +46,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 65
+#define VERSION_PATCH 66
 
 enum Strategy {
     AREA,
@@ -580,8 +580,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             out << abcCommands;
 
-            if (cec)
-                out << "write_eqn " + out_eqn_file + "; cec " + in_eqn_file + " " + out_eqn_file;
+            if (cec) {
+                out << "write_eqn " + out_eqn_file + ";";
+		// cec command is not called, so as not to impact on runtime.
+	        // out << "cec " + in_eqn_file + " " + out_eqn_file;
+            }
             out.close();
 
             run("abc -script " + tmp_file);
