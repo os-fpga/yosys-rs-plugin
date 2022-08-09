@@ -18,6 +18,8 @@ module sram1024x18 (
 	wdata_b,
 	rdata_b
 );
+	parameter [18431:0] INIT_s_i = 18432'h0;
+
 	(* clkbuf_sink *)
 	input wire clk_a;
 	input wire cen_a;
@@ -45,6 +47,15 @@ module sram1024x18 (
 	reg [17:0] lwdata_b;
 	reg [17:0] lwmsk_a;
 	reg [17:0] lwmsk_b;
+
+	initial begin
+		integer k = 0;
+		integer i;
+		for(i = 0; i < 1024; i = i + 1) begin
+			ram[i] = INIT_s_i[i*18+:18];
+		end
+	end
+
 	always @(posedge clk_a) begin
 		laddr_a <= addr_a;
 		lwdata_a <= wdata_a;
