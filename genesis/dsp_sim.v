@@ -982,8 +982,11 @@ module dsp_t1_sim_cfg_ports # (
 // FIXME: The version of Icarus Verilog from Conda seems not to recognize the
 // $error macro. Disable this sanity check for now because of that.
 `ifndef __ICARUS__
-    if (NBITS_ACC < NBITS_A + NBITS_B)
-        $error("NBITS_ACC must be > NBITS_A + NBITS_B");
+    if (NBITS_ACC < NBITS_A + NBITS_B) begin
+        initial begin
+            $error("NBITS_ACC must be > NBITS_A + NBITS_B");
+        end
+    end
 `endif
 
     // Input registers
@@ -2212,8 +2215,11 @@ module dsp_t1_sim_cfg_params # (
 // FIXME: The version of Icarus Verilog from Conda seems not to recognize the
 // $error macro. Disable this sanity check for now because of that.
 `ifndef __ICARUS__
-    if (NBITS_ACC < NBITS_A + NBITS_B)
-        $error("NBITS_ACC must be > NBITS_A + NBITS_B");
+    if (NBITS_ACC < NBITS_A + NBITS_B) begin
+        initial begin
+            $error("NBITS_ACC must be > NBITS_A + NBITS_B");
+        end
+    end
 `endif
 
     // Input registers
