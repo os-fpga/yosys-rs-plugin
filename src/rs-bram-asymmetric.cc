@@ -169,7 +169,6 @@ void test_rs_bram_asymmetric_wider_read(rs_bram_asymmetric_wider_read_pm &pm)
 
 void test_rs_bram_asymmetric_wider_write(rs_bram_asymmetric_wider_write_pm &pm)
 {
-std::cout << "sa chi kanchvum vonc es haskanum em " << std::endl;
     auto mem = pm.st_rs_bram_asymmetric_wider_write.mem;
     auto mem_wr_addr = pm.st_rs_bram_asymmetric_wider_write.mem_wr_addr;
     auto mem_wr_data = pm.st_rs_bram_asymmetric_wider_write.mem_wr_data;
@@ -379,13 +378,12 @@ struct RSBramAsymmetric : public Pass {
 
         int found_cells;
         for (auto module : a_Design->selected_modules()) {
-            std::cout << "SELECTED MODULES HERE ARE" << std::endl;
             found_cells = rs_bram_asymmetric_wider_write_pm(module, module->selected_cells())
                             .run_rs_bram_asymmetric_wider_write(test_rs_bram_asymmetric_wider_write);
-            log("found %d cells matching for wider write port\n", found_cells);
+            log_debug("found %d cells matching for wider write port\n", found_cells);
             found_cells = rs_bram_asymmetric_wider_read_pm(module, module->selected_cells())
                             .run_rs_bram_asymmetric_wider_read(test_rs_bram_asymmetric_wider_read);
-            log("found %d cells matching for wider read port\n", found_cells);
+            log_debug("found %d cells matching for wider read port\n", found_cells);
         }
     }
 } RSBramAsymmetric;
