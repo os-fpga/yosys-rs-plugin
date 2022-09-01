@@ -410,7 +410,9 @@ module TDP36K (
 
     parameter [36863:0] INIT_i = 36864'h0;
 
+
     input wire RESET_ni;
+
     input wire WEN_A1_i;
     input wire WEN_B1_i;
     input wire REN_A1_i;
