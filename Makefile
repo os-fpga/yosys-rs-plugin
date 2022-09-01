@@ -28,6 +28,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/arith_map.v \
 				  $(GENESIS)/all_arith_map.v \
 				  $(GENESIS)/brams_map.v \
+				  $(GENESIS)/brams_final_map.v \
 				  $(GENESIS)/brams.txt \
 				  $(GENESIS)/TDP18K_FIFO.v \
 				  $(GENESIS)/sram1024x18.v \
@@ -38,11 +39,14 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-dsp-macc.cc \
 		  src/rs-dsp-simd.cc \
 		  src/synth_rapidsilicon.cc \
-          src/rs-dsp-io-regs.cc
+          src/rs-dsp-io-regs.cc \
+		  src/rs-bram-split.cc \
+		  src/rs-bram-asymmetric.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
-	   pmgen/rs-dsp-macc.h
-
+	   pmgen/rs-dsp-macc.h \
+	   pmgen/rs-bram-asymmetric-wider-write.h \
+	   pmgen/rs-bram-asymmetric-wider-read.h
 pmgen:
 	mkdir -p pmgen
 
@@ -51,6 +55,12 @@ pmgen/rs-dsp-pm.h: pmgen.py rs_dsp.pmg | pmgen
 
 pmgen/rs-dsp-macc.h: pmgen.py rs-dsp-macc.pmg | pmgen
 	python3 pmgen.py -o $@ -p rs_dsp_macc rs-dsp-macc.pmg
+
+pmgen/rs-bram-asymmetric-wider-write.h: pmgen.py rs-bram-asymmetric-wider-write.pmg | pmgen
+	python3 pmgen.py -o $@ -p rs_bram_asymmetric_wider_write rs-bram-asymmetric-wider-write.pmg
+
+pmgen/rs-bram-asymmetric-wider-read.h: pmgen.py rs-bram-asymmetric-wider-read.pmg | pmgen
+	python3 pmgen.py -o $@ -p rs_bram_asymmetric_wider_read rs-bram-asymmetric-wider-read.pmg
 
 pmgen.py:
 	wget -nc -O $@ https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py
