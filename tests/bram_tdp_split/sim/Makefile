@@ -1,10 +1,5 @@
-# Copyright (C) 2019-2022 The SymbiFlow Authors
+# Copyright (C) 2022 RapidSilicon
 #
-# Use of this source code is governed by a ISC-style
-# license that can be found in the LICENSE file or at
-# https://opensource.org/licenses/ISC
-#
-# SPDX-License-Identifier: ISC
 
 TESTBENCH = bram_tdp_split_tb.v
 POST_SYNTH = bram_tdp_split_2x18x1024_post_synth bram_tdp_split_2x16x1024_post_synth bram_tdp_split_2x9x2048_post_synth bram_tdp_split_2x8x2048_post_synth bram_tdp_split_2x4x4096_post_synth bram_tdp_split_2x2x8192_post_synth bram_tdp_split_2x1x16384_post_synth

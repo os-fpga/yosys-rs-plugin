@@ -1,10 +1,5 @@
-// Copyright (C) 2019-2022 The SymbiFlow Authors
+// Copyright (C) 2022 RapidSilicon
 //
-// Use of this source code is governed by a ISC-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/ISC
-//
-// SPDX-License-Identifier: ISC
 
 `timescale 1ns/1ps
 
