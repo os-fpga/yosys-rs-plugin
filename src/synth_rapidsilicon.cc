@@ -37,6 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
 #define BRAM_MAP_FILE brams_map.v
+#define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -800,8 +801,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!nobram){
+            run("rs_bram_asymmetric");
             run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
-            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+            run("rs_bram_split");
+            run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
 
             if (cec)
                 run("write_verilog -noattr -nohex after_bram_map.v");

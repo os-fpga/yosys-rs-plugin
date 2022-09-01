@@ -1,6 +1,5 @@
 // Copyright (C) 2022 RapidSilicon
 //
-
 `timescale 1ns/1ps
 
 `define STRINGIFY(x) `"x`"
@@ -11,11 +10,11 @@ module TB;
 
 	reg clk;
 	reg rce;
-	reg [`ADDR_WIDTH-1:0] ra;
-	wire [`DATA_WIDTH-1:0] rq;
+	reg [`READ_ADDR_WIDTH-1:0] ra;
+	wire [`READ_DATA_WIDTH-1:0] rq;
 	reg wce;
-	reg [`ADDR_WIDTH-1:0] wa;
-	reg [`DATA_WIDTH-1:0] wd;
+	reg [`WRITE_ADDR_WIDTH-1:0] wa;
+	reg [`WRITE_DATA_WIDTH-1:0] wd;
 
 	initial clk = 0;
 	initial ra = 0;
@@ -31,10 +30,19 @@ module TB;
 	reg done;
 	initial done = 1'b0;
 
-	reg [`DATA_WIDTH-1:0] expected;
+	reg [`READ_DATA_WIDTH-1:0] expected;
 
 	always @(posedge clk) begin
-		expected <= (a | (a << 20) | 20'h55000) & {`DATA_WIDTH{1'b1}};
+		case (`READ_DATA_WIDTH / `WRITE_DATA_WIDTH)
+			1: expected <= (a | (a << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}};
+			2: expected <= ((((2*a+1) | ((2*a+1) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}}) << `WRITE_DATA_WIDTH) |
+					(((2*a) | ((2*a) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}});
+			4: expected <= (((4*a) | ((4*a) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}}) |
+				      ((((4*a+1) | ((4*a+1) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}}) << `WRITE_DATA_WIDTH) |
+				      ((((4*a+2) | ((4*a+2) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}}) << (2 * `WRITE_DATA_WIDTH)) |
+				      ((((4*a+3) | ((4*a+3) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}}) << (3 * `WRITE_DATA_WIDTH));
+			default: expected <= ((a) | ((a) << 20) | 20'h55000) & {`WRITE_DATA_WIDTH{1'b1}};
+		endcase
 	end
 
 	wire error = ((a != 0) && read_test) ? rq !== expected : 0;
@@ -51,7 +59,7 @@ module TB;
 
 	initial #(1) begin
 		// Write data
-		for (a = 0; a < (1<<`ADDR_WIDTH); a = a + ADDR_INCR) begin
+		for (a = 0; a < (1<<`WRITE_ADDR_WIDTH); a = a + ADDR_INCR) begin
 			@(negedge clk) begin
 				wa = a;
 				wd = a | (a << 20) | 20'h55000;
@@ -63,7 +71,7 @@ module TB;
 		end
 		// Read data
 		read_test = 1;
-		for (a = 0; a < (1<<`ADDR_WIDTH); a = a + ADDR_INCR) begin
+		for (a = 0; a < (1<<`READ_ADDR_WIDTH); a = a + ADDR_INCR) begin
 			@(negedge clk) begin
 				ra = a;
 				rce = 1;
@@ -87,8 +95,8 @@ module TB;
 	end
 
 	case (`STRINGIFY(`TOP))
-		"BRAM_SDP_32x512": begin
-			BRAM_SDP_32x512 #() bram (
+		"spram_16x2048_32x1024": begin
+			spram_16x2048_32x1024 #() simple (
 				.clk(clk),
 				.rce(rce),
 				.ra(ra),
@@ -98,8 +106,8 @@ module TB;
 				.wd(wd)
 			);
 		end
-		"BRAM_SDP_16x1024": begin
-			BRAM_SDP_16x1024 #() bram (
+		"spram_8x4096_16x2048": begin
+			spram_8x4096_16x2048 #() simple (
 				.clk(clk),
 				.rce(rce),
 				.ra(ra),
@@ -109,8 +117,8 @@ module TB;
 				.wd(wd)
 			);
 		end
-		"BRAM_SDP_8x2048": begin
-			BRAM_SDP_8x2048 #() bram (
+		"spram_8x2048_16x1024": begin
+			spram_8x2048_16x1024 #() simple (
 				.clk(clk),
 				.rce(rce),
 				.ra(ra),
@@ -120,8 +128,8 @@ module TB;
 				.wd(wd)
 			);
 		end
-		"BRAM_SDP_4x4096": begin
-			BRAM_SDP_4x4096 #() bram (
+		"spram_8x4096_32x1024": begin
+			spram_8x4096_32x1024 #() simple (
 				.clk(clk),
 				.rce(rce),
 				.ra(ra),
