@@ -8,7 +8,11 @@ TESTS = dffs\
 		dsp_mult\
 		dsp_simd\
 		bram_tdp\
-		bram_sdp
+		bram_sdp\
+		bram_sdp_split\
+		bram_tdp_split
+		#bram_asymmetric_wider_read\
+		#bram_asymmetric_wider_write
 
 VALGRIND_TESTS = valgrind/dffs\
 				 valgrind/latches\
@@ -18,7 +22,11 @@ VALGRIND_TESTS = valgrind/dffs\
 				 valgrind/dsp_mult\
 				 valgrind/dsp_simd\
 				 valgrind/bram_tdp\
-				 valgrind/bram_sdp
+				 valgrind/bram_sdp\
+				 valgrind/bram_sdp_split\
+				 valgrind/bram_tdp_split\
+				 #valgrind/bram_asymmetric_wider_read\
+				 #valgrind/bram_asymmetric_wider_write
 
 OPTION_1 = "--tool=memcheck"
 OPTION_2 = "--log-file=valgrind.log"
