@@ -33,7 +33,6 @@ PRIVATE_NAMESPACE_BEGIN
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
-#define DSP_CHECK_MAXWIDTH mul2dsp_check_MAXWIDTH.v
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
