@@ -648,6 +648,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             size_t b_minwidth;
             std::string type;
         };
+        /* 
+            We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on smallest DSP to biggest one. 
+            The idea is that if there is a perfect fit we want to assign the smallest DSP to the RTL operator.
+        */
         const std::vector<DspParams> dsp_rules_loop1 = {
             {10, 9, 4, 4, "$__RS_MUL10X9"},
             {20, 18, 11, 10, "$__RS_MUL20X18"},
@@ -665,6 +669,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             run("chtype -set $mul t:$__soft_mul");
         }
+        /* 
+            In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
+            The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
+        */
         const std::vector<DspParams> dsp_rules_loop2 = {
             {20, 18, 11, 10, "$__RS_MUL20X18"},
             {10, 9, 4, 4, "$__RS_MUL10X9"},
@@ -765,7 +773,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("rs_dsp_macc" + use_dsp_cfg_params);
 
                         processDsp(cec);
-                        
+
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
                                     " -D USE_DSP_CFG_PARAMS=0");
