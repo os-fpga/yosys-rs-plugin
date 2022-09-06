@@ -135,6 +135,9 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     // Add the DSP cell
     RTLIL::Cell *cell = pm.module->addCell(RTLIL::escape_id(name), type);
 
+    // Set attributes
+    cell->set_bool_attribute(RTLIL::escape_id("is_inferred"), true);
+
     // Get input/output data signals
     RTLIL::SigSpec sig_a;
     RTLIL::SigSpec sig_b;
