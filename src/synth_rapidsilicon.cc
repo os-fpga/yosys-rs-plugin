@@ -641,6 +641,57 @@ struct SynthRapidSiliconPass : public ScriptPass {
         _design->sort();
     }
 
+    void processDsp(bool cec){
+        struct DspParams {
+            size_t a_maxwidth;
+            size_t b_maxwidth;
+            size_t a_minwidth;
+            size_t b_minwidth;
+            std::string type;
+        };
+        /* 
+            We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on smallest DSP to biggest one. 
+            The idea is that if there is a perfect fit we want to assign the smallest DSP to the RTL operator.
+        */
+        const std::vector<DspParams> dsp_rules_loop1 = {
+            {10, 9, 4, 4, "$__RS_MUL10X9"},
+            {20, 18, 11, 10, "$__RS_MUL20X18"},
+        };
+        for (const auto &rule : dsp_rules_loop1) {
+            run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
+                        " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                        "-D DSP_NAME=%s",
+                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+            run("stat");
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_dsp_map1_" + std::to_string(rule.a_maxwidth) + ".v");
+
+            run("chtype -set $mul t:$__soft_mul");
+        }
+        /* 
+            In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
+            The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
+        */
+        const std::vector<DspParams> dsp_rules_loop2 = {
+            {20, 18, 11, 10, "$__RS_MUL20X18"},
+            {10, 9, 4, 4, "$__RS_MUL10X9"},
+        };
+        for (const auto &rule : dsp_rules_loop2) {
+            run(stringf("techmap -map +/mul2dsp.v "
+                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                        "-D DSP_NAME=%s",
+                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+
+            if (cec)
+                run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
+
+            run("chtype -set $mul t:$__soft_mul");
+        }
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -721,30 +772,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         run("wreduce t:$mul");
                         run("rs_dsp_macc" + use_dsp_cfg_params);
-                        struct DspParams {
-                            size_t a_maxwidth;
-                            size_t b_maxwidth;
-                            size_t a_minwidth;
-                            size_t b_minwidth;
-                            std::string type;
-                        };
 
-                        const std::vector<DspParams> dsp_rules = {
-                            {20, 18, 11, 10, "$__RS_MUL20X18"},
-                            {10, 9, 4, 4, "$__RS_MUL10X9"},
-                        };
-                        for (const auto &rule : dsp_rules) {
-                            run(stringf("techmap -map +/mul2dsp.v "
-                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                        "-D DSP_NAME=%s",
-                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                        processDsp(cec);
 
-                            if (cec)
-                                run("write_verilog -noattr -nohex after_dsp_map1.v");
-
-                            run("chtype -set $mul t:$__soft_mul");
-                        }
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
                                     " -D USE_DSP_CFG_PARAMS=0");
@@ -753,18 +783,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                     " -D USE_DSP_CFG_PARAMS=1");
                             
                         if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map2.v");
+                            run("write_verilog -noattr -nohex after_dsp_map3.v");
 
                         run("rs_dsp_simd");
                         run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
 
                         if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map3.v");
+                            run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs_dsp_io_regs");
 
                         if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map4.v");
+                            run("write_verilog -noattr -nohex after_dsp_map5.v");
 
                         break;
                     }
@@ -881,6 +911,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             // 	- s38417
             //
             if (!nosimplify) {
+                if (cec)
+                    run("write_verilog -noattr -nohex before_simplify.v");
+
                 simplify();
 
                 if (cec)
