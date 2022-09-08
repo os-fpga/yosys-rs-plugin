@@ -1058,7 +1058,9 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
     wire PORT_B2_WEN = H1EN[0];
     wire [CFG_ENABLE_H-1:0] PORT_B2_BE = {H1EN[1],H1EN[0]};
 
-    TDP36K bram_2x18k (
+    TDP36K #(
+        .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
+    )bram_2x18k(
         .WDATA_A1_i(PORT_A1_WDATA),
         .RDATA_A1_o(PORT_A1_RDATA),
         .ADDR_A1_i(PORT_A1_ADDR),
@@ -1280,7 +1282,9 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 	wire PORT_B2_WEN = D1EN[0];
 	wire [CFG_ENABLE_D-1:0] PORT_B2_BE = {D1EN[1],D1EN[0]};
 
-	TDP36K  bram_2x18k (
+	TDP36K #(
+        .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
+    )bram_2x18k(
 		.WDATA_A1_i(PORT_A1_WDATA),
 		.RDATA_A1_o(PORT_A1_RDATA),
 		.ADDR_A1_i(PORT_A1_ADDR),
@@ -1464,7 +1468,9 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
     assign FLUSH1 = 1'b0;
     assign FLUSH2 = 1'b0;
 
-    TDP36K bram_asymmetric (
+    TDP36K #(
+        .INIT_i(INIT[0*36864+:36864])
+    )bram_asymmetric(
         .RESET_ni(1'b1),
         .WDATA_A1_i(18'h3FFFF),
         .WDATA_A2_i(18'h3FFFF),
