@@ -1092,7 +1092,9 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
         .BE_B2_i(PORT_B2_BE),
 
         .FLUSH1_i(FLUSH1),
-        .FLUSH2_i(FLUSH2)
+        .FLUSH2_i(FLUSH2),
+
+        .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
     );
 endmodule
 
@@ -1314,7 +1316,9 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		.BE_B2_i(PORT_B2_BE),
 
 		.FLUSH1_i(FLUSH1),
-		.FLUSH2_i(FLUSH2)
+		.FLUSH2_i(FLUSH2),
+
+        .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
 	);
 endmodule
 
@@ -1497,6 +1501,8 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
         .BE_B2_i(WR_EN[3:2]),
 
         .FLUSH1_i(FLUSH1),
-        .FLUSH2_i(FLUSH2)
+        .FLUSH2_i(FLUSH2),
+
+        .INIT_i(INIT[0*36864+:36864])
     );
 endmodule
