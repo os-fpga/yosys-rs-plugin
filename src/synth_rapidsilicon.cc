@@ -47,7 +47,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 73
+#define VERSION_PATCH 74
 
 enum Strategy {
     AREA,
@@ -544,7 +544,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             } 
 
             if (fast) {
-                effortStr = "0"; // tell DE to not iterate
+                //effortStr = "0"; // tell DE to not iterate
+                effortStr = "3"; // iterate a couple of times in fast mode
             }
 
             switch(goal) {
@@ -592,7 +593,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
-        run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+
+        if (!fast)
+            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -898,7 +901,27 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
 
         if (fast) {
-            run("opt -fast");
+            // commenting : 
+            //run("opt -fast");
+#if 1
+            // control loop in fast mode because "opt -fast" can still iterate a lot
+            //
+            for (int i = 0; i < 2; i++) { // 2 iterations seems a good trade-off
+
+                int nbInstBefore = getNumberOfInstances();
+
+                run("opt_expr");
+                run("opt_merge");
+                run("opt_dff");
+                run("opt_clean");
+
+                int nbInstAfter = getNumberOfInstances();
+
+                if (nbInstAfter == nbInstBefore) { // early break if apparently no change
+                    break;
+                }
+            }
+#endif
         } else {
             // Perform a small loop of successive "abc -dff" calls.  
             // This simplify pass may have some big QoR impact on this list of designs:
@@ -984,7 +1007,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
-            run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
+            if (!fast)
+                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
 
         if (check_label("map_luts_2")) {
