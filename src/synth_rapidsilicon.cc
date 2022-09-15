@@ -714,12 +714,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 log_warning("Forcing to use BRAMs.\n");
                 mapBrams();
                 if (areMemCellsLeft()) {
-                    log("\n"); // Skip line to make the warning more focused.
+                    log("\n"); // Skip line to make the error more focused.
                     log_error("Failed to map RAM on technology specific BRAM.\n");
                 }
             }
             else {
-                log("\n"); // Skip line to make the warning more focused.
+                log("\n"); // Skip line to make the error more focused.
                 log_error("Failed to map RAM on technology specific BRAM.\n");
             }
         }
