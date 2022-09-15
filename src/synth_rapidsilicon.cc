@@ -7,6 +7,7 @@
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
 #include "kernel/yosys.h"
+#include "kernel/mem.h"
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
@@ -47,7 +48,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 74
+#define VERSION_PATCH 75
 
 enum Strategy {
     AREA,
@@ -695,6 +696,44 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
+    void mapBrams() {
+        run("rs_bram_asymmetric");
+        run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+        run("rs_bram_split");
+        run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+        run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
+
+        if (cec)
+            run("write_verilog -noattr -nohex after_bram_map.v");
+    }
+
+    void postProcessBrams() {
+        if (areMemCellsLeft()) {
+            if (nobram) {
+                log("\n"); // Skip line to make the warning more focused.
+                log_warning("Forcing to use BRAMs.\n");
+                mapBrams();
+                if (areMemCellsLeft()) {
+                    log("\n"); // Skip line to make the error more focused.
+                    log_error("Failed to map RAM on technology specific BRAM.\n");
+                }
+            }
+            else {
+                log("\n"); // Skip line to make the error more focused.
+                log_error("Failed to map RAM on technology specific BRAM.\n");
+            }
+        }
+    }
+
+    bool areMemCellsLeft() {
+        for (auto module : _design->selected_modules()) {
+            auto memCells = Mem::get_selected_memories(module);
+            if (memCells.size())
+                return true;
+        }
+        return false;
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -834,14 +873,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!nobram){
-            run("rs_bram_asymmetric");
-            run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
-            run("rs_bram_split");
-            run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
-            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
-
-            if (cec)
-                run("write_verilog -noattr -nohex after_bram_map.v");
+            mapBrams();
         }
 
         run("pmuxtree");
@@ -849,6 +881,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("muxpack");
 
         run("memory_map");
+
+        postProcessBrams();
 
         if (check_label("map_gates")) {
             switch (tech) {
