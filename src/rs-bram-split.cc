@@ -138,28 +138,37 @@ struct RsBramSplitPass : public Pass {
             m_SigMap.set(module);
 
             // Assemble BRAM cell groups
-            dict<BramConfig, std::vector<RTLIL::Cell *>> groups;
+            //dict<BramConfig, std::vector<RTLIL::Cell *>> groups;
+
+            // Assemble BRAM cell groups for sdp - D
+            dict<BramConfig, std::vector<RTLIL::Cell *>> groups_sdp;
+            // Assemble BRAM cell groups for tdp - D
+            dict<BramConfig, std::vector<RTLIL::Cell *>> groups_tdp;
             for (auto cell : module->selected_cells()) {
 
                 // Check if this is a BRAM cell
                 if (cell->type != RTLIL::escape_id(m_Bram1x18TDPType) && cell->type != RTLIL::escape_id(m_Bram1x18SDPType)) {
                     continue;
                 }
-
                 // Skip if it has the (* keep *) attribute set
                 if (cell->has_keep_attr()) {
                     continue;
                 }
 
-                // Add to a group
+                // Adding brams by type in own group - D
                 const auto key = getBramConfig(cell);
-                groups[key].push_back(cell);
+                if (cell->type == "$__RS_FACTOR_BRAM18_SDP"){
+                    groups_sdp[key].push_back(cell);
+                    std::cout << " ----- 2 -----" << std::endl;
+                }else if (cell->type == "$__RS_FACTOR_BRAM18_TDP"){
+                    groups_tdp[key].push_back(cell);
+                    std::cout << " ----- 1 -----" << std::endl;
+                }
             }
 
             std::vector<const RTLIL::Cell *> cellsToRemove;
-
-            // Map cell pairs to the target BRAM 2x18 cell
-            for (const auto &it : groups) {
+            // Map cell pairs to the target BRAM 2x18 cell for tdp BRams - D
+            for (const auto &it : groups_tdp) {
                 const auto &group = it.second;
                 const auto &config = it.first;
 
@@ -173,8 +182,9 @@ struct RsBramSplitPass : public Pass {
                     const RTLIL::Cell *bram_0 = group[i];
                     const RTLIL::Cell *bram_1 = group[i + 1];
 
-                    if (bram_0->type != bram_1->type)
+                    if (bram_0->type != bram_1->type){
                         log_error("Unsupported BRAM configuration: one half of TDP36K is TDP, second SDP");
+                    }
 
                     std::vector<std::pair<std::string, std::string>> m_BramDataPorts_0;
                     std::vector<std::pair<std::string, std::string>> m_BramDataPorts_1;
@@ -215,7 +225,6 @@ struct RsBramSplitPass : public Pass {
 
                         bram_2x18->setPort(dst, config.connections.at(src));
                     }
-
                     // Connect data ports
                     // Connect first bram
                     map_ports(m_BramDataPorts_0, bram_0, bram_2x18);
@@ -227,7 +236,6 @@ struct RsBramSplitPass : public Pass {
                         auto val = bram_0->getParam(RTLIL::escape_id(it));
                         bram_2x18->setParam(RTLIL::escape_id(it), val);
                     }
-
                     // Setting manual parameters
                     if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
                         bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
@@ -238,10 +246,10 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
                         bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
                     }
-                    if (bram_0->hasParam(RTLIL::escape_id("INIT")))
-                        bram_2x18->setParam(RTLIL::escape_id("INIT0"), bram_0->getParam(RTLIL::escape_id("INIT")));
-                    if (bram_1->hasParam(RTLIL::escape_id("INIT")))
-                        bram_2x18->setParam(RTLIL::escape_id("INIT1"), bram_1->getParam(RTLIL::escape_id("INIT")));
+                    if (bram_0->hasParam(RTLIL::escape_id("INIT"))){
+                        bram_2x18->setParam(RTLIL::escape_id("INIT0"), bram_0->getParam(RTLIL::escape_id("INIT")));}
+                    if (bram_1->hasParam(RTLIL::escape_id("INIT"))){
+                        bram_2x18->setParam(RTLIL::escape_id("INIT1"), bram_1->getParam(RTLIL::escape_id("INIT")));}
 
                     // Mark BRAM parts for removal
                     cellsToRemove.push_back(bram_0);
@@ -249,12 +257,100 @@ struct RsBramSplitPass : public Pass {
                 }
             }
 
+            // Map cell pairs to the target BRAM 2x18 cell for sdp BRams - D
+            for (const auto &it : groups_sdp) {
+                const auto &group = it.second;
+                const auto &config = it.first;
+
+                // Ensure an even number
+                size_t count = group.size();
+                if (count & 1)
+                    count--;
+
+                // Map SIMD pairs
+                for (size_t i = 0; i < count; i += 2) {
+                    const RTLIL::Cell *bram_0 = group[i];
+                    const RTLIL::Cell *bram_1 = group[i + 1];
+
+                    if (bram_0->type != bram_1->type){
+                        log_error("Unsupported BRAM configuration: one half of TDP36K is TDP, second SDP");
+                    }
+
+                    std::vector<std::pair<std::string, std::string>> m_BramDataPorts_0;
+                    std::vector<std::pair<std::string, std::string>> m_BramDataPorts_1;
+                    std::string m_Bram1x18Type;
+                    std::string m_Bram2x18Type;
+                    // Distinguish between TDP and SDP
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                        m_BramDataPorts_0 = m_BramTDPDataPorts_0;
+                        m_BramDataPorts_1 = m_BramTDPDataPorts_1;
+                        m_Bram1x18Type = m_Bram1x18TDPType;
+                        m_Bram2x18Type = m_Bram2x18TDPType;
+                    } else {
+                        m_BramDataPorts_0 = m_BramSDPDataPorts_0;
+                        m_BramDataPorts_1 = m_BramSDPDataPorts_1;
+                        m_Bram1x18Type = m_Bram1x18SDPType;
+                        m_Bram2x18Type = m_Bram2x18SDPType;
+                    }
+
+                    std::string name = stringf("bram_%s_%s", RTLIL::unescape_id(bram_0->name).c_str(), RTLIL::unescape_id(bram_1->name).c_str());
+
+                    log(" BRAM: %s (%s) + %s (%s) => %s (%s)\n", RTLIL::unescape_id(bram_0->name).c_str(), RTLIL::unescape_id(bram_0->type).c_str(),
+                        RTLIL::unescape_id(bram_1->name).c_str(), RTLIL::unescape_id(bram_1->type).c_str(), RTLIL::unescape_id(name).c_str(),
+                        m_Bram2x18Type.c_str());
+
+                    // Create the new cell
+                    RTLIL::Cell *bram_2x18 = module->addCell(RTLIL::escape_id(name), RTLIL::escape_id(m_Bram2x18Type));
+
+                    // Check if the target cell is known (important to know
+                    // its port widths)
+                    if (!bram_2x18->known()) {
+                        log_error(" The target cell type '%s' is not known!", m_Bram2x18Type.c_str());
+                    }
+
+                    // Connect shared ports
+                    for (const auto &it : m_BramSharedPorts) {
+                        auto src = RTLIL::escape_id(it.first);
+                        auto dst = RTLIL::escape_id(it.second);
+
+                        bram_2x18->setPort(dst, config.connections.at(src));
+                    }
+                    // Connect data ports
+                    // Connect first bram
+                    map_ports(m_BramDataPorts_0, bram_0, bram_2x18);
+                    // Connect second bram
+                    map_ports(m_BramDataPorts_1, bram_1, bram_2x18);
+
+                    // Set bram parameters
+                    for (const auto &it : m_BramParams) {
+                        auto val = bram_0->getParam(RTLIL::escape_id(it));
+                        bram_2x18->setParam(RTLIL::escape_id(it), val);
+                    }
+                    // Setting manual parameters
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_D")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_D")));
+                    } else {
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                    }
+                    if (bram_0->hasParam(RTLIL::escape_id("INIT"))){
+                        bram_2x18->setParam(RTLIL::escape_id("INIT0"), bram_0->getParam(RTLIL::escape_id("INIT")));}
+                    if (bram_1->hasParam(RTLIL::escape_id("INIT"))){
+                        bram_2x18->setParam(RTLIL::escape_id("INIT1"), bram_1->getParam(RTLIL::escape_id("INIT")));}
+
+                    // Mark BRAM parts for removal
+                    cellsToRemove.push_back(bram_0);
+                    cellsToRemove.push_back(bram_1);
+                }
+            }
             // Remove old cells
             for (const auto &cell : cellsToRemove) {
                 module->remove(const_cast<RTLIL::Cell *>(cell));
             }
         }
-
         // Clear
         m_SigMap.clear();
     }
