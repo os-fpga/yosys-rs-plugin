@@ -7,6 +7,7 @@
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
 #include "kernel/yosys.h"
+#include "kernel/mem.h"
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
@@ -47,7 +48,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 73
+#define VERSION_PATCH 75
 
 enum Strategy {
     AREA,
@@ -544,7 +545,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             } 
 
             if (fast) {
-                effortStr = "0"; // tell DE to not iterate
+                //effortStr = "0"; // tell DE to not iterate
+                effortStr = "3"; // iterate a couple of times in fast mode
             }
 
             switch(goal) {
@@ -592,7 +594,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (remove(tmp_file.c_str()) != 0)
                 log("Error deleting file: %s", tmp_file.c_str());
         }
-        run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+
+        if (!fast)
+            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -690,6 +694,44 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             run("chtype -set $mul t:$__soft_mul");
         }
+    }
+
+    void mapBrams() {
+        run("rs_bram_asymmetric");
+        run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+        run("rs_bram_split");
+        run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+        run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
+
+        if (cec)
+            run("write_verilog -noattr -nohex after_bram_map.v");
+    }
+
+    void postProcessBrams() {
+        if (areMemCellsLeft()) {
+            if (nobram) {
+                log("\n"); // Skip line to make the warning more focused.
+                log_warning("Forcing to use BRAMs.\n");
+                mapBrams();
+                if (areMemCellsLeft()) {
+                    log("\n"); // Skip line to make the error more focused.
+                    log_error("Failed to map RAM on technology specific BRAM.\n");
+                }
+            }
+            else {
+                log("\n"); // Skip line to make the error more focused.
+                log_error("Failed to map RAM on technology specific BRAM.\n");
+            }
+        }
+    }
+
+    bool areMemCellsLeft() {
+        for (auto module : _design->selected_modules()) {
+            auto memCells = Mem::get_selected_memories(module);
+            if (memCells.size())
+                return true;
+        }
+        return false;
     }
 
     void script() override
@@ -831,14 +873,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!nobram){
-            run("rs_bram_asymmetric");
-            run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
-            run("rs_bram_split");
-            run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
-            run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
-
-            if (cec)
-                run("write_verilog -noattr -nohex after_bram_map.v");
+            mapBrams();
         }
 
         run("pmuxtree");
@@ -846,6 +881,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("muxpack");
 
         run("memory_map");
+
+        postProcessBrams();
 
         if (check_label("map_gates")) {
             switch (tech) {
@@ -898,7 +935,27 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
 
         if (fast) {
-            run("opt -fast");
+            // commenting : 
+            //run("opt -fast");
+#if 1
+            // control loop in fast mode because "opt -fast" can still iterate a lot
+            //
+            for (int i = 0; i < 2; i++) { // 2 iterations seems a good trade-off
+
+                int nbInstBefore = getNumberOfInstances();
+
+                run("opt_expr");
+                run("opt_merge");
+                run("opt_dff");
+                run("opt_clean");
+
+                int nbInstAfter = getNumberOfInstances();
+
+                if (nbInstAfter == nbInstBefore) { // early break if apparently no change
+                    break;
+                }
+            }
+#endif
         } else {
             // Perform a small loop of successive "abc -dff" calls.  
             // This simplify pass may have some big QoR impact on this list of designs:
@@ -984,7 +1041,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
-            run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
+            if (!fast)
+                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
 
         if (check_label("map_luts_2")) {
