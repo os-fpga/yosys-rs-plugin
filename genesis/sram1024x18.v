@@ -49,7 +49,6 @@ module sram1024x18 (
 	reg [17:0] lwmsk_b;
 
 	initial begin
-		integer k = 0;
 		integer i;
 		for(i = 0; i < 1024; i = i + 1) begin
 			ram[i] = INIT_s_i[i*18+:18];
@@ -90,13 +89,14 @@ module sram1024x18 (
 			ram[laddr_b][15] = (lwmsk_b[15] ? ram[laddr_b][15] : lwdata_b[15]);
 			ram[laddr_b][16] = (lwmsk_b[16] ? ram[laddr_b][16] : lwdata_b[16]);
 			ram[laddr_b][17] = (lwmsk_b[17] ? ram[laddr_b][17] : lwdata_b[17]);
+			lwen_b = 1;
 		end
-        else if (lcen_b == 0) begin
-            rdata_b = ram[laddr_b];
-            lcen_b = 1;
-        end
-        else
-            rdata_b = rdata_b;
+		if (lcen_b == 0) begin
+			rdata_b = ram[laddr_b];
+			lcen_b = 1;
+		end
+		else
+			rdata_b = rdata_b;
 	end
 	always @(*) begin
 		if ((lwen_a == 0) && (lcen_a == 0)) begin
@@ -118,13 +118,14 @@ module sram1024x18 (
 			ram[laddr_a][15] = (lwmsk_a[15] ? ram[laddr_a][15] : lwdata_a[15]);
 			ram[laddr_a][16] = (lwmsk_a[16] ? ram[laddr_a][16] : lwdata_a[16]);
 			ram[laddr_a][17] = (lwmsk_a[17] ? ram[laddr_a][17] : lwdata_a[17]);
+			lwen_a = 1;
 		end
-        else if (lcen_a == 0) begin
-            rdata_a = ram[laddr_a];
-            lcen_a = 1;
-        end
-        else
-            rdata_a = rdata_a;
+		if (lcen_a == 0) begin
+			rdata_a = ram[laddr_a];
+			lcen_a = 1;
+		end
+		else
+			rdata_a = rdata_a;
 	end
 endmodule
 `default_nettype none
