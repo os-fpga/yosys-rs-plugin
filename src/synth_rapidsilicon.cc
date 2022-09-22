@@ -714,13 +714,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 log_warning("Forcing to use BRAMs.\n");
                 mapBrams();
                 if (areMemCellsLeft()) {
-                    log("\n"); // Skip line to make the error more focused.
-                    log_error("Failed to map RAM on technology specific BRAM.\n");
+                    reportUnmappedRams();
                 }
             }
             else {
-                log("\n"); // Skip line to make the error more focused.
-                log_error("Failed to map RAM on technology specific BRAM.\n");
+                reportUnmappedRams();
             }
         }
     }
@@ -732,6 +730,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 return true;
         }
         return false;
+    }
+
+    void reportUnmappedRams() {
+        std::stringstream msg;
+        msg << "Failed to map RAM(s) on technology specific BRAM.\n";
+        for (auto module : _design->selected_modules()) {
+            auto memCells = Mem::get_selected_memories(module);
+            for (auto mem : memCells) {
+                msg << "  Signal: " << mem.memid.str().substr(1) << ", ";
+                msg << "Src: " << mem.get_src_attribute().c_str() << "\n";
+            }
+        }
+        msg << "NOTE: Please review MEMORY_BRAM pass logs for details.\n";
+        log("\n"); // Skip line to make the error more focused.
+        log_error("%s\n", msg.str().c_str());
     }
 
     void script() override
