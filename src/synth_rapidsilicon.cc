@@ -37,6 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
+#define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
@@ -699,6 +700,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void mapBrams() {
         run("rs_bram_asymmetric");
         run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+        if (areMemCellsLeft()) {
+            run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT));
+        }
         run("rs_bram_split");
         run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
         run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
