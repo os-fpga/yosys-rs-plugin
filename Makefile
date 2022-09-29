@@ -30,6 +30,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/brams_map.v \
 				  $(GENESIS)/brams_final_map.v \
 				  $(GENESIS)/brams.txt \
+				  $(GENESIS)/brams_async.txt \
 				  $(GENESIS)/TDP18K_FIFO.v \
 				  $(GENESIS)/sram1024x18.v \
 				  $(GENESIS)/ufifo_ctl.v \
