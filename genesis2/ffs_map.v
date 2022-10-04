@@ -960,3 +960,119 @@ module  \$_SDFFE_NN1N_ (D, C, E, R, Q);
 
     sdffnre _TECHMAP_REPLACE_ (.Q(q), .D(!D), .C(C), .E(!E), .R(!R));
 endmodule
+
+module \$_DLATCH_P_ (D, E, Q);
+    input D;
+    input E;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+
+    latch _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E));
+endmodule
+
+module \$_DLATCH_N_ (D, E, Q);
+    input D;
+    input E;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+
+    latchn _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E));
+endmodule
+
+module \$_DLATCH_PP0_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+
+    latchr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E), .R(R));
+endmodule
+
+module \$_DLATCH_NP0_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+
+    latchnr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E), .R(R));
+endmodule
+
+module \$_DLATCH_PN0_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+
+    latchr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E), .R(!R));
+endmodule
+
+module \$_DLATCH_NN0_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+
+    latchnr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E), .R(!R));
+endmodule
+
+module \$_DLATCH_PP1_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    wire q;
+    assign Q = !q;
+
+    latchr _TECHMAP_REPLACE_ (.Q(q), .D(!D), .G(E), .R(R));
+endmodule
+
+module \$_DLATCH_NP1_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    wire q;
+    assign Q = !q;
+
+    latchnr _TECHMAP_REPLACE_ (.Q(q), .D(!D), .G(E), .R(R));
+endmodule
+
+module \$_DLATCH_PN1_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    wire q;
+    assign Q = !q;
+
+    latchr _TECHMAP_REPLACE_ (.Q(q), .D(!D), .G(E), .R(!R));
+endmodule
+
+module \$_DLATCH_NN1_ (D, E, R, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    parameter _TECHMAP_WIREINIT_Q_ = 1'bx;
+    wire q;
+    assign Q = !q;
+
+    latchnr _TECHMAP_REPLACE_ (.Q(q), .D(!D), .G(E), .R(!R));
+endmodule

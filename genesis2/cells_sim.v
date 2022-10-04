@@ -197,41 +197,115 @@ module sdffnre(
             Q <= D;
 endmodule
 
-module latchsre (
+module latch (
     output reg Q,
-    input S,
-    input R,
     input D,
-    input G,
-    input E
+    input G
 );
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
     always @*
-        if (!R) 
-            Q <= 1'b0;
-        else if (!S) 
-            Q <= 1'b1;
-        else if (E && G) 
+        if (G) 
             Q <= D;
 endmodule
 
-module latchnsre (
+module latchn (
     output reg Q,
-    input S,
-    input R,
     input D,
-    input G,
-    input E
+    input G
 );
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
     always @*
-        if (!R) 
+        if (!G) 
+            Q <= D;
+endmodule
+
+module latche (
+    output reg Q,
+    input D,
+    input E,
+    input G
+);
+    parameter [0:0] INIT = 1'b0;
+    initial Q = INIT;
+    always @*
+        if (E && G) 
+            Q <= D;
+endmodule
+
+module latchne (
+    output reg Q,
+    input D,
+    input E,
+    input G
+);
+    parameter [0:0] INIT = 1'b0;
+    initial Q = INIT;
+    always @*
+        if (E && !G) 
+            Q <= D;
+endmodule
+
+module latchr (
+    output reg Q,
+    input D,
+    input R,
+    input G
+);
+    parameter [0:0] INIT = 1'b0;
+    initial Q = INIT;
+    always @*
+        if (R)
             Q <= 1'b0;
-        else if (!S) 
-            Q <= 1'b1;
-        else if (E && !G) 
+        else if (G)
+            Q <= D;
+endmodule
+
+module latchnr (
+    output reg Q,
+    input D,
+    input R,
+    input G
+);
+    parameter [0:0] INIT = 1'b0;
+    initial Q = INIT;
+    always @*
+        if (R)
+            Q <= 1'b0;
+        else if (!G)
+            Q <= D;
+endmodule
+
+module latchre (
+    output reg Q,
+    input D,
+    input R,
+    input E,
+    input G
+);
+    parameter [0:0] INIT = 1'b0;
+    initial Q = INIT;
+    always @*
+        if (R)
+            Q <= 1'b0;
+        else if (E && G)
+            Q <= D;
+endmodule
+
+module latchnre (
+    output reg Q,
+    input D,
+    input R,
+    input E,
+    input G
+);
+    parameter [0:0] INIT = 1'b0;
+    initial Q = INIT;
+    always @*
+        if (R)
+            Q <= 1'b0;
+        else if (E && !G)
             Q <= D;
 endmodule
 
