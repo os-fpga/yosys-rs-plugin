@@ -1081,7 +1081,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFFE_??_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0"
-                                // TODO: add latch support
+                                " -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
                            );
 
                         if (cec)
