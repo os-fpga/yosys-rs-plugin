@@ -221,32 +221,6 @@ module latchn (
             Q <= D;
 endmodule
 
-module latche (
-    output reg Q,
-    input D,
-    input E,
-    input G
-);
-    parameter [0:0] INIT = 1'b0;
-    initial Q = INIT;
-    always @*
-        if (E && G) 
-            Q <= D;
-endmodule
-
-module latchne (
-    output reg Q,
-    input D,
-    input E,
-    input G
-);
-    parameter [0:0] INIT = 1'b0;
-    initial Q = INIT;
-    always @*
-        if (E && !G) 
-            Q <= D;
-endmodule
-
 module latchr (
     output reg Q,
     input D,
@@ -276,39 +250,6 @@ module latchnr (
         else if (!G)
             Q <= D;
 endmodule
-
-module latchre (
-    output reg Q,
-    input D,
-    input R,
-    input E,
-    input G
-);
-    parameter [0:0] INIT = 1'b0;
-    initial Q = INIT;
-    always @*
-        if (R)
-            Q <= 1'b0;
-        else if (E && G)
-            Q <= D;
-endmodule
-
-module latchnre (
-    output reg Q,
-    input D,
-    input R,
-    input E,
-    input G
-);
-    parameter [0:0] INIT = 1'b0;
-    initial Q = INIT;
-    always @*
-        if (R)
-            Q <= 1'b0;
-        else if (E && !G)
-            Q <= D;
-endmodule
-
 
 module io_scff(
     output reg Q,
