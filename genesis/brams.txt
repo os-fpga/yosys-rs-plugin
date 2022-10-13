@@ -118,7 +118,6 @@ match $__RS_FACTOR_BRAM36_TDP
   max wports 2
   min rports 1
   max rports 2
-  min efficiency 1
   shuffle_enable B
   make_transp
   or_next_if_better
@@ -128,7 +127,6 @@ match $__RS_FACTOR_BRAM36_SDP
   min bits 18433
   max wports 1
   max rports 1
-  min efficiency 1
   shuffle_enable B
   make_transp
   or_next_if_better
@@ -141,7 +139,6 @@ match $__RS_FACTOR_BRAM18_TDP
   max wports 2
   min rports 1
   max rports 2
-  min efficiency 1
   shuffle_enable B
   make_transp
   or_next_if_better
@@ -152,7 +149,6 @@ match $__RS_FACTOR_BRAM18_SDP
   max bits 18432
   max wports 1
   max rports 1
-  min efficiency 1
   shuffle_enable B
   make_transp
 endmatch
