@@ -61,7 +61,6 @@ match $__RS_FACTOR_BRAM36_TDP
   max wports 2
   min rports 1
   max rports 2
-  min efficiency 1
   shuffle_enable B
   make_transp
   or_next_if_better
@@ -74,7 +73,6 @@ match $__RS_FACTOR_BRAM18_TDP
   max wports 2
   min rports 1
   max rports 2
-  min efficiency 1
   shuffle_enable B
   make_transp
 endmatch
