@@ -21,18 +21,19 @@ void moniter_netlist(std::std::string *design_stage,std::std::string *synthesis_
     });
 }
 
-void gen_tcl(vector<std::string>& path_golden,vector<std::string>& path_revised,vector<std::string>& top)
+void load_settings(ofstream& new_file)
 {
-    ofstream new_file; 
-    new_file.open("onespin_try.tcl"); 
-    new_file.close();
+  
+    new_file<<"load_settings ec_fpga_rtl\n";
 
+}
+
+void read_hdl(ofstream& new_file,vector<string>& path_golden,vector<string>& path_revised)
+{
     
-if (regex_match (path_golden[0], regex("(.*..*vh)") ) | regex_match (path_golden[0], regex("(.*.v)") ) | regex_match (path_golden[0], regex("(.*.sv)") ))
+
+    if (regex_match (path_golden[0], regex("(.*..*vh)") ) | regex_match (path_golden[0], regex("(.*.v)") ) | regex_match (path_golden[0], regex("(.*.sv)") ))
     {   
-        cout << "verilog files => matched\n";
-        new_file.open("onespin_try.tcl",ios::app);
-        new_file<<"load_settings ec_fpga_rtl\n";
         new_file<<"\nread_verilog -golden  -pragma_ignore {}  -version sv2012 {\\\n";
         for (auto i = path_golden.begin(); i != path_golden.end(); ++i) 
         new_file<< *i <<"\t\\\n";
@@ -40,16 +41,9 @@ if (regex_match (path_golden[0], regex("(.*..*vh)") ) | regex_match (path_golden
         new_file<<"\n\nread_verilog -revised  -pragma_ignore {}  -version sv2012 {\\\n";
         for (auto j = path_revised.begin(); j != path_revised.end(); ++j) 
         new_file<< *j <<"\t\\\n";
-        new_file<<"}\n\nset_elaborate_option -both -top {Verilog!work."<<top[0]<<"}\n";
-        new_file<<"\nelaborate -both\ncompile -both\nset_mode ec\nmap\ncompare\n"; 
-        new_file<<"\n\nsave_result_file "<<top[0]<<"_results.log\nexit -force";
-        new_file.close(); 
     }
-else if (regex_match (path_golden[0], regex("(.*.vhd)") ) | regex_match (path_golden[0], regex("(.*.vhdl)") ))
-    {
-        cout << "VHDL files => matched\n";
-        new_file.open("onespin_try.tcl",ios::app);
-        new_file<<"load_settings ec_fpga_rtl\n";
+    else if (regex_match (path_golden[0], regex("(.*.vhd)") ) | regex_match (path_golden[0], regex("(.*.vhdl)") ))
+    {    
         new_file<<"\nread_vhdl -golden  -pragma_ignore {}  -version 2008 {\\\n";
         for (auto i = path_golden.begin(); i != path_golden.end(); ++i) 
         new_file<< *i <<"\t\\\n";
@@ -57,11 +51,69 @@ else if (regex_match (path_golden[0], regex("(.*.vhd)") ) | regex_match (path_go
         new_file<<"\n\nread_verilog -revised  -pragma_ignore {}  -version sv2012 {\\\n";
         for (auto j = path_revised.begin(); j != path_revised.end(); ++j) 
         new_file<< *j <<"\t\\\n";
-        new_file<<"}\n\nset_elaborate_option -revised-top {Verilog!work."<<top[0]<<"}\n";
-        new_file<<"\nelaborate -both\ncompile -both\nset_mode ec\nmap\ncompare\n"; 
-        new_file<<"\n\nsave_result_file "<<top[0]<<"_results.log\nexit -force";
-        new_file.close(); 
+
+    } 
+    
+}
+
+void elaboration (ofstream& new_file,vector<string>& path_golden,vector<string>& path_revised,vector<string>& top)
+{
+    
+    if (regex_match (path_golden[0], regex("(.*..*vh)") ) | regex_match (path_golden[0], regex("(.*.v)") ) | regex_match (path_golden[0], regex("(.*.sv)") ))
+    {
+        new_file<<"}\n\nset_elaborate_option -both -top {Verilog!work."<<top[0]<<"}\n";
     }
+
+    else if (regex_match (path_golden[0], regex("(.*.vhd)") ) | regex_match (path_golden[0], regex("(.*.vhdl)") ))
+    { 
+        new_file<<"}\n\nset_elaborate_option -revised-top {Verilog!work."<<top[0]<<"}\n";
+    }
+    new_file<<"\nelaborate -both\n";
+ 
+}
+
+void compile(ofstream& new_file)
+{
+    
+    new_file<<"compile -both\n";
+   
+}
+
+void mapping(ofstream& new_file, bool extra_map)
+{
+    
+    new_file<<"set_mode ec\n";
+    if (!extra_map)
+    {
+    new_file<<"map\n"; 
+    }
+    else{
+    new_file<<"\nmap -input -output -state -style quartus -nonameonly -no_phase -effort_phase {10} -port_complement_naming_style {BAR} -delimiters {,_.()[]<>/} -exclude {} -ignored_substrings {\\ { }} -fsm {} -nofsm {} -effort_fsm {-1} -reset {} -vif_file {} -vif_submodule_prefix {} -replace_regexp { {@.*@} {}}\n";   
+    }
+
+}
+
+void compare(ofstream& new_file,vector<string>& top)
+{
+
+    new_file<<"compare\n"; 
+    new_file<<"\n\nsave_result_file "<<top[0]<<"_results.log\nexit -force";
+ 
+}
+
+void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<string>& top)
+{
+    
+  
+    ofstream new_file;     
+    new_file.open("onespin_try.tcl",ios::app);
+    load_settings(new_file);
+    read_hdl(new_file,path_golden,path_revised);
+    elaboration(new_file,path_golden,path_revised,top);
+    compile(new_file);
+    mapping(new_file, false);
+    compare(new_file,top);
+    new_file.close();
 }
 int main() {
 
