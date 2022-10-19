@@ -12,6 +12,8 @@
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <thread>
+#include "fv/synth_formal.h"
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
@@ -89,7 +91,7 @@ enum ClockEnableStrategy {
 struct SynthRapidSiliconPass : public ScriptPass {
 
     SynthRapidSiliconPass() : ScriptPass(STR(PASS_NAME), "Synthesis for RapidSilicon FPGAs") {}
-
+    pthread_t fv_t;
     void help() override
     {
         log("\n");
@@ -207,6 +209,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - late\n");
         log("        By default 'early' is used.\n");
         log("\n");
+        log("    -fv\n");
+        log("        Run logic equivalence check to verify the functionality of post synthesis netlist\n");
+        log("        By default fv is not called with synthesis\n");
+        log("\n");
+        log("    -onespin_path <executable_path>\n");
+        log("        Executable path for Onespin360-ECFPGA, executable is mendatory with -fv option\n");
+        log("\n");
+        log("    -fv_timout_limit <hours>\n");
+        log("        Timeout limit for formal verification run, formal process will be terminated automatically with partial results\n");
+        log("        default timeout limit 4 hours\n");
+        log("\n");
+        log("    -golden_netlist <post_synthesis_netlist_path>\n");
+        log("        A Pre-verified netlist which can be used as reference design in formal verification run, this option can be used with -fv\n");
+        log("        Specify the path for preverified post synthesis netlist from Raptor\n");
+        log("\n");
         log("\n");
     }
 
@@ -228,6 +245,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nosimplify;
     bool keep_tribuf;
     int de_max_threads;
+    bool fv;
+    string onespin_path;
+    string golden_netlist;
+    int fv_timout_limit;
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
@@ -256,6 +277,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
+        fv = false;
+        fv_timout_limit = 4;
+        onespin_path="";
+        golden_netlist="";
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -364,6 +389,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 clke_strategy_str = args[++argidx];
                 continue;
             }
+            if (args[argidx] == "-fv") {
+                fv = true;
+                continue;
+            }
+            if (args[argidx] == "-onespin_path" && argidx + 1 < args.size()) {
+                onespin_path = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-fv_timout_limit" && argidx + 1 < args.size()) {
+                fv_timout_limit = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-golden_netlist" && argidx + 1 < args.size()) {
+                golden_netlist = args[++argidx];
+                continue;
+            }
 
             break;
         }
@@ -445,7 +486,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if(fast && effort == EffortLevel::LOW)
             log_warning("\"-effort low\" and \"-fast\" options are set.");
 
+        struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+        if (fv){
+            fvarg->ref_net = &golden_netlist;
+            fvarg->fv_timeout = &fv_timout_limit;
+            fvarg->bram_inf = &nobram;
+            fvarg->dsp_inf = &nodsp;
+            fvarg->retiming = &nosimplify;
+            fvarg->fv_cec = &cec;
+            fvarg->synth_status = false;
+            if (pthread_create(&fv_t,NULL, run_fv,(void *)fvarg)!=0){
+                std::cout<<"Error creating thread"<<std::endl;
+            };   
+        }
         run_script(design, run_from, run_to);
+        fvarg->synth_status = true;
+        pthread_join(fv_t,NULL);
 
         log_pop();
     }

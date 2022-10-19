@@ -45,12 +45,14 @@ SOURCES = src/rs-dsp.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
-		  src/rs-bram-asymmetric.cc
+		  src/rs-bram-asymmetric.cc \
+		  src/fv/synth_formal.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \
-	   pmgen/rs-bram-asymmetric-wider-read.h
+	   pmgen/rs-bram-asymmetric-wider-read.h \
+	   src/fv/synth_formal.h 
 pmgen:
 	mkdir -p pmgen
 
