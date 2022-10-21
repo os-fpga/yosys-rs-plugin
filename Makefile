@@ -45,14 +45,17 @@ SOURCES = src/rs-dsp.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
-		  src/rs-bram-asymmetric.cc \
-		  src/fv/synth_formal.cc
+		  src/rs-bram-asymmetric.cc 
+		#   src/fv/synth_formal.cc
+
+fv_srcs = src/fv/src/synth_formal.cc
+fv_deps = src/fv/src//synth_formal.h 
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \
-	   pmgen/rs-bram-asymmetric-wider-read.h \
-	   src/fv/synth_formal.h 
+	   pmgen/rs-bram-asymmetric-wider-read.h 
+	#    src/fv/synth_formal.h 
 pmgen:
 	mkdir -p pmgen
 
@@ -73,13 +76,24 @@ pmgen.py:
 
 OBJS := $(SOURCES:cc=o)
 
+fv_srcs_obj := $(fv_srcs:cc=o)
+
 all: $(NAME).so
 
 $(OBJS): %.o: %.cc $(DEPS)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) -c -o $@ $(filter %.cc, $^)
-
+	
 $(NAME).so: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
+
+# FV flow
+FVFLAG 	+= -std=c++17
+$(fv_srcs_obj): %.o: %.cc $(fv_deps)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) $(FVFLAG) -c -o $@ $(filter %.cc, $^)
+
+$(NAME).so: $(fv_srcs_obj)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FVFLAG) -shared -o $@ $^ $(LDLIBS)
+
 
 install_plugin: $(NAME).so
 	install -D $< $(PLUGINS_DIR)/$<
