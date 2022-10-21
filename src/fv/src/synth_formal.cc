@@ -180,8 +180,10 @@ void process_stage(struct fv_args *stage_arg){
                 design_stages.clear();
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
+            fs::path p = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
+            std::string p1 = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
             net_status = moniter_netlist(&design_stages.at(1),&synth_dir_);
-            
+
             break;
         }
         case(1):
