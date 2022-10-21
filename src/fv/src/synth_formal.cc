@@ -1,8 +1,3 @@
-#include "synth_formal.h"
-
-using namespace std; 
-// #include <filesystem>
-// namespace fs = std::filesystem;
 
 #include <iostream>
 #include <vector>
@@ -10,15 +5,17 @@ using namespace std;
 #include <string>
 #include <regex>
 #include "synthesis_watcher.h"
+#include "synth_formal.h"
+using namespace std; 
 
 using namespace std;
 bool moniter_netlist(std::string *design_stage,std::string *synthesis_dir){
     std::string nstage_netlist = *synthesis_dir + *design_stage;
-    
     monitor_synthesis_project_dir fw{*synthesis_dir,nstage_netlist, std::chrono::milliseconds(5)};
     bool test;
+    std::cout<<"Netlist Path: "<<nstage_netlist<<std::endl;
     test = fw.start_monitoring([] (std::string synthesis_netlist_path, std::string _revised_netlist_, FileStatus status) -> void {
-        if(!std::filesystem::is_regular_file(std::filesystem::path(synthesis_netlist_path)) && status != FileStatus::erased) {
+        if(!fs::is_regular_file(fs::path(synthesis_netlist_path)) && status != FileStatus::erased) {
             return;
         }
         if (status == FileStatus::netlist_generated){
@@ -125,7 +122,6 @@ void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<str
     fv_script.close();
 }
 
-
 int exec() {
 
     std::string synthesis_dir = "/nfs_scratch/scratch/FV/awais/file_watcher/";
@@ -141,12 +137,12 @@ int exec() {
     top.push_back("top");
 
     bool net_status;
-    std::filesystem::path p = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
+    fs::path p = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
     std::string p1 = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
 
     net_status = moniter_netlist(&design_stage,&synthesis_dir);
 
-    if (std::filesystem::exists(p)){
+    if (fs::exists(p)){
         remove(p);
     }
     else{
@@ -162,7 +158,7 @@ void process_stage(struct fv_args *stage_arg){
     // struct fv_args *stage_arg = (struct fv_args *)fvarg;
     // synth_configuration configuration;
     fs::path cwd_dir_ = fs::current_path();
-    std:: string synth_dir_ = cwd_dir_.generic_string();
+    std:: string synth_dir_ = (cwd_dir_.generic_string()+"/");
     std::cout<<"DSP Inference "<<*stage_arg->dsp_inf<<std::endl;
 
     int test_convd = *stage_arg->dsp_inf?1:0;
@@ -175,7 +171,8 @@ void process_stage(struct fv_args *stage_arg){
 
     switch(out){
         case(7):{
-            std::string des_stages[] = {"after_flatten","after_dspmap4","after_bram","before_simplify","after_simplify","final"};
+            bool net_status;
+            std::string des_stages[] = {"after_flatten.v","after_opt-fast-full.v","final"};
             if (design_stages.empty()){
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
@@ -183,8 +180,8 @@ void process_stage(struct fv_args *stage_arg){
                 design_stages.clear();
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
-            std::cout<<"CWD: "<<synth_dir_<<std::endl;
-
+            net_status = moniter_netlist(&design_stages.at(1),&synth_dir_);
+            
             break;
         }
         case(1):
@@ -217,7 +214,7 @@ void process_stage(struct fv_args *stage_arg){
 void *run_fv(void* flow) {
     // pthread_t file_t;
     std::cout<<"Yeh kia tito party hai"<<std::endl;
-    std::filesystem::path p = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/yosys_verific_rs/yosys-rs-plugin/src/fv/onespin_try.tcl";
+    fs::path p = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/yosys_verific_rs/yosys-rs-plugin/src/fv/onespin_try.tcl";
     if (fs::exists(p)){
 
     std::cout<<"Bhai kr raha hu remove"<<std::endl;

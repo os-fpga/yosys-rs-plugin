@@ -861,6 +861,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
+            if (cec)
+                run("write_verilog -noattr -nohex after_flatten.v");
             if (keep_tribuf)
                 run("tribuf -logic");
             else

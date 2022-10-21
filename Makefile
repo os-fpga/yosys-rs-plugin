@@ -48,9 +48,11 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-bram-asymmetric.cc 
 		#   src/fv/synth_formal.cc
 
-fv_srcs = src/fv/src/synth_formal.cc
-fv_deps = src/fv/src//synth_formal.h 
+fv_srcs = src/fv/src/synth_formal.cc \
+		  src/fv/src/synthesis_watcher.cc
 
+fv_deps = src/fv/src//synth_formal.h \
+		  src/fv/src/synthesis_watcher.h
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \

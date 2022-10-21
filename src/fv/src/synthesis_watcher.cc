@@ -6,7 +6,7 @@ bool monitor_synthesis_project_dir::start_monitoring(const std::function<void (s
 
             auto it = _file_in_dir_.begin();
             while (it != _file_in_dir_.end()) {
-                if (!std::filesystem::exists(it->first)) {
+                if (!fs::exists(it->first)) {
                     action(it->first, _current_stage_, FileStatus::erased);
                     it = _file_in_dir_.erase(it);
                 }
@@ -15,13 +15,13 @@ bool monitor_synthesis_project_dir::start_monitoring(const std::function<void (s
                 }                    
             }
 
-            for(auto &netlist : std::filesystem::recursive_directory_iterator(synthesis_netlist_path)) {
+            for(auto &netlist : fs::recursive_directory_iterator(synthesis_netlist_path)) {
                 if (netlist.path().string()==_current_stage_){
                     action(netlist.path().string(),_current_stage_, FileStatus::netlist_generated);
                     running_ = false;
                     return true;
                 }
-                auto current_file_last_write_time = std::filesystem::last_write_time(netlist);
+                auto current_file_last_write_time = fs::last_write_time(netlist);
                 if(!contains(netlist.path().string())) {
                     _file_in_dir_[netlist.path().string()] = current_file_last_write_time;
                     action(netlist.path().string(),_current_stage_, FileStatus::netlist_generated);
