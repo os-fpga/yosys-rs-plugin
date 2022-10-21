@@ -13,7 +13,7 @@
 #include <fstream>
 #include <regex>
 #include <thread>
-#include "fv/synth_formal.h"
+#include "fv/src/synth_formal.h"
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
