@@ -110,7 +110,7 @@ void compare(std::ofstream& fv_script,vector<string>& top)
 void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<string>& top, std::string *tclout_path)
 {
     
-  
+    cout<<"TCL Path"<<*tclout_path<<endl;
     std::ofstream fv_script;     
     fv_script.open(*tclout_path,ios::app);
     load_settings(fv_script);
@@ -153,6 +153,29 @@ int exec() {
     }
 }
 
+void tcl_process(std::string design_stage ,std:: string *synth_dir_){
+    bool net_status;
+    fs::path p = *synth_dir_ + "onespin_try.tcl";
+    std::string p1 = p.generic_string();
+    vector<string> path_golden;
+    path_golden.push_back("/nfs_scratch/scratch/FV/awais/file_watcher/after_fsm.v");
+    vector<string> top;
+    top.push_back("top");
+
+    vector<string> path_revised;
+    path_revised.push_back(*synth_dir_);
+    net_status = moniter_netlist(&design_stage,synth_dir_);
+    
+    if (fs::exists(p)){
+        remove(p);
+    }
+    else{
+        if (net_status){
+            gen_tcl(path_golden, path_revised , top, &p1);
+            std::cout<<"File does not exist"<<std::endl;
+        }
+    }
+}
 
 void process_stage(struct fv_args *stage_arg){
     // struct fv_args *stage_arg = (struct fv_args *)fvarg;
@@ -172,7 +195,7 @@ void process_stage(struct fv_args *stage_arg){
     switch(out){
         case(7):{
             bool net_status;
-            std::string des_stages[] = {"after_flatten.v","after_opt-fast-full.v","final"};
+            std::string des_stages[] = {"after_flatten.v","after_opt-fast-full.v"};
             if (design_stages.empty()){
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
@@ -180,10 +203,9 @@ void process_stage(struct fv_args *stage_arg){
                 design_stages.clear();
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
-            fs::path p = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
-            std::string p1 = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
-            net_status = moniter_netlist(&design_stages.at(1),&synth_dir_);
-
+            for (auto &stage:design_stages){
+                tcl_process(stage,&synth_dir_);
+            }
             break;
         }
         case(1):

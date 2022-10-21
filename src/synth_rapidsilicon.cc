@@ -500,10 +500,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             };   
         }
         run_script(design, run_from, run_to);
-        fvarg->synth_status = true;
-        pthread_join(fv_t,NULL);
 
         log_pop();
+        fvarg->synth_status = true;
     }
 
     void step(string msg)
@@ -1202,6 +1201,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex " + verilog_file);
             }
         }
+
+        pthread_join(fv_t,NULL);
     }
 
 } SynthRapidSiliconPass;
