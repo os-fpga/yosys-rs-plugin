@@ -13,7 +13,6 @@
 #include <chrono>
 #include <filesystem>
 using namespace std; 
-namespace fs = std::filesystem;
 
 struct fv_args{
     std::string *ref_net;

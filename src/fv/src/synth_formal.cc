@@ -8,7 +8,6 @@
 #include "synth_formal.h"
 using namespace std; 
 
-using namespace std;
 bool moniter_netlist(std::string *design_stage,std::string *synthesis_dir){
     std::string nstage_netlist = *synthesis_dir + *design_stage;
     monitor_synthesis_project_dir fw{*synthesis_dir,nstage_netlist, std::chrono::milliseconds(5)};
