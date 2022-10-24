@@ -4,9 +4,33 @@
 #include <fstream>
 #include <string>
 #include <regex>
+#include <stdexcept>
+#include <stdio.h>
 #include "synthesis_watcher.h"
 #include "synth_formal.h"
 using namespace std; 
+
+string exec_pipe(string command) {
+   char buffer[128];
+   string result = "";
+
+   // Open pipe to file
+   FILE* pipe = popen(command.c_str(), "r");
+   if (!pipe) {
+      return "popen failed!";
+   }
+
+   // read till end of process:
+   while (!feof(pipe)) {
+
+      // use buffer to read and add to result
+      if (fgets(buffer, 128, pipe) != NULL)
+         result += buffer;
+   }
+
+   pclose(pipe);
+   return result;
+}
 
 bool moniter_netlist(std::string *design_stage,std::string *synthesis_dir){
     std::string nstage_netlist = *synthesis_dir + *design_stage;
@@ -71,7 +95,7 @@ void elaboration (std::ofstream& fv_script,vector<string>& path_golden,vector<st
 
     else if (regex_match (path_golden[0], regex("(.*.vhd)") ) | regex_match (path_golden[0], regex("(.*.vhdl)") ))
     { 
-        fv_script<<"}\n\nset_elaborate_option -revised-top {Verilog!work."<<top[0]<<"}\n";
+        fv_script<<"}\n\nset_elaborate_option -revised -top {Verilog!work."<<top[0]<<"}\n";
     }
     fv_script<<"\nelaborate -both\n";
  
@@ -98,15 +122,15 @@ void mapping(std::ofstream& fv_script, bool extra_map)
 
 }
 
-void compare(std::ofstream& fv_script,vector<string>& top)
+void compare(std::ofstream& fv_script,vector<string>& top,std::string *design_stage)
 {
 
     fv_script<<"compare\n"; 
-    fv_script<<"\n\nsave_result_file "<<top[0]<<"_results.log\nexit -force";
+    fv_script<<"\n\nsave_result_file "<<top[0]<<"_"<<*design_stage<<"_results.log\nexit -force";
  
 }
 
-void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<string>& top, std::string *tclout_path)
+void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<string>& top, std::string *tclout_path, std::string *design_stage)
 {
     
     cout<<"TCL Path"<<*tclout_path<<endl;
@@ -117,63 +141,33 @@ void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<str
     elaboration(fv_script,path_golden,path_revised,top);
     compile(fv_script);
     mapping(fv_script, false);
-    compare(fv_script,top);
+    compare(fv_script,top,design_stage);
     fv_script.close();
 }
 
-int exec() {
-
-    std::string synthesis_dir = "/nfs_scratch/scratch/FV/awais/file_watcher/";
-    std::string design_stage = "after_fsm1.v";
-    vector<string> path_revised;
-    path_revised.push_back("/nfs_scratch/scratch/FV/awais/file_watcher/after_fsm1.v");
-
-    vector<string> path_golden;
-    path_golden.push_back("/nfs_scratch/scratch/FV/awais/file_watcher/after_fsm1.v");
-
-
-    vector<string> top;
-    top.push_back("top");
-
+string tcl_process(std::string design_stage ,std:: string *synth_dir_){
     bool net_status;
-    fs::path p = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
-    std::string p1 = "/nfs_scratch/scratch/FV/awais/file_watcher/onespin_try.tcl";
-
-    net_status = moniter_netlist(&design_stage,&synthesis_dir);
-
-    if (fs::exists(p)){
-        remove(p);
-    }
-    else{
-        if (net_status){
-            gen_tcl(path_golden, path_revised , top, &p1);
-            std::cout<<"File does not exist"<<std::endl;
-        }
-    }
-}
-
-void tcl_process(std::string design_stage ,std:: string *synth_dir_){
-    bool net_status;
-    fs::path p = *synth_dir_ + "onespin_try.tcl";
+    fs::path p = *synth_dir_ + design_stage + "onespin_try.tcl";
     std::string p1 = p.generic_string();
     vector<string> path_golden;
-    path_golden.push_back("/nfs_scratch/scratch/FV/awais/file_watcher/after_fsm.v");
+    path_golden.push_back("/nfs_scratch/scratch/FV/ayyaz/Gap-Analysis/RTL_Benchmark/VHDL/itc99-poli/itc99/b01/rtl/b01.vhd");
     vector<string> top;
-    top.push_back("top");
-
+    top.push_back("b01");
+    string rev_net = *synth_dir_+design_stage;
     vector<string> path_revised;
-    path_revised.push_back(*synth_dir_);
+    path_revised.push_back(rev_net);
+    path_revised.push_back("/nfs_scratch/scratch/FV/ayyaz/Gap-Analysis/RTL_Benchmark/Verilog/RS/libcells/dffsre.v");
     net_status = moniter_netlist(&design_stage,synth_dir_);
-    
+
+    std::cout<<"Netlist Status: "<<net_status<<std::endl;
     if (fs::exists(p)){
         remove(p);
     }
-    else{
-        if (net_status){
-            gen_tcl(path_golden, path_revised , top, &p1);
-            std::cout<<"File does not exist"<<std::endl;
-        }
+    if (net_status){
+        gen_tcl(path_golden, path_revised , top, &p1,&design_stage);
+        std::cout<<"File does not exist"<<std::endl;
     }
+    return p1;
 }
 
 void process_stage(struct fv_args *stage_arg){
@@ -193,7 +187,7 @@ void process_stage(struct fv_args *stage_arg){
 
     switch(out){
         case(7):{
-            bool net_status;
+            // bool net_status;
             std::string des_stages[] = {"after_flatten.v","after_opt-fast-full.v"};
             if (design_stages.empty()){
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
@@ -203,7 +197,11 @@ void process_stage(struct fv_args *stage_arg){
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
             for (auto &stage:design_stages){
-                tcl_process(stage,&synth_dir_);
+                std::string tcl_path;
+                tcl_path= tcl_process(stage, &synth_dir_);
+                std::cout<<"Onespin Script Path: "<<tcl_path<<std::endl;
+                string result = exec_pipe("onespin_sh "+tcl_path);
+                // cout << result;
             }
             break;
         }
