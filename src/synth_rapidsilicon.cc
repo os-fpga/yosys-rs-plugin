@@ -43,6 +43,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_MAP_FILE brams_map.v
 #define BRAM_MAP_NEW_FILE brams_map_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
+#define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -719,19 +720,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
         switch (tech) {
             case Technologies::GENESIS: {
                 run("rs_bram_asymmetric");
-                if (!libmap)
+                if (!libmap) {
                     run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
-                else
-                    run("memory_libmap -lib" GET_FILE_PATH(GENESIS_DIR, BRAM_LIB));
-                if (areMemCellsLeft()) {
-                    run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT));
-                }
-                run("rs_bram_split");
-                if (!libmap)
+                    run("rs_bram_split");
+                    if (areMemCellsLeft()) {
+                        run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT));
+                    }
                     run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
-                else
+                    run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
+                }
+                else {
+                    run("memory_libmap -lib" GET_FILE_PATH(GENESIS_DIR, BRAM_LIB));
+                    run("rs_bram_split -new_mapping");
                     run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_NEW_FILE));
-                run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
+                    run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_NEW_FILE));
+                }
 
                 if (cec)
                     run("write_verilog -noattr -nohex after_bram_map.v");
