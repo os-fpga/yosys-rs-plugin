@@ -145,26 +145,62 @@ void gen_tcl(vector<string>& path_golden,vector<string>& path_revised,vector<str
     fv_script.close();
 }
 
-string tcl_process(std::string design_stage ,std:: string *synth_dir_){
+void get_rtl(vector<string*> rtl_path){
+
+}
+void get_rtl(fs::path ys_script, vector<string> &rtl_files){
+   if (fs::exists(ys_script)){
+      ifstream inp;
+      string line;
+      smatch match;
+      inp.open(ys_script);
+      if(inp.is_open()){
+         while(inp.good()){
+            getline(inp,line);
+            string hdl_mode[] = {"-vhdl",  "-vlog2k", "-vlog95", "-sv"};
+            for (auto mode:hdl_mode){
+               regex _rstr("(verific.*"+mode+"?)");
+               regex_search(line, match, _rstr);
+               if(match[1].str().length()>0){
+                  istringstream ss(line);
+                  string word{};
+                  regex str2("("+mode+"?)");
+                  while (ss >> word){
+                     regex_search(word, match, str2);
+                     if ((word !="verific") & !(match[1].str().length()>0) & word != "\\")  {
+                        rtl_files.push_back(word);
+                     }
+                  }
+               }
+            }
+         }
+     }
+     inp.close();
+   }
+}
+string tcl_process(std::string design_stage ,std::string rev_stage ,std:: string *synth_dir_){
     bool net_status;
-    fs::path p = *synth_dir_ + design_stage + "onespin_try.tcl";
+    string synth_desig_stage = rev_stage+".v";
+    fs::path p = *synth_dir_ + rev_stage + "_onespin.tcl";
     std::string p1 = p.generic_string();
     vector<string> path_golden;
-    path_golden.push_back("/nfs_scratch/scratch/FV/ayyaz/Gap-Analysis/RTL_Benchmark/VHDL/itc99-poli/itc99/b01/rtl/b01.vhd");
+    fs::path ys_script=*synth_dir_+"/b01.ys";
+    if (design_stage=="RTL"){get_rtl(ys_script,path_golden);}
+    else{path_golden.push_back(*synth_dir_+design_stage+".v");}
     vector<string> top;
     top.push_back("b01");
-    string rev_net = *synth_dir_+design_stage;
+    string rev_net = *synth_dir_+synth_desig_stage;
     vector<string> path_revised;
     path_revised.push_back(rev_net);
     path_revised.push_back("/nfs_scratch/scratch/FV/ayyaz/Gap-Analysis/RTL_Benchmark/Verilog/RS/libcells/dffsre.v");
-    net_status = moniter_netlist(&design_stage,synth_dir_);
+    net_status = moniter_netlist(&synth_desig_stage,synth_dir_);
 
     std::cout<<"Netlist Status: "<<net_status<<std::endl;
     if (fs::exists(p)){
         remove(p);
     }
     if (net_status){
-        gen_tcl(path_golden, path_revised , top, &p1,&design_stage);
+        gen_tcl(path_golden, path_revised , top, &p1,&synth_desig_stage);
         std::cout<<"File does not exist"<<std::endl;
     }
     return p1;
@@ -188,7 +224,7 @@ void process_stage(struct fv_args *stage_arg){
     switch(out){
         case(7):{
             // bool net_status;
-            std::string des_stages[] = {"after_flatten.v","after_opt-fast-full.v"};
+            std::string des_stages[] = {"RTL","after_flatten","after_opt-fast-full", "b01_post_synth"};
             if (design_stages.empty()){
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
@@ -196,11 +232,17 @@ void process_stage(struct fv_args *stage_arg){
                 design_stages.clear();
                 design_stages.insert(design_stages.begin(),begin(des_stages),end(des_stages));
             }
-            for (auto &stage:design_stages){
+            // for (auto &stage:design_stages){
+            std::cout<<"Stage Size: "<<design_stages.size()<<std::endl;
+            for (int stage=0; stage<(design_stages.size()-1);stage++){
                 std::string tcl_path;
-                tcl_path= tcl_process(stage, &synth_dir_);
-                std::cout<<"Onespin Script Path: "<<tcl_path<<std::endl;
-                string result = exec_pipe("onespin_sh "+tcl_path);
+                std::cout<<"Stage : "<<stage<<" "<<design_stages.at(stage)<<std::endl;
+                tcl_path= tcl_process(design_stages.at(stage),design_stages.at(stage+1), &synth_dir_);
+                if (design_stages.at(stage)!="b01_post_synth"){
+                    std::cout<<"Onespin Script Path: "<<design_stages.at(stage)<<design_stages.at(stage+1)<<tcl_path<<std::endl;
+                }
+                // string result = exec_pipe("onespin_sh "+tcl_path);
+
                 // cout << result;
             }
             break;
@@ -296,16 +338,6 @@ return 1;
 }
 
 void *run_fv(void* flow) {
-    // pthread_t file_t;
-    std::cout<<"Yeh kia tito party hai"<<std::endl;
-    fs::path p = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/yosys_verific_rs/yosys-rs-plugin/src/fv/onespin_try.tcl";
-    if (fs::exists(p)){
-
-    std::cout<<"Bhai kr raha hu remove"<<std::endl;
-        remove(p);
-    }else{
-        std::cout<<"Bhai pehly file to bana ly"<<std::endl;
-    }
     struct fv_args *fvargs = (struct fv_args *)flow;
     std::string ref_net = *fvargs->ref_net;
     process_stage(fvargs);
@@ -313,10 +345,7 @@ void *run_fv(void* flow) {
 
     std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(5)); 
-    std::cout<<"Golden Netlist "<<ref_net<<std::endl;
-    std::cout<<"Formal Veriication Timeout "<<fV_timeout<<std::endl;
     std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
-    std::cout<<"DSP Inference "<<*fvargs->dsp_inf<<std::endl;
 
     pthread_exit(NULL);
     return NULL;

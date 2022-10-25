@@ -502,7 +502,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run_script(design, run_from, run_to);
 
         fvarg->synth_status = true;
-        pthread_join(fv_t,NULL);
         log_pop();
     }
 
@@ -1191,6 +1190,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean -purge");
         }
 
+        if (fv){
+            run("write_verilog -noattr -nohex post_synthesis.v");
+        }
+
         if (check_label("blif")) {
             if (!blif_file.empty()) {
                 run(stringf("write_blif %s", blif_file.c_str()));
@@ -1203,6 +1206,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
         }
 
+        pthread_join(fv_t,NULL);
     }
 
 } SynthRapidSiliconPass;
