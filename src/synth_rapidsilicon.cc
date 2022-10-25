@@ -38,8 +38,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
+#define BRAM_LIB brams_new.txt
 #define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
+#define BRAM_MAP_NEW_FILE brams_map_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
@@ -188,6 +190,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default call simplify.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -libmap\n");
+        log("        By default call memory_bram.\n");
+        log("        Specifying this switch turns it to memory_libmap.\n");
+        log("\n");
         log("    -keep_tribuf\n");
         log("        By default translate TBUF into logic.\n");
         log("        Specify this to keep TBUF primitives.\n");
@@ -227,6 +233,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sdffr;
     bool nosimplify;
     bool keep_tribuf;
+    bool libmap;
     int de_max_threads;
     RTLIL::Design *_design;
     string nosdff_str;
@@ -253,6 +260,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         de_max_threads = -1;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
+        libmap = false;
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
@@ -350,6 +358,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-no_simplify") {
                 nosimplify = true;
+                continue;
+            }
+            if (args[argidx] == "-libmap") {
+                libmap = true;
                 continue;
             }
             if (args[argidx] == "-keep_tribuf") {
@@ -707,12 +719,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
         switch (tech) {
             case Technologies::GENESIS: {
                 run("rs_bram_asymmetric");
-                run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+                if (!libmap)
+                    run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+                else
+                    run("memory_libmap -lib" GET_FILE_PATH(GENESIS_DIR, BRAM_LIB));
                 if (areMemCellsLeft()) {
                     run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT));
                 }
                 run("rs_bram_split");
-                run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+                if (!libmap)
+                    run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+                else
+                    run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_NEW_FILE));
                 run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
 
                 if (cec)
