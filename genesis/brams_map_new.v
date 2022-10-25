@@ -10,9 +10,7 @@
 
 module \$__RS_FACTOR_BRAM36_TDP (...);
 	parameter INIT = 0;
-	parameter ABITS = 15;
 	parameter WIDTH = 1;
-	parameter CFG_ENABLE = 4;
 	
 	parameter PORT_A_WR_EN_WIDTH = 1;
 	parameter PORT_A_RD_INIT_VALUE = 0;
@@ -21,6 +19,9 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	parameter PORT_B_WR_EN_WIDTH = 1;
 	parameter PORT_B_RD_INIT_VALUE = 0;
 	parameter PORT_B_RD_SRST_VALUE = 1;
+
+	localparam ABITS = 15;
+	localparam CFG_ENABLE = 4;
 
 	input 				PORT_A_CLK;
 	input [ABITS-1:0] 		PORT_A_ADDR;
@@ -173,9 +174,7 @@ endmodule
 
 module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter INIT = 0;
-	parameter ABITS = 14;
 	parameter WIDTH = 1;
-	parameter CFG_ENABLE = 4;
 	
 	parameter PORT_A_WR_EN_WIDTH = 1;
 	parameter PORT_A_RD_INIT_VALUE = 0;
@@ -185,8 +184,9 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter PORT_B_RD_INIT_VALUE = 0;
 	parameter PORT_B_RD_SRST_VALUE = 1;
 
-	parameter CLKPOL2 = 1;
-	parameter CLKPOL3 = 1;
+	localparam ABITS = 14;
+	localparam CLKPOL2 = 1;
+	localparam CLKPOL3 = 1;
 
 	input 				PORT_A_CLK;
 	input [ABITS-1:0] 		PORT_A_ADDR;
@@ -207,8 +207,8 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	BRAM2x18_TDP #(
 		.CFG_ABITS(ABITS),
 		.CFG_DBITS(WIDTH),
-		.CFG_ENABLE_B(CFG_ENABLE),
-		.CFG_ENABLE_D(CFG_ENABLE),
+		.CFG_ENABLE_B(PORT_A_WR_EN_WIDTH),
+		.CFG_ENABLE_D(PORT_B_WR_EN_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
 		.INIT0(INIT),

@@ -52,20 +52,21 @@ struct RsBramSplitPass : public Pass {
     // of the target BRAM cell
     const std::vector<std::pair<std::string, std::string>> m_BramSharedPorts = {};
     // BRAM parameters
-    const std::vector<std::string> m_BramParams = {"WIDTH"};
+    const std::vector<std::pair<std::string,std::string>> m_BramParams = {
+        std::make_pair("WIDTH", "CFG_DBITS")};
 
     // TDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target TDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_0 = {
-      std::make_pair("A1ADDR", "A1ADDR"), std::make_pair("A1DATA", "A1DATA"), std::make_pair("A1EN", "A1EN"),     std::make_pair("B1ADDR", "B1ADDR"),
-      std::make_pair("B1DATA", "B1DATA"), std::make_pair("B1EN", "B1EN"),     std::make_pair("C1ADDR", "C1ADDR"), std::make_pair("C1DATA", "C1DATA"),
-      std::make_pair("C1EN", "C1EN"),     std::make_pair("CLK1", "CLK1"),     std::make_pair("CLK2", "CLK2"),     std::make_pair("D1ADDR", "D1ADDR"),
-      std::make_pair("D1DATA", "D1DATA"), std::make_pair("D1EN", "D1EN")};
+      std::make_pair("PORT_A_ADDR", "A1ADDR"), std::make_pair("PORT_A_RD_DATA", "A1DATA"), std::make_pair("PORT_A_RD_EN", "A1EN"),     std::make_pair("PORT_A_ADDR", "B1ADDR"),
+      std::make_pair("PORT_A_WR_DATA", "B1DATA"), std::make_pair("PORT_A_WR_EN", "B1EN"),     std::make_pair("PORT_B_ADDR", "C1ADDR"), std::make_pair("PORT_B_RD_DATA", "C1DATA"),
+      std::make_pair("PORT_B_RD_EN", "C1EN"),     std::make_pair("PORT_A_CLK", "CLK1"),     std::make_pair("PORT_B_CLK", "CLK2"),     std::make_pair("PORT_B_ADDR", "D1ADDR"),
+      std::make_pair("PORT_B_WR_DATA", "D1DATA"), std::make_pair("PORT_B_WR_EN", "D1EN")};
     // TDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target TDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_1 = {
-      std::make_pair("A1ADDR", "E1ADDR"), std::make_pair("A1DATA", "E1DATA"), std::make_pair("A1EN", "E1EN"),     std::make_pair("B1ADDR", "F1ADDR"),
-      std::make_pair("B1DATA", "F1DATA"), std::make_pair("B1EN", "F1EN"),     std::make_pair("C1ADDR", "G1ADDR"), std::make_pair("C1DATA", "G1DATA"),
-      std::make_pair("C1EN", "G1EN"),     std::make_pair("CLK1", "CLK3"),     std::make_pair("CLK2", "CLK4"),     std::make_pair("D1ADDR", "H1ADDR"),
-      std::make_pair("D1DATA", "H1DATA"), std::make_pair("D1EN", "H1EN")};
+      std::make_pair("PORT_A_ADDR", "E1ADDR"), std::make_pair("PORT_A_RD_DATA", "E1DATA"), std::make_pair("PORT_A_RD_EN", "E1EN"),     std::make_pair("PORT_A_ADDR", "F1ADDR"),
+      std::make_pair("PORT_A_WR_DATA", "F1DATA"), std::make_pair("PORT_A_WR_EN", "F1EN"),     std::make_pair("PORT_B_ADDR", "G1ADDR"), std::make_pair("PORT_B_RD_DATA", "G1DATA"),
+      std::make_pair("PORT_B_RD_EN", "G1EN"),     std::make_pair("PORT_A_CLK", "CLK3"),     std::make_pair("PORT_B_CLK", "CLK4"),     std::make_pair("PORT_B_ADDR", "H1ADDR"),
+      std::make_pair("PORT_B_WR_DATA", "H1DATA"), std::make_pair("PORT_B_WR_EN", "H1EN")};
     // Source BRAM TDP cell type (1x18K)
     const std::string m_Bram1x18TDPType = "$__RS_FACTOR_BRAM18_TDP";
     // Target BRAM TDP cell type for the split mode
@@ -191,15 +192,15 @@ struct RsBramSplitPass : public Pass {
 
                 // Set bram parameters
                 for (const auto &it : m_BramParams) {
-                    auto val = bram_0->getParam(RTLIL::escape_id(it));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), val);
+                    auto val = bram_0->getParam(RTLIL::escape_id(it.first));
+                    bram_2x18->setParam(RTLIL::escape_id(it.second), val);
                 }
                 // Setting manual parameters
                 if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_D")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_D")));
+                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_A_WR_EN_WIDTH")));
+                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("PORT_A_WR_EN_WIDTH")));
+                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
                 } else {
                     bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
                     bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
