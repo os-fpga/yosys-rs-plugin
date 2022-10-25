@@ -145,7 +145,7 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 		.CLK_A2_i(PORT_A_CLK),
 		.REN_A1_i(PORT_A_RD_EN),
 		.REN_A2_i(PORT_A_RD_EN),
-		.WEN_A1_i(PORT_A_WR_EN]),
+		.WEN_A1_i(PORT_A_WR_EN),
 		.WEN_A2_i(PORT_A_WR_EN),
 		.BE_A1_i({B1EN[1],B1EN[0]}),
 		.BE_A2_i({B1EN[3],B1EN[2]}),
