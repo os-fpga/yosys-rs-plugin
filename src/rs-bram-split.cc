@@ -22,6 +22,9 @@ struct RsBramSplitPass : public Pass {
         log("    This pass identifies k6n10f 18K BRAM cells\n");
         log("    and packs pairs of them together into final TDP36K cell that can\n");
         log("    be split into 2x18K BRAMs.\n");
+        log("    -new_mapping\n");
+        log("        Use the new mapping definitions.\n");
+        log("\n");
     }
 
     // ..........................................
@@ -52,17 +55,31 @@ struct RsBramSplitPass : public Pass {
     // of the target BRAM cell
     const std::vector<std::pair<std::string, std::string>> m_BramSharedPorts = {};
     // BRAM parameters
-    const std::vector<std::pair<std::string,std::string>> m_BramParams = {
+    const std::vector<std::string> m_BramParams = {"CFG_ABITS", "CFG_DBITS"};
+    // BRAM parameters for new mapping
+    const std::vector<std::pair<std::string,std::string>> m_BramParamsNew = {
         std::make_pair("WIDTH", "CFG_DBITS")};
 
     // TDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target TDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_0 = {
+      std::make_pair("A1ADDR", "A1ADDR"), std::make_pair("A1DATA", "A1DATA"), std::make_pair("A1EN", "A1EN"),     std::make_pair("B1ADDR", "B1ADDR"),
+      std::make_pair("B1DATA", "B1DATA"), std::make_pair("B1EN", "B1EN"),     std::make_pair("C1ADDR", "C1ADDR"), std::make_pair("C1DATA", "C1DATA"),
+      std::make_pair("C1EN", "C1EN"),     std::make_pair("CLK1", "CLK1"),     std::make_pair("CLK2", "CLK2"),     std::make_pair("D1ADDR", "D1ADDR"),
+      std::make_pair("D1DATA", "D1DATA"), std::make_pair("D1EN", "D1EN")};
+    // TDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target TDP BRAM 2x18 cell
+    const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_1 = {
+      std::make_pair("A1ADDR", "E1ADDR"), std::make_pair("A1DATA", "E1DATA"), std::make_pair("A1EN", "E1EN"),     std::make_pair("B1ADDR", "F1ADDR"),
+      std::make_pair("B1DATA", "F1DATA"), std::make_pair("B1EN", "F1EN"),     std::make_pair("C1ADDR", "G1ADDR"), std::make_pair("C1DATA", "G1DATA"),
+      std::make_pair("C1EN", "G1EN"),     std::make_pair("CLK1", "CLK3"),     std::make_pair("CLK2", "CLK4"),     std::make_pair("D1ADDR", "H1ADDR"),
+      std::make_pair("D1DATA", "H1DATA"), std::make_pair("D1EN", "H1EN")};
+    // TDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target TDP BRAM 2x18 cell for new mapping
+    const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPortsNew_0 = {
       std::make_pair("PORT_A_ADDR", "A1ADDR"), std::make_pair("PORT_A_RD_DATA", "A1DATA"), std::make_pair("PORT_A_RD_EN", "A1EN"),     std::make_pair("PORT_A_ADDR", "B1ADDR"),
       std::make_pair("PORT_A_WR_DATA", "B1DATA"), std::make_pair("PORT_A_WR_EN", "B1EN"),     std::make_pair("PORT_B_ADDR", "C1ADDR"), std::make_pair("PORT_B_RD_DATA", "C1DATA"),
       std::make_pair("PORT_B_RD_EN", "C1EN"),     std::make_pair("PORT_A_CLK", "CLK1"),     std::make_pair("PORT_B_CLK", "CLK2"),     std::make_pair("PORT_B_ADDR", "D1ADDR"),
       std::make_pair("PORT_B_WR_DATA", "D1DATA"), std::make_pair("PORT_B_WR_EN", "D1EN")};
-    // TDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target TDP BRAM 2x18 cell
-    const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_1 = {
+    // TDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target TDP BRAM 2x18 cell for new mapping
+    const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPortsNew_1 = {
       std::make_pair("PORT_A_ADDR", "E1ADDR"), std::make_pair("PORT_A_RD_DATA", "E1DATA"), std::make_pair("PORT_A_RD_EN", "E1EN"),     std::make_pair("PORT_A_ADDR", "F1ADDR"),
       std::make_pair("PORT_A_WR_DATA", "F1DATA"), std::make_pair("PORT_A_WR_EN", "F1EN"),     std::make_pair("PORT_B_ADDR", "G1ADDR"), std::make_pair("PORT_B_RD_DATA", "G1DATA"),
       std::make_pair("PORT_B_RD_EN", "G1EN"),     std::make_pair("PORT_A_CLK", "CLK3"),     std::make_pair("PORT_B_CLK", "CLK4"),     std::make_pair("PORT_B_ADDR", "H1ADDR"),
@@ -74,10 +91,18 @@ struct RsBramSplitPass : public Pass {
 
     // SDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target SDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramSDPDataPorts_0 = {
-      std::make_pair("PORT_A_ADDR", "A1ADDR"), std::make_pair("PORT_A_RD_DATA", "A1DATA"), std::make_pair("PORT_A_RD_EN", "A1EN"), std::make_pair("PORT_B_ADDR", "B1ADDR"),
-      std::make_pair("PORT_B_WR_DATA", "B1DATA"), std::make_pair("PORT_B_WR_EN", "B1EN"),     std::make_pair("PORT_A_CLK", "CLK1")};
+      std::make_pair("A1ADDR", "A1ADDR"), std::make_pair("A1DATA", "A1DATA"), std::make_pair("A1EN", "A1EN"), std::make_pair("B1ADDR", "B1ADDR"),
+      std::make_pair("B1DATA", "B1DATA"), std::make_pair("B1EN", "B1EN"),     std::make_pair("CLK1", "CLK1")};
     // SDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target SDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramSDPDataPorts_1 = {
+      std::make_pair("A1ADDR", "C1ADDR"), std::make_pair("A1DATA", "C1DATA"), std::make_pair("A1EN", "C1EN"), std::make_pair("B1ADDR", "D1ADDR"),
+      std::make_pair("B1DATA", "D1DATA"), std::make_pair("B1EN", "D1EN"),     std::make_pair("CLK1", "CLK2")};
+    // SDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target SDP BRAM 2x18 cell for new mapping
+    const std::vector<std::pair<std::string, std::string>> m_BramSDPDataPortsNew_0 = {
+      std::make_pair("PORT_A_ADDR", "A1ADDR"), std::make_pair("PORT_A_RD_DATA", "A1DATA"), std::make_pair("PORT_A_RD_EN", "A1EN"), std::make_pair("PORT_B_ADDR", "B1ADDR"),
+      std::make_pair("PORT_B_WR_DATA", "B1DATA"), std::make_pair("PORT_B_WR_EN", "B1EN"),     std::make_pair("PORT_A_CLK", "CLK1")};
+    // SDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target SDP BRAM 2x18 cell for new mapping
+    const std::vector<std::pair<std::string, std::string>> m_BramSDPDataPortsNew_1 = {
       std::make_pair("PORT_A_ADDR", "C1ADDR"), std::make_pair("PORT_A_RD_DATA", "C1DATA"), std::make_pair("PORT_A_RD_EN", "C1EN"), std::make_pair("PORT_B_ADDR", "D1ADDR"),
       std::make_pair("PORT_B_WR_DATA", "D1DATA"), std::make_pair("PORT_B_WR_EN", "D1EN"),     std::make_pair("PORT_B_CLK", "CLK2")};
     // Source BRAM SDP cell type (1x18K)
@@ -87,6 +112,8 @@ struct RsBramSplitPass : public Pass {
 
     /// Temporary SigBit to SigBit helper map.
     SigMap m_SigMap;
+
+    bool m_newMapping;
 
     // ..........................................
 
@@ -150,17 +177,32 @@ struct RsBramSplitPass : public Pass {
                 std::vector<std::pair<std::string, std::string>> m_BramDataPorts_1;
                 std::string m_Bram1x18Type;
                 std::string m_Bram2x18Type;
-                // Distinguish between TDP and SDP
-                if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
-                    m_BramDataPorts_0 = m_BramTDPDataPorts_0;
-                    m_BramDataPorts_1 = m_BramTDPDataPorts_1;
-                    m_Bram1x18Type = m_Bram1x18TDPType;
-                    m_Bram2x18Type = m_Bram2x18TDPType;
+                if (m_newMapping) {
+                    // Distinguish between TDP and SDP
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                        m_BramDataPorts_0 = m_BramTDPDataPortsNew_0;
+                        m_BramDataPorts_1 = m_BramTDPDataPortsNew_1;
+                        m_Bram1x18Type = m_Bram1x18TDPType;
+                        m_Bram2x18Type = m_Bram2x18TDPType;
+                    } else {
+                        m_BramDataPorts_0 = m_BramSDPDataPortsNew_0;
+                        m_BramDataPorts_1 = m_BramSDPDataPortsNew_1;
+                        m_Bram1x18Type = m_Bram1x18SDPType;
+                        m_Bram2x18Type = m_Bram2x18SDPType;
+                    }
                 } else {
-                    m_BramDataPorts_0 = m_BramSDPDataPorts_0;
-                    m_BramDataPorts_1 = m_BramSDPDataPorts_1;
-                    m_Bram1x18Type = m_Bram1x18SDPType;
-                    m_Bram2x18Type = m_Bram2x18SDPType;
+                    // Distinguish between TDP and SDP
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                        m_BramDataPorts_0 = m_BramTDPDataPorts_0;
+                        m_BramDataPorts_1 = m_BramTDPDataPorts_1;
+                        m_Bram1x18Type = m_Bram1x18TDPType;
+                        m_Bram2x18Type = m_Bram2x18TDPType;
+                    } else {
+                        m_BramDataPorts_0 = m_BramSDPDataPorts_0;
+                        m_BramDataPorts_1 = m_BramSDPDataPorts_1;
+                        m_Bram1x18Type = m_Bram1x18SDPType;
+                        m_Bram2x18Type = m_Bram2x18SDPType;
+                    }
                 }
 
                 std::string name = stringf("bram_%s_%s", RTLIL::unescape_id(bram_0->name).c_str(), RTLIL::unescape_id(bram_1->name).c_str());
@@ -190,20 +232,41 @@ struct RsBramSplitPass : public Pass {
                 // Connect second bram
                 map_ports(m_BramDataPorts_1, bram_1, bram_2x18);
 
-                // Set bram parameters
-                for (const auto &it : m_BramParams) {
-                    auto val = bram_0->getParam(RTLIL::escape_id(it.first));
-                    bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                if (m_newMapping) {
+                    // Set bram parameters
+                    for (const auto &it : m_BramParamsNew) {
+                        auto val = bram_0->getParam(RTLIL::escape_id(it.first));
+                        bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                    }
+                } else { 
+                    // Set bram parameters
+                    for (const auto &it : m_BramParams) {
+                        auto val = bram_0->getParam(RTLIL::escape_id(it));
+                        bram_2x18->setParam(RTLIL::escape_id(it), val);
+                    }
                 }
-                // Setting manual parameters
-                if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_A_WR_EN_WIDTH")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("PORT_A_WR_EN_WIDTH")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                if (m_newMapping) {
+                    // Setting manual parameters
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_A_WR_EN_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("PORT_A_WR_EN_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                    } else {
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                    }
                 } else {
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
-                    bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                    // Setting manual parameters
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_D")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_D")));
+                    } else {
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
+                    }
                 }
 
                 if (bram_0->hasParam(RTLIL::escape_id("INIT")))
@@ -221,9 +284,17 @@ struct RsBramSplitPass : public Pass {
     void execute(std::vector<std::string> a_Args, RTLIL::Design *a_Design) override
     {
         log_header(a_Design, "Executing Rs_BRAM_Split pass.\n");
+        m_newMapping = false;
 
         // Parse args
-        extra_args(a_Args, 1, a_Design);
+        size_t argidx;
+        for (argidx = 1; argidx < a_Args.size(); argidx++) {
+            if (a_Args[argidx] == "-new_mapping") {
+                m_newMapping = true;
+                continue;
+            }
+        }
+        extra_args(a_Args, argidx, a_Design);
 
         // Process modules
         for (auto module : a_Design->selected_modules()) {
