@@ -34,11 +34,11 @@ ram block $__RS_FACTOR_BRAM36_SDP {
     widths  1 2 4 9 18 36 global;
 	cost 2;
 	init any;
-	port sw "A" {
+	port sw "B" {
         clock posedge;
         wrtrans all new;
     }
-    port sr "B" {
+    port sr "A" {
         clock posedge;
         rden;
         rdinit any;
@@ -52,11 +52,11 @@ ram block $__RS_FACTOR_BRAM18_SDP {
     widths  1 2 4 9 18 global;
 	cost 1;
 	init any;
-	port sw "A" {
+	port sw "B" {
         clock posedge;
         wrtrans all new;
     }
-    port sr "B" {
+    port sr "A" {
         clock posedge;
         rden;
         rdinit any;
