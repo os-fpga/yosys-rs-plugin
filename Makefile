@@ -41,7 +41,8 @@ SOURCES = src/rs-dsp.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
-		  src/rs-bram-asymmetric.cc
+		  src/rs-bram-asymmetric.cc \
+		  src/opt_Dff_clean.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \

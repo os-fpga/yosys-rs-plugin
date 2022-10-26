@@ -85,6 +85,11 @@ struct rsDspIORegs : public Pass {
 
                 // If the cell does not have the "is_inferred" attribute set
                 // then don't touch it.
+
+                if (dsp->getPort(RTLIL::escape_id("register_inputs")).as_int() == 1) {
+                    continue;
+                }
+
                 if (!dsp->has_attribute(RTLIL::escape_id("is_inferred")) || dsp->get_bool_attribute(RTLIL::escape_id("is_inferred")) == false) {
                     continue;
                 }
