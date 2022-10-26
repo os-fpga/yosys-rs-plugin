@@ -39,19 +39,23 @@ parameter DWIDTH = 32)(
 	reg        [DWIDTH-1:0] memory[0:(1<<AWIDTH)-1];
 
 	always @(posedge clk_a) begin
-		if (rce_a)
-			rq_a <= memory[ra_a];
-
-		if (wce_a)
+        if (wce_a) begin
 			memory[wa_a] <= wd_a;
+            rq_a <= wd_a;
+        end
+		else if (rce_a)
+			rq_a <= memory[wa_a];
+
 	end
 
 	always @(posedge clk_b) begin
-		if (rce_b)
-			rq_b <= memory[ra_b];
-
-		if (wce_b)
+        if (wce_b) begin
 			memory[wa_b] <= wd_b;
+            rq_b <= wd_b;
+        end
+		else if (rce_b)
+			rq_b <= memory[wa_b];
+
 	end
 
 	integer i;
