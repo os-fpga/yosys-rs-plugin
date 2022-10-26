@@ -10,7 +10,11 @@ TESTS = dffs\
 		bram_tdp\
 		bram_sdp\
 		bram_sdp_split\
-		bram_tdp_split
+		bram_tdp_split\
+		bram_tdp_new\
+		bram_sdp_new\
+		bram_sdp_split_new\
+		bram_tdp_split_new
 		#bram_asymmetric_wider_read\
 		#bram_asymmetric_wider_write
 
