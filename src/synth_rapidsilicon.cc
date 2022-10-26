@@ -191,9 +191,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default call simplify.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
-        log("    -libmap\n");
-        log("        By default call memory_bram.\n");
-        log("        Specifying this switch turns it to memory_libmap.\n");
+        log("    -no_libmap\n");
+        log("        By default call memory_libmap for Block RAM mapping.\n");
+        log("        Specifying this switch turns it to memory_bram.\n");
         log("\n");
         log("    -keep_tribuf\n");
         log("        By default translate TBUF into logic.\n");
@@ -234,7 +234,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sdffr;
     bool nosimplify;
     bool keep_tribuf;
-    bool libmap;
+    bool nolibmap;
     int de_max_threads;
     RTLIL::Design *_design;
     string nosdff_str;
@@ -261,7 +261,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         de_max_threads = -1;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
-        libmap = false;
+        nolibmap = false;
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
@@ -361,8 +361,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 nosimplify = true;
                 continue;
             }
-            if (args[argidx] == "-libmap") {
-                libmap = true;
+            if (args[argidx] == "-no_libmap") {
+                nolibmap = true;
                 continue;
             }
             if (args[argidx] == "-keep_tribuf") {
@@ -720,7 +720,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         switch (tech) {
             case Technologies::GENESIS: {
                 run("rs_bram_asymmetric");
-                if (!libmap) {
+                if (nolibmap) {
                     run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
                     run("rs_bram_split");
                     if (areMemCellsLeft()) {
