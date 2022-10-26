@@ -42,19 +42,27 @@ struct OptDFfCleanWorker
 
 
 struct OptDFfCleanWorkerPass : public Pass {
-	OptDFfCleanWorkerPass() : Pass("dff_clean", "get rid of unnecessary DFFs") { }
+	OptDFfCleanWorkerPass() : Pass("rs_pack_dsp_regs", "get rid of unnecessary DFFs") { }
 	void help() override
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
 		log("\n");
-		log("    dff_clean [selection]\n");
+		log("    Rs_pack_dsp_regs [selection]\n");
 		log("\n");
 		log("This pass makes it possible to use all the DFFs in the DSP and not add new DFFs to the design in an empty space\n");
 		log("\n");
 	}	
 
-	void execute(std::vector<std::string> args, RTLIL::Design *design) override
+	void execute(std::vector<std::string> a_Args, RTLIL::Design *design) override
 	{		
+        log_header(design, "Executing rs_pack_dsp_regs pass.\n");
+
+		size_t argidx;
+        for (argidx = 1; argidx < a_Args.size(); argidx++) {
+            break;
+        }
+        extra_args(a_Args, argidx, design);
+
 		int total_count = 0;
 
 		std::vector <std::string> DSP_modules_names {"\\RS_DSP1", "\\RS_DSP2", "\\RS_DSP2_MULT","\\RS_DSP2_MULT_REGIN", "\\RS_DSP2_MULT_REGOUT", 
@@ -75,8 +83,6 @@ struct OptDFfCleanWorkerPass : public Pass {
 			OptDFfCleanWorker worker(module);			
 			total_count += worker.count;
 			for (auto cell : module->selected_cells()) {
-				//std::cout << "CELL: " << cell->type.c_str() << std::endl << std::endl;
-
 				bool dsp_found_ = false;
 				for (auto it : DSP_modules_names) {
 					if (it == cell->type.c_str()){						
@@ -99,7 +105,7 @@ struct OptDFfCleanWorkerPass : public Pass {
 			
 			// Getting each DSP from all DSPs of our MODULE
 			for (auto &it_dsp : DSP_used_cells){
-				std::cout << "Working with DSP by name: " <<  it_dsp->name.c_str() << std::endl;
+				log_debug("Working with DSP by name: %s.\n", it_dsp->name.c_str());
 
 				// if the port of DSP driven from DFF
 				bool port_a_from_dff = false;
@@ -113,7 +119,7 @@ struct OptDFfCleanWorkerPass : public Pass {
 				RTLIL::SigSpec DSP_port_b = sigmap(it_dsp->getPort("\\b"));
 				// Getting each DFF from all DFFs of our MODULE
 				for (auto &it_dff : DFF_used_cells){
-					std::cout << "-- Working with DFF by name: " <<  it_dff->name.c_str() << std::endl;
+					log_debug("Working with DFF by name: %s.\n", it_dff->name.c_str());
 					// Getting all connections of each dff
 					for (auto &conn_dff : it_dff->connections_) {
 						// Getting selected DFF RESET and CLOCK SigSepc
@@ -126,10 +132,10 @@ struct OptDFfCleanWorkerPass : public Pass {
 							}
 						}
 						// check if there was connection between DSP and DFF
-
 						// if DSP port b is driven from DFF make it true
-						if (sigmap(DSP_port_a) == sigmap(conn_dff.second)){ 
-							std::cout << "\tThere was connection between DSP port ( \\a ) and DFF port ( " << conn_dff.first.c_str() << " )" << std::endl;
+						if (sigmap(DSP_port_a) == sigmap(conn_dff.second)){
+							log_debug("There was connection between DSP port ( \\a ) and DFF port ( %s )\n", conn_dff.first.c_str());
+							
 							if (for_first_dff){
 								port_a_from_dff = true;
 							}else{
@@ -140,7 +146,7 @@ struct OptDFfCleanWorkerPass : public Pass {
 						}
 						// if DSP port b is driven from DFF make it true
 						if (sigmap(DSP_port_b) == sigmap(conn_dff.second)){ 
-							std::cout << "\tThere was connection between DSP port ( \\b ) and DFF port ( " << conn_dff.first.c_str() << " )" << std::endl;
+							log_debug("There was connection between DSP port ( \\b ) and DFF port ( %s )\n", conn_dff.first.c_str());
 							if (for_first_dff){
 								port_b_from_dff = true;
 							}else{
@@ -164,7 +170,6 @@ struct OptDFfCleanWorkerPass : public Pass {
 					DSP_that_drives_from_DFF.push_back(it_dsp);
 				}
 			}
-
 
 			// Getting all DSP that are confirmed for treatment
 			for (auto &DSP_driven_DFF : DSP_used_cells){

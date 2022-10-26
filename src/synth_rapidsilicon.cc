@@ -873,9 +873,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
-                        run("stat");                        
                         run("opt_clean");
-                        run("dff_clean");
+                        run("rs_pack_dsp_regs");
                         run("opt_clean");
                         
                         run("rs_dsp_io_regs");
@@ -1131,7 +1130,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("hierarchy -check");
             run("stat");
         }
-        run("show -format 'svg'");
 
         if (check_label("finalize")) {
             run("opt_clean -purge");
