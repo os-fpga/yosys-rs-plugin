@@ -53,6 +53,12 @@ fv_srcs = src/fv/src/synth_formal.cc \
 
 fv_deps = src/fv/src//synth_formal.h \
 		  src/fv/src/synthesis_watcher.h
+
+simulation_model = src/fv/src/sim_par.cc
+execute_Sim_parse:
+	g++  -lstdc++fs -std=c++17  $(simulation_model)  -o sim_par 
+	./sim_par
+
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \
@@ -104,7 +110,7 @@ install_modules: $(VERILOG_MODULES)
 	$(foreach f,$^,install -D $(f) $(DATA_DIR)/rapidsilicon/$(f);)
 
 .PHONY: install
-install: install_plugin install_modules
+install: execute_Sim_parse install_plugin install_modules
 
 valgrind:
 	$(MAKE) -C tests valgrind YOSYS_PATH=$(YOSYS_PATH)
