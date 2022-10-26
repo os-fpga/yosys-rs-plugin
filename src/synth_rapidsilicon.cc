@@ -28,6 +28,7 @@ PRIVATE_NAMESPACE_BEGIN
 #endif
 
 #define GENESIS_DIR genesis
+#define GENESIS_2_DIR genesis2
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
@@ -37,6 +38,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
+#define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
@@ -48,7 +50,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 75
+#define VERSION_PATCH 82
 
 enum Strategy {
     AREA,
@@ -64,7 +66,8 @@ enum EffortLevel {
 
 enum Technologies {
     GENERIC,   
-    GENESIS
+    GENESIS,
+    GENESIS_2
 };
 
 enum CarryMode {
@@ -101,6 +104,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        generate the synthesis netlist for the specified technology.\n");
         log("        Supported values:\n");
         log("        - generic  : generic\n");
+        log("        - genesis  : Gemini target architecture.\n");
+        log("        - genesis2 : Gemini_2 target architecture.\n");
         log("        By default 'generic' technology is used.\n");
         log("\n");
         log("    -blif <file>\n");
@@ -371,6 +376,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             tech = Technologies::GENERIC;
         else if (tech_str == "genesis")
             tech = Technologies::GENESIS;
+        else if (tech_str == "genesis2")
+            tech = Technologies::GENESIS_2;
         else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
 
@@ -697,14 +704,30 @@ struct SynthRapidSiliconPass : public ScriptPass {
     }
 
     void mapBrams() {
-        run("rs_bram_asymmetric");
-        run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
-        run("rs_bram_split");
-        run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
-        run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
+        switch (tech) {
+            case Technologies::GENESIS: {
+                run("rs_bram_asymmetric");
+                run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+                if (areMemCellsLeft()) {
+                    run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT));
+                }
+                run("rs_bram_split");
+                run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
+                run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
 
-        if (cec)
-            run("write_verilog -noattr -nohex after_bram_map.v");
+                if (cec)
+                    run("write_verilog -noattr -nohex after_bram_map.v");
+                break;
+            }
+            case GENESIS_2: {
+                // TODO: Add BRAM inference.
+                log_warning("BRAM inference is not yet implemented for Genesis_2 technology.");
+                break;
+            }
+            case GENERIC: {
+                break;
+            }
+        }
     }
 
     void postProcessBrams() {
@@ -714,13 +737,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 log_warning("Forcing to use BRAMs.\n");
                 mapBrams();
                 if (areMemCellsLeft()) {
-                    log("\n"); // Skip line to make the error more focused.
-                    log_error("Failed to map RAM on technology specific BRAM.\n");
+                    reportUnmappedRams();
                 }
             }
             else {
-                log("\n"); // Skip line to make the error more focused.
-                log_error("Failed to map RAM on technology specific BRAM.\n");
+                reportUnmappedRams();
             }
         }
     }
@@ -734,6 +755,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return false;
     }
 
+    void reportUnmappedRams() {
+        std::stringstream msg;
+        msg << "Failed to map RAM(s) on technology specific BRAM.\n";
+        for (auto module : _design->selected_modules()) {
+            auto memCells = Mem::get_selected_memories(module);
+            for (auto mem : memCells) {
+                msg << "  Signal: " << mem.memid.str().substr(1) << ", ";
+                msg << "Src: " << mem.get_src_attribute().c_str() << "\n";
+            }
+        }
+        msg << "NOTE: Please review MEMORY_BRAM pass logs for details.\n";
+        log("\n"); // Skip line to make the error more focused.
+        log_error("%s\n", msg.str().c_str());
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -741,6 +777,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             switch (tech) {
                 case Technologies::GENESIS: {
                     readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) GET_FILE_PATH(GENESIS_DIR, DSP_SIM_LIB_FILE);
+                    break;
+                }    
+                case Technologies::GENESIS_2: {
+                    readArgs = GET_FILE_PATH(GENESIS_2_DIR, SIM_LIB_FILE);
+                    //readArgs = GET_FILE_PATH(GENESIS_2_DIR, SIM_LIB_FILE) GET_FILE_PATH(GENESIS_2_DIR, DSP_SIM_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
@@ -844,6 +885,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         break;
                     }
+                    case GENESIS_2: {
+                        // TODO: Add DSP inference
+                        log_warning("DSP inference is not yet implemented for Genesis_2 technology.");
+                        break;
+                    }
                     case GENERIC: {
                         break;
                     }
@@ -910,6 +956,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     run("stat");
 #endif
                     break;    
+                }    
+                case GENESIS_2: {
+                    // TODO: Add Carry inference
+                    log_warning("Carry inference is not yet implemented for Genesis_2 technology.");
+                    run("techmap");
+                    break;
                 }    
                 // Just to make compiler happy
                 case Technologies::GENERIC: {
@@ -1023,6 +1075,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         techMapArgs += GET_FILE_PATH(GENESIS_DIR, FFS_MAP_FILE);
                         break;    
                     }    
+                    case GENESIS_2: {
+#ifdef DEV_BUILD
+                        run("stat");
+#endif
+                        // TODO: run("shregmap -minlen 8 -maxlen 20");
+                        run(
+                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFFE_??_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                " -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0"
+                                " -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
+                           );
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dfflegalize.v");
+
+#ifdef DEV_BUILD
+                        run("stat");
+#endif
+                        techMapArgs += GET_FILE_PATH(GENESIS_2_DIR, FFS_MAP_FILE);
+                        break;
+                    }
                     // Just to make compiler happy
                     case Technologies::GENERIC: {
                         break;

@@ -19,6 +19,7 @@ EXTRA_FLAGS ?=
 
 COMMON			= common
 GENESIS			= genesis
+GENESIS2		= genesis2
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/cells_sim.v \
 				  $(GENESIS)/dsp_sim.v \
@@ -30,9 +31,12 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/brams_map.v \
 				  $(GENESIS)/brams_final_map.v \
 				  $(GENESIS)/brams.txt \
+				  $(GENESIS)/brams_async.txt \
 				  $(GENESIS)/TDP18K_FIFO.v \
 				  $(GENESIS)/sram1024x18.v \
 				  $(GENESIS)/ufifo_ctl.v \
+				  $(GENESIS2)/cells_sim.v \
+				  $(GENESIS2)/ffs_map.v \
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
