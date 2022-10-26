@@ -674,6 +674,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             run("chtype -set $mul t:$__soft_mul");
         }
+
         /* 
             In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
             The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
@@ -691,7 +692,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec)
                 run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
-
             run("chtype -set $mul t:$__soft_mul");
         }
     }
@@ -814,8 +814,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         run("wreduce t:$mul");
                         run("rs_dsp_macc" + use_dsp_cfg_params);
-
                         processDsp(cec);
+                        
 
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
@@ -832,7 +832,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
-
+                        run("stat");                        
+                        run("opt_clean");
+                        run("dff_clean");
+                        run("opt_clean");
+                        
                         run("rs_dsp_io_regs");
 
                         if (cec)
@@ -858,9 +862,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
             run("stat");
 #endif
-
             run("memory -nomap");
-
 #ifdef DEV_BUILD
             run("stat");
 #endif
@@ -897,7 +899,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         }
                         case CarryMode::ALL: {
                             run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
-                            break;
+                            break;                            
                         }
                         case CarryMode::NO: {
                             run("techmap");
@@ -1037,6 +1039,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_merge");
             run("opt_dff -nodffe -nosdff");
             run("opt_clean");
+            
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
@@ -1056,6 +1059,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("hierarchy -check");
             run("stat");
         }
+        run("show -format 'svg'");
 
         if (check_label("finalize")) {
             run("opt_clean -purge");
