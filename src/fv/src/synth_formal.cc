@@ -193,7 +193,7 @@ string tcl_process(std::string design_stage ,std::string rev_stage ,std:: string
     fs::path p = *synth_dir_ + rev_stage + "_onespin.tcl";
     std::string p1 = p.generic_string();
     vector<string> path_golden;
-    fs::path ys_script=*synth_dir_+"/b01.ys";
+    fs::path ys_script=*synth_dir_+"/yosys.ys";
     if (design_stage=="RTL"){get_rtl(ys_script,path_golden);}
     else{
         path_golden.push_back(*synth_dir_+design_stage+".v");
@@ -224,8 +224,70 @@ string tcl_process(std::string design_stage ,std::string rev_stage ,std:: string
     }
     return p1;
 }
+void write_report(string& top,string& synth_directory)
+{
+ifstream yosys_log_file,onespin_log;
+ofstream fv_synth; 
+yosys_log_file.open (synth_directory+"yosys_output.log"); // yosys output log file path
+onespin_log.open (synth_directory+top+"_final_results.log");// onespin result.log file path
+fv_synth.open (synth_directory+"FV_synth.rpt",ios::out); // final output report file
+fv_synth.close();
+if (yosys_log_file.fail())
+{
+	cout<<"File failed to open"<<endl;
+	return;
+}
 
-void run_stage(std::vector<std::string> &design_stages,string synth_dir_,string des_stages,string final_net,string top){
+if (onespin_log.fail())
+{
+	cout<<"onespin_log File failed to open"<<endl;
+	return;
+}
+int stat_line=0;
+string line;
+bool write=false;
+fv_synth.open ("FV_synth.rpt",ios::app);
+fv_synth <<"========= Synthesis Utilization =========\n\n";
+while (getline(yosys_log_file,line))
+{
+	if (regex_match (line, regex(".*hierarchy -check")))
+	{
+		write=true;
+        // cout<<"Entered into hierarchy -check"<<endl;
+	}
+	if (write)
+	{		
+		if (line=="=== "+top+" ===")
+		{
+			// cout<<"Entered === "+top+" ==="<<endl;
+            stat_line=1;
+		}
+		if (regex_match (line, regex(".*opt_clean -purge")))
+		{
+		break;
+		}
+		if (stat_line==1)
+		fv_synth <<line+"\n";
+	}
+}
+fv_synth << "\n\n========= Formal Verification =========\n\n";
+while (getline(onespin_log,line))
+{
+	
+	 fv_synth <<line+"\n";
+	if (line.find("The designs are") != std::string::npos) 
+	{
+		break;
+	}
+
+}
+
+yosys_log_file.close();
+onespin_log.close();
+fv_synth.close();
+return;
+}
+void run_stage(std::vector<std::string> &design_stages,string synth_dir_,string des_stages,string final_net,string top,bool *status){
     istringstream ss(des_stages);
     string word{};
     design_stages.clear();
@@ -237,6 +299,11 @@ void run_stage(std::vector<std::string> &design_stages,string synth_dir_,string 
         tcl_path= tcl_process(design_stages.at(stage),design_stages.at(stage+1), &synth_dir_,final_net,top);
         // string result = exec_pipe("onespin_sh "+tcl_path);
     }
+
+    while(!*status){
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    write_report(top,synth_dir_); // writing the final report
 }
 
 void process_stage(struct fv_args *stage_arg){
@@ -248,6 +315,7 @@ void process_stage(struct fv_args *stage_arg){
     int test_convr = *stage_arg->retiming?1:0;
     int out = (!(*stage_arg->fv_cec)<<3)|(test_convd << 2) | (test_convb<<1) | test_convr;
     std::string final_net = *stage_arg->final_stage;
+    bool *synthesis_status= &(stage_arg->synth_status);
     istringstream ss(*stage_arg->top_module);
     string word{};
     string top_mod{};
@@ -262,48 +330,48 @@ void process_stage(struct fv_args *stage_arg){
         case(0):{
             // highly optimized configuration
             string des_stages = "RTL after_flatten after_dsp_map4 after_bram_map before_simplify after_simplify final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(1):{
             string des_stages = "RTL after_flatten after_dsp_map4 after_bram_map final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(2):{
             string des_stages = "RTL after_flatten after_dsp_map4 before_simplify after_simplify final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(3):{
             string des_stages = "RTL after_flatten after_dsp_map4 after_opt-fast-full final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(4):{
             string des_stages = "RTL after_flatten after_bram_map before_simplify after_simplify final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(5):{
             string des_stages = "RTL after_flatten after_bram_map after_opt-fast-full final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(6):{
             string des_stages = "RTL after_flatten before_simplify after_simplify final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         case(7):{
             // least optimized configuration
             string des_stages = "RTL after_flatten after_opt-fast-full final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
         default:{
             string des_stages = "RTL final";
-            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod);
+            run_stage(design_stages,synth_dir_,des_stages,final_net,top_mod,synthesis_status);
             break;
         }
     }
@@ -312,11 +380,11 @@ void process_stage(struct fv_args *stage_arg){
 void *run_fv(void* flow) {
     struct fv_args *fvargs = (struct fv_args *)flow;
     std::string ref_net = *fvargs->ref_net;
-    std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
+    std::cout<<"\nSynthesis Status "<<fvargs->synth_status<<std::endl;
     process_stage(fvargs);
     int fV_timeout = *fvargs->fv_timeout;
 
-    std::this_thread::sleep_for(std::chrono::seconds(5)); 
+    // std::this_thread::sleep_for(std::chrono::seconds(5)); 
     std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
 
     pthread_exit(NULL);

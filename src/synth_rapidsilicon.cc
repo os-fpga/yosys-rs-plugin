@@ -1217,7 +1217,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         fvarg->synth_status = true;
-        pthread_join(fv_t,NULL);
+        if(fv){
+            pthread_join(fv_t,NULL);
+        }
     }
 
 } SynthRapidSiliconPass;
