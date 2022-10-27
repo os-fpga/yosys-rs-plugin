@@ -23,6 +23,8 @@ struct fv_args{
     std::string *strategy;
     bool synth_status;
     bool *fv_cec;
+    std::string *top_module;
+    std::string *final_stage;
 };
 
 

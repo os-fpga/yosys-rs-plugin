@@ -92,6 +92,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     SynthRapidSiliconPass() : ScriptPass(STR(PASS_NAME), "Synthesis for RapidSilicon FPGAs") {}
     pthread_t fv_t;
+    struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
     void help() override
     {
         log("\n");
@@ -227,10 +228,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
     }
 
-    string top_opt; 
+    string top_opt;
+    // string top_module{};
     Technologies tech; 
     string blif_file; 
     string verilog_file;
+    string finl_stg;
     Strategy goal;
     Encoding fsm_encoding;
     EffortLevel effort;
@@ -486,8 +489,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if(fast && effort == EffortLevel::LOW)
             log_warning("\"-effort low\" and \"-fast\" options are set.");
 
-        struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+        
         if (fv){
+            if (!verilog_file.empty()) {
+                fvarg->final_stage=&verilog_file;
+            }
+            else{
+                finl_stg="post_synthesis.v";
+                fvarg->final_stage=&finl_stg;
+            }
+            fvarg->top_module=&top_opt;
             fvarg->ref_net = &golden_netlist;
             fvarg->fv_timeout = &fv_timout_limit;
             fvarg->bram_inf = &nobram;
@@ -501,7 +512,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         run_script(design, run_from, run_to);
 
-        fvarg->synth_status = true;
         log_pop();
     }
 
@@ -1190,7 +1200,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean -purge");
         }
 
-        if (fv){
+        if (fv && (verilog_file.empty())){
             run("write_verilog -noattr -nohex post_synthesis.v");
         }
 
@@ -1206,6 +1216,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
         }
 
+        fvarg->synth_status = true;
         pthread_join(fv_t,NULL);
     }
 
