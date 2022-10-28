@@ -256,7 +256,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
-
+    std::string dir_name;
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -498,6 +498,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 finl_stg="post_synthesis.v";
                 fvarg->final_stage=&finl_stg;
             }
+            dir_name = proc_share_dirname();
+            fvarg->shared_dir_path=&dir_name;
             fvarg->top_module=&top_opt;
             fvarg->ref_net = &golden_netlist;
             fvarg->fv_timeout = &fv_timout_limit;
@@ -506,9 +508,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             fvarg->retiming = &nosimplify;
             fvarg->fv_cec = &cec;
             fvarg->synth_status = false;
+            // cout<<"Shared Directory Path in struct: "<<*fvarg->shared_dir_path<<endl;
             if (pthread_create(&fv_t,NULL, run_fv,(void *)fvarg)!=0){
                 std::cout<<"Error creating thread"<<std::endl;
-            };   
+            }; 
+             
         }
         run_script(design, run_from, run_to);
 

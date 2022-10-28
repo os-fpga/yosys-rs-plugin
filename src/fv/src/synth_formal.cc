@@ -10,6 +10,7 @@
 #include "synth_formal.h"
 using namespace std; 
 
+std::string shared_dir;
 string exec_pipe(string command) {
    char buffer[256];
    string result = "";
@@ -204,8 +205,8 @@ string tcl_process(std::string design_stage ,std::string rev_stage ,std:: string
     
     vector<string> path_revised;
     path_revised.push_back(rev_net);
-    cout<<"Final Netlist Name "<<synth_desig_stage<<" Revised Netlist: "<<rev_stage<<endl;
-    path_revised.push_back(*synth_dir_+"../yosys_verific_rs/yosys-rs-plugin/sim_models.v");
+    // cout<<"Final Netlist Name "<<synth_desig_stage<<" Revised Netlist: "<<rev_stage<<endl;
+    path_revised.push_back(shared_dir+"rapidsilicon/sim_models.v");
     if (synth_desig_stage=="post_synthesis.v"){
         net_status = moniter_netlist(&synth_desig_stage,synth_dir_);
     }
@@ -247,19 +248,20 @@ int stat_line=0;
 string line;
 bool write=false;
 fv_synth.open ("FV_synth.rpt",ios::app);
+cout<<"========= Synthesis Utilization =========\n";
 fv_synth <<"========= Synthesis Utilization =========\n\n";
 while (getline(yosys_log_file,line))
 {
 	if (regex_match (line, regex(".*hierarchy -check")))
 	{
 		write=true;
-        // cout<<"Entered into hierarchy -check"<<endl;
+        cout<<"Entered into hierarchy -check"<<endl;
 	}
 	if (write)
 	{		
 		if (line=="=== "+top+" ===")
 		{
-			// cout<<"Entered === "+top+" ==="<<endl;
+			cout<<"Entered === "+top+" ==="<<endl;
             stat_line=1;
 		}
 		if (regex_match (line, regex(".*opt_clean -purge")))
@@ -303,6 +305,7 @@ void run_stage(std::vector<std::string> &design_stages,string synth_dir_,string 
     while(!*status){
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    cout<<"Sysnthesis Status: "<<*status<<endl;
     write_report(top,synth_dir_); // writing the final report
 }
 
@@ -380,12 +383,15 @@ void process_stage(struct fv_args *stage_arg){
 void *run_fv(void* flow) {
     struct fv_args *fvargs = (struct fv_args *)flow;
     std::string ref_net = *fvargs->ref_net;
-    std::cout<<"\nSynthesis Status "<<fvargs->synth_status<<std::endl;
+    // std::cout<<"\nSynthesis Status "<<fvargs->synth_status<<std::endl;
+
+    shared_dir = *fvargs->shared_dir_path;
+    // cout<<"Shared Path: "<<*fvargs->shared_dir_path<<endl;
     process_stage(fvargs);
     int fV_timeout = *fvargs->fv_timeout;
 
     // std::this_thread::sleep_for(std::chrono::seconds(5)); 
-    std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
+    // std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
 
     pthread_exit(NULL);
     return NULL;

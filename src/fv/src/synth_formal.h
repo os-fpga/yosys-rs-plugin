@@ -25,6 +25,7 @@ struct fv_args{
     bool *fv_cec;
     std::string *top_module;
     std::string *final_stage;
+    std::string *shared_dir_path;
 };
 
 

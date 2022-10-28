@@ -37,6 +37,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/ufifo_ctl.v \
 				  $(GENESIS2)/cells_sim.v \
 				  $(GENESIS2)/ffs_map.v \
+				  sim_models.v \
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
