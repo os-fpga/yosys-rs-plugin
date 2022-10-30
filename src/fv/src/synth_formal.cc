@@ -11,6 +11,8 @@
 using namespace std; 
 
 std::string shared_dir;
+int fV_timeout;
+std::string ref_net;
 string exec_pipe(string command) {
    char buffer[256];
    string result = "";
@@ -324,7 +326,6 @@ void process_stage(struct fv_args *stage_arg){
     string top_mod{};
     while (ss>>word){
         top_mod=word;
-        
     }
     cout<< "Top Module of HDL: "<<top_mod<<" DSP: "<<*stage_arg->final_stage<<endl;
     std::vector<std::string> design_stages;
@@ -382,16 +383,10 @@ void process_stage(struct fv_args *stage_arg){
 
 void *run_fv(void* flow) {
     struct fv_args *fvargs = (struct fv_args *)flow;
-    std::string ref_net = *fvargs->ref_net;
-    // std::cout<<"\nSynthesis Status "<<fvargs->synth_status<<std::endl;
-
+    ref_net = *fvargs->ref_net;
     shared_dir = *fvargs->shared_dir_path;
-    // cout<<"Shared Path: "<<*fvargs->shared_dir_path<<endl;
+    fV_timeout = *fvargs->fv_timeout;
     process_stage(fvargs);
-    int fV_timeout = *fvargs->fv_timeout;
-
-    // std::this_thread::sleep_for(std::chrono::seconds(5)); 
-    // std::cout<<"Synthesis Status "<<fvargs->synth_status<<std::endl;
 
     pthread_exit(NULL);
     return NULL;
