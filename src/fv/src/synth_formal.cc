@@ -247,26 +247,26 @@ if (onespin_log.fail())
 	return;
 }
 int stat_line=0;
+int write =7;
 string line;
-bool write=false;
 fv_synth.open ("FV_synth.rpt",ios::app);
-cout<<"========= Synthesis Utilization =========\n";
+
 fv_synth <<"========= Synthesis Utilization =========\n\n";
 while (getline(yosys_log_file,line))
 {
-	if (regex_match (line, regex(".*hierarchy -check")))
+	if (regex_match (line, regex(".*Printing statistics.")))
 	{
-		write=true;
-        cout<<"Entered into hierarchy -check"<<endl;
+		write--;
+
 	}
-	if (write)
+	if (write==0)
 	{		
 		if (line=="=== "+top+" ===")
 		{
-			cout<<"Entered === "+top+" ==="<<endl;
+
             stat_line=1;
 		}
-		if (regex_match (line, regex(".*opt_clean -purge")))
+		if (regex_match (line, regex(".*Executing OPT_CLEAN pass.*")))
 		{
 		break;
 		}
