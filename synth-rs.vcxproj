@@ -167,7 +167,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\yosys\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\yosys\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -180,6 +180,8 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="pmgen\rs-bram-asymmetric-wider-read.h" />
+    <ClInclude Include="pmgen\rs-bram-asymmetric-wider-write.h" />
     <ClInclude Include="pmgen\rs-dsp-macc.h" />
     <ClInclude Include="pmgen\rs-dsp-pm.h" />
     <ClInclude Include="src\include\abc.h" />
