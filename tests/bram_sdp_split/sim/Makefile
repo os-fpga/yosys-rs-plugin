@@ -1,12 +1,11 @@
 # Copyright (C) 2022 RapidSilicon
 #
 
-TESTBENCH = bram_sdp_tb.v
-POST_SYNTH = bram_sdp_32x512_post_synth bram_sdp_16x1024_post_synth bram_sdp_8x2048_post_synth bram_sdp_4x4096_post_synth
-ADDR_WIDTH = 9 10 11 12
-DATA_WIDTH = 32 16 8 4
-TOP = BRAM_SDP_32x512 BRAM_SDP_16x1024 BRAM_SDP_8x2048 BRAM_SDP_4x4096
-TEST_CASES = $(seq 0 3)
+TESTBENCH = bram_sdp_split_tb.v
+POST_SYNTH = bram_sdp_split_2x18x1024_post_synth bram_sdp_split_2x16x1024_post_synth bram_sdp_split_2x9x2048_post_synth bram_sdp_split_2x8x2048_post_synth bram_sdp_split_2x4x4096_post_synth bram_sdp_split_2x2x8192_post_synth bram_sdp_split_2x1x16384_post_synth
+ADDR_WIDTH = 10 10 11 11 12 13 14
+DATA_WIDTH = 18 16 9 8 4 2 1
+TOP = BRAM_SDP_SPLIT_2x18x1024 BRAM_SDP_SPLIT_2x16x1024 BRAM_SDP_SPLIT_2x9x2048 BRAM_SDP_SPLIT_2x8x2048 BRAM_SDP_SPLIT_2x4x4096 BRAM_SDP_SPLIT_2x2x8192 BRAM_SDP_SPLIT_2x1x16384
 ADDR_DEFINES = $(foreach awidth, $(ADDR_WIDTH),-DADDR_WIDTH="$(awidth)")
 DATA_DEFINES = $(foreach dwidth, $(DATA_WIDTH),-DDATA_WIDTH="$(dwidth)")
 TOP_DEFINES = $(foreach top, $(TOP),-DTOP="$(top)")
@@ -23,8 +22,12 @@ define clean_post_synth_sim
 	@rm -rf  $(word $(1),$(POST_SYNTH)).vcd $(word $(1),$(POST_SYNTH)).vvp $(word $(1),$(POST_SYNTH)).vvp.log $(word $(1),$(POST_SYNTH)).vcd.log
 endef
 
+#FIXME: $(call simulate_post_synth,3)
 sim:
 	$(call simulate_post_synth,1)
 	$(call simulate_post_synth,2)
 	$(call simulate_post_synth,3)
 	$(call simulate_post_synth,4)
+	$(call simulate_post_synth,5)
+	$(call simulate_post_synth,6)
+	$(call simulate_post_synth,7)

@@ -18,6 +18,8 @@ module sram1024x18 (
 	wdata_b,
 	rdata_b
 );
+	parameter [18431:0] INIT_s_i = 18432'h0;
+
 	(* clkbuf_sink *)
 	input wire clk_a;
 	input wire cen_a;
@@ -45,6 +47,14 @@ module sram1024x18 (
 	reg [17:0] lwdata_b;
 	reg [17:0] lwmsk_a;
 	reg [17:0] lwmsk_b;
+
+	initial begin
+		integer i;
+		for(i = 0; i < 1024; i = i + 1) begin
+			ram[i] = INIT_s_i[i*18+:18];
+		end
+	end
+
 	always @(posedge clk_a) begin
 		laddr_a <= addr_a;
 		lwdata_a <= wdata_a;
@@ -79,13 +89,14 @@ module sram1024x18 (
 			ram[laddr_b][15] = (lwmsk_b[15] ? ram[laddr_b][15] : lwdata_b[15]);
 			ram[laddr_b][16] = (lwmsk_b[16] ? ram[laddr_b][16] : lwdata_b[16]);
 			ram[laddr_b][17] = (lwmsk_b[17] ? ram[laddr_b][17] : lwdata_b[17]);
+			lwen_b = 1;
 		end
-        else if (lcen_b == 0) begin
-            rdata_b = ram[laddr_b];
-            lcen_b = 1;
-        end
-        else
-            rdata_b = rdata_b;
+		if (lcen_b == 0) begin
+			rdata_b = ram[laddr_b];
+			lcen_b = 1;
+		end
+		else
+			rdata_b = rdata_b;
 	end
 	always @(*) begin
 		if ((lwen_a == 0) && (lcen_a == 0)) begin
@@ -107,13 +118,14 @@ module sram1024x18 (
 			ram[laddr_a][15] = (lwmsk_a[15] ? ram[laddr_a][15] : lwdata_a[15]);
 			ram[laddr_a][16] = (lwmsk_a[16] ? ram[laddr_a][16] : lwdata_a[16]);
 			ram[laddr_a][17] = (lwmsk_a[17] ? ram[laddr_a][17] : lwdata_a[17]);
+			lwen_a = 1;
 		end
-        else if (lcen_a == 0) begin
-            rdata_a = ram[laddr_a];
-            lcen_a = 1;
-        end
-        else
-            rdata_a = rdata_a;
+		if (lcen_a == 0) begin
+			rdata_a = ram[laddr_a];
+			lcen_a = 1;
+		end
+		else
+			rdata_a = rdata_a;
 	end
 endmodule
 `default_nettype none

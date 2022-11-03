@@ -1129,7 +1129,7 @@ module dsp_t1_sim_cfg_ports # (
     wire [NBITS_ACC-1:0] acc_out = (output_select_i[1]) ? add_o : acc;
 
     // Round, shift, saturate
-    wire [NBITS_ACC-1:0] acc_rnd = (rnd && (shift_right_i != 0)) ? (acc_out + ({{(NBITS_ACC-1){1'b0}}, 1'b1} << (shift_right_i - 1))) :
+    wire signed [NBITS_ACC-1:0] acc_rnd = (rnd && (shift_right_i != 0)) ? (acc_out + ({{(NBITS_ACC-1){1'b0}}, 1'b1} << (shift_right_i - 1))) :
                                                                     acc_out;
 
     wire [NBITS_ACC-1:0] acc_shr = (unsigned_mode) ? (acc_rnd  >> shift_right_i) :
