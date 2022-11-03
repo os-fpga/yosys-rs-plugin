@@ -2,7 +2,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
 	byte 9;
     abits 15;
     widths  1 2 4 9 18 36 global;
-	cost 2;
+	cost 4;
 	init any;
 	port srsw "A" "B" {
         clock posedge;
@@ -17,7 +17,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
 	byte 9;
     abits 14;
     widths  1 2 4 9 18 global;
-	cost 1;
+	cost 2;
 	init any;
 	port srsw "A" "B" {
         clock posedge;
@@ -32,7 +32,7 @@ ram block $__RS_FACTOR_BRAM36_SDP {
     byte 9;
     abits 15;
     widths  1 2 4 9 18 36 global;
-	cost 2;
+	cost 3;
 	init any;
 	port sw "B" {
         clock posedge;
