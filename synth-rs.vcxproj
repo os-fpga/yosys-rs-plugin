@@ -187,6 +187,8 @@
     <ClInclude Include="src\include\abc.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\rs-bram-asymmetric.cc" />
+    <ClCompile Include="src\rs-bram-split.cc" />
     <ClCompile Include="src\rs-dsp-io-regs.cc" />
     <ClCompile Include="src\rs-dsp-macc.cc" />
     <ClCompile Include="src\rs-dsp-simd.cc" />
