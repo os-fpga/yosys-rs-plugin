@@ -12,43 +12,50 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	parameter INIT = 0;
 	parameter WIDTH = 1;
 	
-	parameter PORT_A_WR_EN_WIDTH = 1;
+	parameter PORT_B_WR_EN_WIDTH = 1;
 	parameter PORT_A_RD_INIT_VALUE = 0;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
-	parameter PORT_B_WR_EN_WIDTH = 1;
-	parameter PORT_B_RD_INIT_VALUE = 0;
-	parameter PORT_B_RD_SRST_VALUE = 1;
+	parameter PORT_D_WR_EN_WIDTH = 1;
+	parameter PORT_C_RD_INIT_VALUE = 0;
+	parameter PORT_C_RD_SRST_VALUE = 1;
 
 	localparam ABITS = 15;
 	localparam CFG_ENABLE = 4;
 
+    input CLK_C1;
+    input CLK_C2;
+
 	input 				PORT_A_CLK;
 	input [ABITS-1:0] 		PORT_A_ADDR;
-	input [WIDTH-1:0] 		PORT_A_WR_DATA;
 	output [WIDTH-1:0]		PORT_A_RD_DATA;
 	input 				PORT_A_RD_EN;
-	input [PORT_A_WR_EN_WIDTH-1:0]	PORT_A_WR_EN;
-	input 				PORT_A_RD_SRST;
 	
 	input 				PORT_B_CLK;
 	input [ABITS-1:0] 		PORT_B_ADDR;
 	input [WIDTH-1:0] 		PORT_B_WR_DATA;
-	output [WIDTH-1:0]		PORT_B_RD_DATA;
-	input 				PORT_B_RD_EN;
 	input [PORT_B_WR_EN_WIDTH-1:0]	PORT_B_WR_EN;
-	input 				PORT_B_RD_SRST;
+
+	input 				PORT_C_CLK;
+	input [ABITS-1:0] 		PORT_C_ADDR;
+	output [WIDTH-1:0]		PORT_C_RD_DATA;
+	input 				PORT_C_RD_EN;
+	
+	input 				PORT_D_CLK;
+	input [ABITS-1:0] 		PORT_D_ADDR;
+	input [WIDTH-1:0] 		PORT_D_WR_DATA;
+	input [PORT_B_WR_EN_WIDTH-1:0]	PORT_D_WR_EN;
 
 
 	wire FLUSH1;
 	wire FLUSH2;
 	wire SPLIT;
 
-	wire [CFG_ENABLE-1:PORT_A_WR_EN_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_A_WR_EN_WIDTH{1'b0}};
-	wire [CFG_ENABLE-1:PORT_B_WR_EN_WIDTH] D1EN_CMPL = {CFG_ENABLE-PORT_B_WR_EN_WIDTH{1'b0}};
+	wire [CFG_ENABLE-1:PORT_B_WR_EN_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_B_WR_EN_WIDTH{1'b0}};
+	wire [CFG_ENABLE-1:PORT_D_WR_EN_WIDTH] D1EN_CMPL = {CFG_ENABLE-PORT_D_WR_EN_WIDTH{1'b0}};
 
-	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_A_WR_EN};
-	wire [CFG_ENABLE-1:0] D1EN = {D1EN_CMPL, PORT_B_WR_EN};
+	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_EN};
+	wire [CFG_ENABLE-1:0] D1EN = {D1EN_CMPL, PORT_D_WR_EN};
 
 	wire [35:WIDTH] B1DATA_CMPL;
 	wire [35:WIDTH] D1DATA_CMPL;
@@ -64,15 +71,15 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	case (WIDTH)
 		9: begin
 			assign PORT_A_RD_DATA = {A1DATA_TOTAL[16], A1DATA_TOTAL[7:0]};
-			assign PORT_B_RD_DATA = {C1DATA_TOTAL[16], C1DATA_TOTAL[7:0]};
-			assign B1DATA_TOTAL = {B1DATA_CMPL[35:17], PORT_A_WR_DATA[8], B1DATA_CMPL[16:9], PORT_A_WR_DATA[7:0]};
-			assign D1DATA_TOTAL = {D1DATA_CMPL[35:17], PORT_B_WR_DATA[8], D1DATA_CMPL[16:9], PORT_B_WR_DATA[7:0]};
+			assign PORT_C_RD_DATA = {C1DATA_TOTAL[16], C1DATA_TOTAL[7:0]};
+			assign B1DATA_TOTAL = {B1DATA_CMPL[35:17], PORT_B_WR_DATA[8], B1DATA_CMPL[16:9], PORT_B_WR_DATA[7:0]};
+			assign D1DATA_TOTAL = {D1DATA_CMPL[35:17], PORT_D_WR_DATA[8], D1DATA_CMPL[16:9], PORT_D_WR_DATA[7:0]};
 		end
 		default: begin
 			assign PORT_A_RD_DATA = A1DATA_TOTAL[WIDTH-1:0];
-			assign PORT_B_RD_DATA = C1DATA_TOTAL[WIDTH-1:0];
-			assign B1DATA_TOTAL = {B1DATA_CMPL, PORT_A_WR_DATA};
-			assign D1DATA_TOTAL = {D1DATA_CMPL, PORT_B_WR_DATA};
+			assign PORT_C_RD_DATA = C1DATA_TOTAL[WIDTH-1:0];
+			assign B1DATA_TOTAL = {B1DATA_CMPL, PORT_B_WR_DATA};
+			assign D1DATA_TOTAL = {D1DATA_CMPL, PORT_D_WR_DATA};
 		end
 	endcase
 
@@ -145,8 +152,8 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 		.CLK_A2_i(PORT_A_CLK),
 		.REN_A1_i(PORT_A_RD_EN),
 		.REN_A2_i(PORT_A_RD_EN),
-		.WEN_A1_i(PORT_A_WR_EN),
-		.WEN_A2_i(PORT_A_WR_EN),
+		.WEN_A1_i(PORT_B_WR_EN),
+		.WEN_A2_i(PORT_B_WR_EN),
 		.BE_A1_i({B1EN[1],B1EN[0]}),
 		.BE_A2_i({B1EN[3],B1EN[2]}),
 
@@ -154,14 +161,14 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 		.WDATA_B2_i(D1DATA_TOTAL[35:18]),
 		.RDATA_B1_o(C1DATA_TOTAL[17:0]),
 		.RDATA_B2_o(C1DATA_TOTAL[35:18]),
-		.ADDR_B1_i(PORT_B_ADDR),
-		.ADDR_B2_i(PORT_B_ADDR),
-		.CLK_B1_i(PORT_B_CLK),
-		.CLK_B2_i(PORT_B_CLK),
-		.REN_B1_i(PORT_B_RD_EN),
-		.REN_B2_i(PORT_B_RD_EN),
-		.WEN_B1_i(PORT_B_WR_EN),
-		.WEN_B2_i(PORT_B_WR_EN),
+		.ADDR_B1_i(PORT_C_ADDR),
+		.ADDR_B2_i(PORT_C_ADDR),
+		.CLK_B1_i(PORT_C_CLK),
+		.CLK_B2_i(PORT_C_CLK),
+		.REN_B1_i(PORT_C_RD_EN),
+		.REN_B2_i(PORT_C_RD_EN),
+		.WEN_B1_i(PORT_D_WR_EN),
+		.WEN_B2_i(PORT_D_WR_EN),
 		.BE_B1_i({D1EN[1],D1EN[0]}),
 		.BE_B2_i({D1EN[3],D1EN[2]}),
 
@@ -176,38 +183,45 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter INIT = 0;
 	parameter WIDTH = 1;
 	
-	parameter PORT_A_WR_EN_WIDTH = 1;
+	parameter PORT_B_WR_EN_WIDTH = 1;
 	parameter PORT_A_RD_INIT_VALUE = 0;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
-	parameter PORT_B_WR_EN_WIDTH = 1;
-	parameter PORT_B_RD_INIT_VALUE = 0;
-	parameter PORT_B_RD_SRST_VALUE = 1;
+	parameter PORT_D_WR_EN_WIDTH = 1;
+	parameter PORT_C_RD_INIT_VALUE = 0;
+	parameter PORT_C_RD_SRST_VALUE = 1;
 
 	localparam ABITS = 14;
 	localparam CLKPOL2 = 1;
 	localparam CLKPOL3 = 1;
-
-	input 				PORT_A_CLK;
+    
+    input CLK_C1;
+    input CLK_C2;
+	
+    input 				PORT_A_CLK;
 	input [ABITS-1:0] 		PORT_A_ADDR;
-	input [WIDTH-1:0] 		PORT_A_WR_DATA;
 	output [WIDTH-1:0]		PORT_A_RD_DATA;
 	input 				PORT_A_RD_EN;
-	input [PORT_A_WR_EN_WIDTH-1:0]	PORT_A_WR_EN;
-	input 				PORT_A_RD_SRST;
 	
 	input 				PORT_B_CLK;
 	input [ABITS-1:0] 		PORT_B_ADDR;
 	input [WIDTH-1:0] 		PORT_B_WR_DATA;
-	output [WIDTH-1:0]		PORT_B_RD_DATA;
-	input 				PORT_B_RD_EN;
 	input [PORT_B_WR_EN_WIDTH-1:0]	PORT_B_WR_EN;
-	input 				PORT_B_RD_SRST;
+	
+    input 				PORT_C_CLK;
+	input [ABITS-1:0] 		PORT_C_ADDR;
+	output [WIDTH-1:0]		PORT_C_RD_DATA;
+	input 				PORT_C_RD_EN;
+	
+	input 				PORT_D_CLK;
+	input [ABITS-1:0] 		PORT_D_ADDR;
+	input [WIDTH-1:0] 		PORT_D_WR_DATA;
+	input [PORT_D_WR_EN_WIDTH-1:0]	PORT_D_WR_EN;
 
 	BRAM2x18_TDP #(
 		.CFG_DBITS(WIDTH),
-		.CFG_ENABLE_B(PORT_A_WR_EN_WIDTH),
-		.CFG_ENABLE_D(PORT_B_WR_EN_WIDTH),
+		.CFG_ENABLE_B(PORT_B_WR_EN_WIDTH),
+		.CFG_ENABLE_D(PORT_D_WR_EN_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
 		.INIT0(INIT),
@@ -215,18 +229,18 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 		.A1ADDR(PORT_A_ADDR),
 		.A1DATA(PORT_A_RD_DATA),
 		.A1EN(PORT_A_RD_EN),
-		.B1ADDR(PORT_A_ADDR),
-		.B1DATA(PORT_A_WR_DATA),
-		.B1EN(PORT_A_WR_EN),
+		.B1ADDR(PORT_B_ADDR),
+		.B1DATA(PORT_B_WR_DATA),
+		.B1EN(PORT_B_WR_EN),
 		.CLK1(PORT_A_CLK),
 
-		.C1ADDR(PORT_B_ADDR),
-		.C1DATA(PORT_B_RD_DATA),
-		.C1EN(PORT_B_RD_EN),
-		.D1ADDR(PORT_B_ADDR),
-		.D1DATA(PORT_B_WR_DATA),
-		.D1EN(PORT_B_WR_EN),
-		.CLK2(PORT_B_CLK),
+		.C1ADDR(PORT_C_ADDR),
+		.C1DATA(PORT_C_RD_DATA),
+		.C1EN(PORT_C_RD_EN),
+		.D1ADDR(PORT_D_ADDR),
+		.D1DATA(PORT_D_WR_DATA),
+		.D1EN(PORT_D_WR_EN),
+		.CLK2(PORT_C_CLK),
 
 		.E1ADDR(),
 		.E1DATA(),
