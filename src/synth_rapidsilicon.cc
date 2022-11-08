@@ -876,7 +876,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("opt_clean");
                         run("rs_pack_dsp_regs");
                         run("opt_clean");
-                        
                         run("rs_dsp_io_regs");
 
                         if (cec)
