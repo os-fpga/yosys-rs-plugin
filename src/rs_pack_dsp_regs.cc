@@ -22,193 +22,276 @@
 #include "kernel/ffinit.h"
 #include "kernel/ff.h"
 
-
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-struct OptDFfCleanWorker
+struct RsPackDspRegsWorker
 {
-	int count = 0;
-	RTLIL::Module *module;
-	ModIndex index;
-	FfInitVals initvals;
+    int count = 0;
+    RTLIL::Module *m_module;
+    SigMap m_sigmap;
+    FfInitVals m_initvals;
 
-	OptDFfCleanWorker(RTLIL::Module *module) :
-		module(module), index(module), initvals(&index.sigmap, module)
-	{
-		log("Discovering LUTs.\n\n");
-	}
+    RsPackDspRegsWorker(RTLIL::Module *module) :
+        m_module(module), m_sigmap(module), m_initvals(&m_sigmap, module) {}
+
+    void run (RTLIL::Design *design) {
+
+        std::vector<Cell *> DSP_used_cells;
+        std::vector<Cell *> DFF_used_cells;
+        std::vector<Cell *> ALL_cells_of_design;
+// ----- A piece of code that got all DSPs, DFF, and another cells -----
+        for (auto cell : m_module->selected_cells()) {
+            // Get name of DSP for checking type
+            std::string cell_type_str = cell->type.str();
+            if (cell_type_str == RTLIL::escape_id("RS_DSP2") || cell_type_str == RTLIL::escape_id("RS_DSP3")) {
+                //adding all DSP cells of design
+                DSP_used_cells.push_back(cell);
+                // if cell type not DSP or DFF add as other cell
+                ALL_cells_of_design.push_back(cell);
+                continue;
+            }
+            if (RTLIL::builtin_ff_cell_types().count(cell->type)) {
+                //adding all DFF cells of design
+                DFF_used_cells.push_back(cell);
+                continue;
+            }
+            // if cell type not DSP or DFF add as other cell
+            ALL_cells_of_design.push_back(cell);
+        }
+
+        std::vector <RTLIL::Cell*> DSP_driven_only_by_DFF;
+        RTLIL::SigSpec DFF_clk;
+        RTLIL::SigSpec DFF_rst;
+
+// ----- A piece of code that filters all DSP leaving only those with only DFF in the input  -----
+        // Getting each DSP from all DSPs of our MODULE
+        for (auto &it_dsp : DSP_used_cells) {
+            log_debug("Working with DSP by name: %s.\n", it_dsp->name.c_str());
+
+            // if the port of DSP driven from DFF
+            bool port_a_from_dff = false;
+            bool port_b_from_dff = false;
+            // if we check somthing and need to ignore selected DSP
+            bool ignore_dsp = false;
+            // if we check somthing and need to ignore selected DFF
+            bool next_dff = false;
+            // Get RESET and CLK SigSpec to compare with another DFF RESET and CLK SigSpecs which drive DSP signals
+            bool for_first_dff = true;
+            // get it_dsp SigSpec of ports "\a" and "\b"
+            RTLIL::SigSpec DSP_port_a = it_dsp->getPort(RTLIL::escape_id("\\a"));
+            RTLIL::SigSpec DSP_port_b = it_dsp->getPort(RTLIL::escape_id("\\b"));
+
+            // Getting each cell of DESIGN to check if there is connection between
+            for (auto &it_cell : ALL_cells_of_design) {
+                next_dff = false;
+                // skip if cell is the same DSP
+                if (it_cell->name == it_dsp->name)
+                    continue;
+                // Getting all connections of each cell
+                for (auto &conn_cell : it_cell->connections_) {
+                    // Checking if one of the Ports of DSP is driven from other cell
+                    for (auto bit_cell : m_sigmap(conn_cell.second)) {
+                        for (auto bit_dsp : m_sigmap(DSP_port_a)) {
+                            if (bit_cell == bit_dsp) {
+                                log_debug("There is a connection between DSP port ( \\a ) and Cell port ( %s )\n", conn_cell.first.c_str());
+                                ignore_dsp = true;
+                                // exit DSP bits loop
+                                break;
+                            }
+                        }
+                        // exit cell bits loop
+                        if (ignore_dsp)
+                            break;
+                        for (auto bit_dsp : m_sigmap(DSP_port_b)) {
+                            if (bit_cell == bit_dsp) {
+                                log_debug("There is a connection between DSP port ( \\b ) and Cell port ( %s )\n", conn_cell.first.c_str());
+                                ignore_dsp = true;
+                                // exit DSP bits loop
+                                break;
+                            }
+                        }
+                        // exit cell bits loop
+                        if (ignore_dsp)
+                            break;
+                    }
+                    // exit cell connections loop
+                    if (ignore_dsp)
+                        break;
+                }
+                // exit cells loop
+                if (ignore_dsp)
+                    break;
+            }
+            // pick next DSP
+            if (ignore_dsp)
+                continue;
+
+            // Getting each DFF from all DFFs of our MODULE
+            for (auto &it_dff : DFF_used_cells) {
+                log_debug("Working with DFF by name: %s.\n", it_dff->name.c_str());
+                FfData ff(&m_initvals, it_dff);
+                // Getting all connections of each dff
+
+                // Lambda function for action when having connection between DSP and DFF
+                auto check_dff = [&DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
+                    log_debug("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
+                    if (ff.has_ce || ff.has_sr || ff.has_aload) {
+                        ignore_dsp = true;
+                        return;
+                    }
+                    if (for_first_dff) {
+                        // Getting selected DFF RESET and CLOCK SigSepc
+                        DFF_rst = ff.sig_arst;
+                        DFF_clk = ff.sig_clk;
+                        // if DSP port is driven from DFF make it true
+                        port_from_dff = true;
+                        // first time desable
+                        for_first_dff = false;
+                        // pick next dff
+                        next_dff = true;
+                    } else {
+                        if (ff.sig_arst == m_sigmap(DFF_rst) && ff.sig_clk == m_sigmap(DFF_clk)) {
+                            port_from_dff = true;
+                            next_dff = true;
+                        } else {
+                            ignore_dsp = true;
+                        }
+                    }
+                };
+
+                // getting all bits of selected DFF port ( q )
+                for (auto bit_dff : m_sigmap(ff.sig_q)) {
+                    // getting all bits of DSP port ( a )
+                    for (auto bit_dsp : m_sigmap(DSP_port_a)) {
+                        // comparing if DFF port bit is the same as DSP port bit
+                        if (bit_dff == bit_dsp) {
+                            // calling lambda function for port ( a )
+                            check_dff(port_a_from_dff, 'a');
+                            // we cancel the comparison of the remaining bits because it is already clear that the DSP port receives a signal from the DFF
+                            break;
+                        }
+                    }
+                    if (ignore_dsp)
+                        break;
+                    // getting all bits of DSP port ( b )
+                    for (auto bit_dsp : m_sigmap(DSP_port_b)) {
+                        // comparing if DFF port bit is the same as DSP port bit
+                        if (bit_dff == bit_dsp) {
+                            // calling lambda function for port ( a )
+                            check_dff(port_b_from_dff, 'b');
+                            // we cancel the comparison of the remaining bits because it is already clear that the DSP port receives a signal from the DFF
+                            break;
+                        }
+                    }
+                    if (next_dff || ignore_dsp) {break;}
+                }
+                if (ignore_dsp)
+                    break;
+                if (next_dff)
+                    continue;
+            }
+            if (ignore_dsp)
+                continue;
+
+            // if DSP data ports is driven from DFFs add that DSP to vector
+            if (port_a_from_dff && port_b_from_dff && !ignore_dsp) {
+                DSP_driven_only_by_DFF.push_back(it_dsp);
+            }
+        }
+
+// ----- A piece of code that works with DSP connections  -----
+        // Getting all DSP that are confirmed for treatment
+        for (auto &DSP_driven_DFF : DSP_driven_only_by_DFF) {
+            // creating new SigSpecs with which we will change the SigSpecs of DSP ports A and B
+            RTLIL::SigSpec new_sigspec_for_a;
+            RTLIL::SigSpec new_sigspec_for_b;
+
+            // get selected DSP SigSpec of ports "\a" and "\b"
+            RTLIL::SigSpec DSP_port_a = DSP_driven_DFF->getPort(RTLIL::escape_id("\\a"));
+            RTLIL::SigSpec DSP_port_b = DSP_driven_DFF->getPort(RTLIL::escape_id("\\b"));
+
+            for (auto &it_dff : DFF_used_cells) {
+                FfData ff(&m_initvals, it_dff);
+
+                SigBit ankap_bit;
+
+                // will be used as DFF-DSP sig_bit_index for new SigSpec;
+                int sig_bit_index_a = 0;
+                int sig_bit_index_b = 0;
+
+                    // Getting all bits of dsp port (a)
+                    for (auto bit_dsp : m_sigmap(DSP_port_a)) {
+                        // Getting all bits of selected DFF port (q) to find wich bit is connected with DSP port (a)
+                        for (auto bit_dff : m_sigmap(ff.sig_q)) {
+                            // we compare to make sure that a given bit in DSP is actually a bit for DFF
+                            if (bit_dff == bit_dsp) {
+                                // adding that taken bit to a new SigSpec
+                                new_sigspec_for_a.append(ff.sig_d[sig_bit_index_a]);
+                                // adding DFF-DSP index for next bit
+                                sig_bit_index_a++;
+                            }
+                        }
+                    }
+
+                    // Getting all bits of dsp port (a)
+                    for (auto bit_dsp : m_sigmap(DSP_port_b)) {
+                        // Getting all bits of selected DFF port (q) to find wich bit is connected with DSP port (a)
+                        for (auto bit_dff : m_sigmap(ff.sig_q)) {
+                            // we compare to make sure that a given bit in DSP is actually a bit for DFF
+                            if (bit_dff == bit_dsp) {
+                                // adding that taken bit to a new SigSpec
+                                new_sigspec_for_b.append(ff.sig_d[sig_bit_index_b]);
+                                // adding DFF-DSP index for next bit
+                                sig_bit_index_b++;
+                            }
+                        }
+                    }
+
+            // After all DFFs will be changed DSP port ( a ) and ( b )
+            if (&it_dff == &DFF_used_cells.back()) {
+                DSP_driven_DFF->setPort("\\a", new_sigspec_for_a);
+                DSP_driven_DFF->setPort("\\b", new_sigspec_for_b);
+            }
+
+            // Getting DSP Reginster inputs port to change value 1
+            if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP2"))
+                DSP_driven_DFF->setPort(RTLIL::escape_id("register_inputs"), RTLIL::S1);
+            if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP3"))
+                DSP_driven_DFF->setParam(RTLIL::escape_id("register_inputs"), RTLIL::S1);
+
+            // Getting DSP clock port to connect it with DFF clock port
+                DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
+            // Getting DSP reset port to connect it with DFF reset port
+                DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+            }
+        }
+    }
 };
 
+struct RsPackDspRegsPass : public Pass {
+    RsPackDspRegsPass() : Pass("rs_pack_dsp_regs", "pack DSP input registers") { }
+    void help() override
+    {
+        //   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
+        log("\n");
+        log("    Rs_pack_dsp_regs [selection]\n");
+        log("\n");
+        log("This pass packs DSP input registers inside DSP component\n");
+        log("\n");
+    }
 
-struct OptDFfCleanWorkerPass : public Pass {
-	OptDFfCleanWorkerPass() : Pass("rs_pack_dsp_regs", "get rid of unnecessary DFFs") { }
-	void help() override
-	{
-		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
-		log("\n");
-		log("    Rs_pack_dsp_regs [selection]\n");
-		log("\n");
-		log("This pass makes it possible to use all the DFFs in the DSP and not add new DFFs to the design in an empty space\n");
-		log("\n");
-	}	
-
-	void execute(std::vector<std::string> a_Args, RTLIL::Design *design) override
-	{		
+    void execute(std::vector<std::string> a_Args, RTLIL::Design *design) override
+    {
         log_header(design, "Executing rs_pack_dsp_regs pass.\n");
 
-		size_t argidx;
-        for (argidx = 1; argidx < a_Args.size(); argidx++) {
-            break;
-        }
-        extra_args(a_Args, argidx, design);
+        extra_args(a_Args, 1, design);
 
-		int total_count = 0;
-
-		std::vector <std::string> DSP_modules_names {"\\RS_DSP1", "\\RS_DSP2", "\\RS_DSP2_MULT","\\RS_DSP2_MULT_REGIN", "\\RS_DSP2_MULT_REGOUT", 
-		"\\RS_DSP2_MULT_REGIN_REGOUT", "\\RS_DSP2_MULTADD", "\\RS_DSP2_MULTADD_REGIN", "\\RS_DSP2_MULTADD_REGOUT", "\\RS_DSP2_MULTADD_REGIN_REGOUT", 
-		"\\RS_DSP2_MULTACC", "\\RS_DSP2_MULTACC_REGIN", "\\RS_DSP2_MULTACC_REGOUT", "\\RS_DSP2_MULTACC_REGIN_REGOUT", "\\dsp_t1_20x18x64_cfg_ports", 
-		"\\dsp_t1_10x9x32_cfg_ports", "\\dsp_t1_sim_cfg_ports", "\\RS_DSP3", "\\RS_DSP3_MULT ", "\\RS_DSP3_MULT_REGIN", "\\RS_DSP3_MULT_REGOUT", 
-		"\\RS_DSP3_MULT_REGIN_REGOUT", "\\RS_DSP3_MULTADD", "\\RS_DSP3_MULTADD_REGIN", "\\RS_DSP3_MULTADD_REGOUT", "\\RS_DSP3_MULTADD_REGIN_REGOUT", 
-		"\\RS_DSP3_MULTACC", "\\RS_DSP3_MULTACC_REGIN", "\\RS_DSP3_MULTACC_REGOUT", "\\RS_DSP3_MULTACC_REGIN_REGOUT", "\\dsp_t1_20x18x64_cfg_params", 
-		"\\dsp_t1_10x9x32_cfg_params", "\\dsp_t1_sim_cfg_params"};
-	
-		std::vector<Cell *> DSP_used_cells;
-		std::vector<Cell *> DFF_used_cells;
-		std::vector<Cell *> ALL_cells_of_design;
-		
-		for (auto module : design->selected_modules())
-		{
-			SigMap sigmap(module);
-			OptDFfCleanWorker worker(module);			
-			total_count += worker.count;
-			for (auto cell : module->selected_cells()) {
-				bool dsp_found_ = false;
-				for (auto it : DSP_modules_names) {
-					if (it == cell->type.c_str()){						
-						DSP_used_cells.push_back(cell); //adding all DSP cells of design
-						dsp_found_ = true;
-					}
-				}
-				if (dsp_found_)
-					continue;
-				if (module->design->selected(module, cell) && RTLIL::builtin_ff_cell_types().count(cell->type)){
-					DFF_used_cells.push_back(cell); //adding all DFF cells of design
-					continue;
-				}
-				ALL_cells_of_design.push_back(cell);
-			}	
-
-			std::vector <RTLIL::Cell*> DSP_that_drives_from_DFF;
-			RTLIL::SigSpec DFF_clk;
-			RTLIL::SigSpec DFF_rst;
-			
-			// Getting each DSP from all DSPs of our MODULE
-			for (auto &it_dsp : DSP_used_cells){
-				log_debug("Working with DSP by name: %s.\n", it_dsp->name.c_str());
-
-				// if the port of DSP driven from DFF
-				bool port_a_from_dff = false;
-				bool port_b_from_dff = false;
-				// if secelted DFF have enable pin, dont add that DSP to vector;
-				bool dff_have_enable_pin = false;
-				// Get RESET and CLK SigSpec to compare with another DFF RESET and CLK SigSpecs wich drive DSP signals
-				bool for_first_dff = true;
-				// get it_dsp SigSpec of ports "\a" and "\b"
-				RTLIL::SigSpec DSP_port_a = sigmap(it_dsp->getPort("\\a"));
-				RTLIL::SigSpec DSP_port_b = sigmap(it_dsp->getPort("\\b"));
-				// Getting each DFF from all DFFs of our MODULE
-				for (auto &it_dff : DFF_used_cells){
-					log_debug("Working with DFF by name: %s.\n", it_dff->name.c_str());
-					// Getting all connections of each dff
-					for (auto &conn_dff : it_dff->connections_) {
-						// Getting selected DFF RESET and CLOCK SigSepc
-						if (for_first_dff){
-							if(sigmap(conn_dff.second) == sigmap(it_dff->getPort("\\ARST"))){
-								DFF_rst = it_dff->getPort("\\ARST");
-							}
-							if(sigmap(conn_dff.second) == sigmap(it_dff->getPort("\\CLK"))){
-								DFF_clk = it_dff->getPort("\\CLK");
-							}
-						}
-						// check if there was connection between DSP and DFF
-						// if DSP port b is driven from DFF make it true
-						if (sigmap(DSP_port_a) == sigmap(conn_dff.second)){
-							log_debug("There was connection between DSP port ( \\a ) and DFF port ( %s )\n", conn_dff.first.c_str());
-							
-							if (for_first_dff){
-								port_a_from_dff = true;
-							}else{
-								if (sigmap(it_dff->getPort("\\ARST")) == sigmap(DFF_rst) && sigmap(it_dff->getPort("\\CLK")) == sigmap(DFF_clk)){
-									port_a_from_dff = true;
-								}
-							}
-						}
-						// if DSP port b is driven from DFF make it true
-						if (sigmap(DSP_port_b) == sigmap(conn_dff.second)){ 
-							log_debug("There was connection between DSP port ( \\b ) and DFF port ( %s )\n", conn_dff.first.c_str());
-							if (for_first_dff){
-								port_b_from_dff = true;
-							}else{
-								if (sigmap(it_dff->getPort("\\ARST")) == sigmap(DFF_rst) && sigmap(it_dff->getPort("\\CLK")) == sigmap(DFF_clk)){
-									port_b_from_dff = true;
-								}
-							}
-						}
-						// Checking if DFF have Enable port
-						if (strcmp(conn_dff.first.c_str(), "\\EN")){
-							dff_have_enable_pin = true;
-						}
-					}
-					// first time desable
-					if (for_first_dff){
-						for_first_dff = false;
-					}
-				}
-				// if DSP data ports is driven from DFFs add that DSP to vector
-				if (port_a_from_dff && port_b_from_dff && !dff_have_enable_pin){
-					DSP_that_drives_from_DFF.push_back(it_dsp);
-				}
-			}
-
-			// Getting all DSP that are confirmed for treatment
-			for (auto &DSP_driven_DFF : DSP_used_cells){
-				// Getting selected DSP port ( a ) and ( b )
-				RTLIL::SigSpec DSP_port_a = sigmap(DSP_driven_DFF->getPort("\\a"));
-				RTLIL::SigSpec DSP_port_b = sigmap(DSP_driven_DFF->getPort("\\b"));
-				// Getting all connetions of selected DSP
-				for (auto &conn_dsp : DSP_driven_DFF->connections_){
-					// Getting all DFF_s to find connetions that are connected with DSP
-					for (auto &it_dff : DFF_used_cells){
-						// Getting all connections of each selected DFF
-						for (auto &conn_dff : it_dff->connections_){
-							// if sleceted DSP connection is DSP port ( a )
-							if (sigmap(conn_dff.second) == DSP_port_a){
-								// connectiong DSP port ( a ) with DFF data input port
-								DSP_driven_DFF->setPort("\\a", it_dff->getPort("\\D"));
-							}
-							if (sigmap(conn_dff.second) == DSP_port_b){
-								// connectiong DSP port ( b ) with DFF data input port
-								DSP_driven_DFF->setPort("\\b", it_dff->getPort("\\D"));
-							}							
-						}
-					}
-					// Getting DSP Reginster inputs port to change value 1
-					if (sigmap(conn_dsp.second) == sigmap(DSP_driven_DFF->getPort("\\register_inputs"))){
-						DSP_driven_DFF->setPort(RTLIL::escape_id("register_inputs"), RTLIL::S1);
-					}
-					// Getting DSP clock port to connect it with DFF clock port
-					if (conn_dsp.second == DSP_driven_DFF->getPort("\\clk")){
-						DSP_driven_DFF->setPort("\\clk", DFF_clk);
-					}
-					// Getting DSP reset port to connect it with DFF reset port
-					if (conn_dsp.second == DSP_driven_DFF->getPort("\\reset")){
-						DSP_driven_DFF->setPort("\\reset", DFF_rst);
-					}
-				}
-			}
+        for (auto mod : design->selected_modules()) {
+			RsPackDspRegsWorker worker(mod);
+			worker.run(design);
 		}
-	}
-} OptDFfCleanWorkerPass;
+    }
+} RsPackDspRegsPass;
 
 PRIVATE_NAMESPACE_END
