@@ -116,6 +116,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Write the design to the specified verilog file. writing of an output file\n");
         log("        is omitted if this parameter is not specified.\n");
         log("\n");
+        log("    -vhdl <file>\n");
+        log("        Write the design to the specified VHDL file.\n");
+        log("\n");
         log("    -goal <strategy>\n");
         log("        Run synthesis and generate netlist with the specified strategy\n");
         log("        Supported values:\n");
@@ -214,6 +217,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     Technologies tech; 
     string blif_file; 
     string verilog_file;
+    string vhdl_file;
     Strategy goal;
     Encoding fsm_encoding;
     EffortLevel effort;
@@ -239,6 +243,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         tech = Technologies::GENERIC;
         blif_file = "";
         verilog_file = "";
+        vhdl_file = "";
         goal = Strategy::MIXED;
         fsm_encoding = Encoding::BINARY;
         effort = EffortLevel::HIGH;
@@ -291,6 +296,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-verilog" && argidx + 1 < args.size()) {
                 verilog_file = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-vhdl" && argidx + 1 < args.size()) {
+                vhdl_file = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-goal" && argidx + 1 < args.size()) {
@@ -1142,6 +1151,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (check_label("verilog")) {
             if (!verilog_file.empty()) {
                 run("write_verilog -noattr -nohex " + verilog_file);
+            }
+        }
+
+        if (check_label("vhdl")) {
+            if (!vhdl_file.empty()) {
+                run("write_vhdl " + vhdl_file);
             }
         }
     }
