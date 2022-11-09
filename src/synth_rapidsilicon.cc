@@ -50,7 +50,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 84
+#define VERSION_PATCH 85
 
 enum Strategy {
     AREA,
@@ -385,8 +385,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             tech = Technologies::GENERIC;
         else if (tech_str == "genesis")
             tech = Technologies::GENESIS;
-        else if (tech_str == "genesis2")
+        else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
+            sdffr = true;
+            nosdff_str = "";
+        }
         else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
 
