@@ -387,6 +387,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             tech = Technologies::GENESIS;
         else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
+            sdffr = true;
             nosdff_str = "";
         }
         else if (tech_str != "")
