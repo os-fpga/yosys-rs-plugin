@@ -46,7 +46,7 @@ SOURCES = src/rs-dsp.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc \
-		  src/rs_pack_dsp_regs.cc
+		  src/rs-pack-dsp-regs.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
