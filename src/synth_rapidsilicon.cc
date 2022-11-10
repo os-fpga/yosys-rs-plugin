@@ -32,6 +32,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
+#define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
@@ -676,67 +677,95 @@ struct SynthRapidSiliconPass : public ScriptPass {
             We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on smallest DSP to biggest one. 
             The idea is that if there is a perfect fit we want to assign the smallest DSP to the RTL operator.
         */
-        const std::vector<DspParams> dsp_rules_loop1 = {
-            {10, 9, 4, 4, "$__RS_MUL10X9"},
-            {20, 18, 11, 10, "$__RS_MUL20X18"},
-        };
-        for (const auto &rule : dsp_rules_loop1) {
-            run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
-                        " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                        "-D DSP_NAME=%s",
-                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
-            run("stat");
+        switch (tech) {
+            case Technologies::GENESIS:
+            case Technologies::GENESIS_2: {
+                const std::vector<DspParams> dsp_rules_loop1 = {
+                    {10, 9, 4, 4, "$__RS_MUL10X9"},
+                    {20, 18, 11, 10, "$__RS_MUL20X18"},
+                };
+                for (const auto &rule : dsp_rules_loop1) {
+                    run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
+                                " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                "-D DSP_NAME=%s",
+                                rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                    run("stat");
 
-            if (cec)
-                run("write_verilog -noattr -nohex after_dsp_map1_" + std::to_string(rule.a_maxwidth) + ".v");
+                    if (cec)
+                        run("write_verilog -noattr -nohex after_dsp_map1_" + std::to_string(rule.a_maxwidth) + ".v");
 
-            run("chtype -set $mul t:$__soft_mul");
-        }
-        /* 
-            In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
-            The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
-        */
-        const std::vector<DspParams> dsp_rules_loop2 = {
-            {20, 18, 11, 10, "$__RS_MUL20X18"},
-            {10, 9, 4, 4, "$__RS_MUL10X9"},
-        };
-        for (const auto &rule : dsp_rules_loop2) {
-            run(stringf("techmap -map +/mul2dsp.v "
-                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                        "-D DSP_NAME=%s",
-                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                    run("chtype -set $mul t:$__soft_mul");
+                }
+                /* 
+                    In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
+                    The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
+                */
+                const std::vector<DspParams> dsp_rules_loop2 = {
+                    {20, 18, 11, 10, "$__RS_MUL20X18"},
+                    {10, 9, 4, 4, "$__RS_MUL10X9"},
+                };
+                for (const auto &rule : dsp_rules_loop2) {
+                    run(stringf("techmap -map +/mul2dsp.v "
+                                "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                "-D DSP_NAME=%s",
+                                rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
-            if (cec)
-                run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
+                    if (cec)
+                        run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
 
-            run("chtype -set $mul t:$__soft_mul");
+                    run("chtype -set $mul t:$__soft_mul");
+                }
+                break;
+            }
+            case Technologies::GENERIC: {
+                break;
+            }
         }
     }
 
     void mapBrams() {
+        std::string bramTxt;
+        std::string bramAsyncTxt;
+        std::string bramMapFile;
+        std::string bramFinalMapFile;
         switch (tech) {
             case Technologies::GENESIS: {
+                bramTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_TXT);
+                bramAsyncTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT);
+                bramMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE);
+                bramFinalMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE);
+                break;
+            }
+            case Technologies::GENESIS_2: {
+                bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_TXT);
+                bramAsyncTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_ASYNC_TXT);
+                bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_FILE);
+                bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_FILE);
+                break;
+            }
+            case Technologies::GENERIC: {
+                break;
+            }
+        }
+        switch (tech) {
+            case Technologies::GENESIS:
+            case Technologies::GENESIS_2: {
                 run("rs_bram_asymmetric");
-                run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_TXT));
+                run("memory_bram -rules" + bramTxt);
                 if (areMemCellsLeft()) {
-                    run("memory_bram -rules" GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT));
+                    run("memory_bram -rules" + bramAsyncTxt);
                 }
                 run("rs_bram_split");
-                run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
-                run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
+                run("techmap -autoproc -map" + bramMapFile);
+                run("techmap -map" + bramFinalMapFile);
 
                 if (cec)
                     run("write_verilog -noattr -nohex after_bram_map.v");
                 break;
             }
-            case GENESIS_2: {
-                // TODO: Add BRAM inference.
-                log_warning("BRAM inference is not yet implemented for Genesis_2 technology.");
-                break;
-            }
-            case GENERIC: {
+            case Technologies::GENERIC: {
                 break;
             }
         }
@@ -788,12 +817,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
             string readArgs;
             switch (tech) {
                 case Technologies::GENESIS: {
-                    readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) GET_FILE_PATH(GENESIS_DIR, DSP_SIM_LIB_FILE);
+                    readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_DIR, DSP_SIM_LIB_FILE);
                     break;
                 }    
                 case Technologies::GENESIS_2: {
-                    readArgs = GET_FILE_PATH(GENESIS_2_DIR, SIM_LIB_FILE);
-                    //readArgs = GET_FILE_PATH(GENESIS_2_DIR, SIM_LIB_FILE) GET_FILE_PATH(GENESIS_2_DIR, DSP_SIM_LIB_FILE);
+                    readArgs = GET_FILE_PATH(GENESIS_2_DIR, SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_2_DIR, DSP_SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_2_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
@@ -860,8 +891,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (check_label("coarse")) {
             if(!nodsp){
+                std::string dspMapFile;
+                std::string dspFinalMapFile;
                 switch (tech) {
-                    case GENESIS: {
+                    case Technologies::GENESIS: {
+                        dspMapFile = GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE);
+                        dspFinalMapFile = GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE);
+                        break;
+                    }
+                    case Technologies::GENESIS_2: {
+                        dspMapFile = GET_FILE_PATH(GENESIS_2_DIR, DSP_MAP_FILE);
+                        dspFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, DSP_FINAL_MAP_FILE);
+                        break;
+                    }
+                    case Technologies::GENERIC: {
+                        break;
+                    }
+                }
+                switch (tech) {
+                    case Technologies::GENESIS:
+                    case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
@@ -871,17 +920,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         processDsp(cec);
 
                         if (use_dsp_cfg_params.empty())
-                            run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
-                                    " -D USE_DSP_CFG_PARAMS=0");
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
                         else
-                            run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE) 
-                                    " -D USE_DSP_CFG_PARAMS=1");
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1");
                             
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
 
                         run("rs_dsp_simd");
-                        run("techmap -map " GET_FILE_PATH(GENESIS_DIR, DSP_FINAL_MAP_FILE));
+                        run("techmap -map " + dspFinalMapFile);
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
@@ -893,12 +940,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         break;
                     }
-                    case GENESIS_2: {
-                        // TODO: Add DSP inference
-                        log_warning("DSP inference is not yet implemented for Genesis_2 technology.");
-                        break;
-                    }
-                    case GENERIC: {
+                    case Technologies::GENERIC: {
                         break;
                     }
                 }
@@ -943,18 +985,36 @@ struct SynthRapidSiliconPass : public ScriptPass {
         postProcessBrams();
 
         if (check_label("map_gates")) {
+            std::string arithMapFile;
+            std::string allArithMapFile;
             switch (tech) {
-                case GENESIS: {
+                case Technologies::GENESIS: {
+                    arithMapFile = GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE);
+                    allArithMapFile = GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE);
+                    break;    
+                }    
+                case Technologies::GENESIS_2: {
+                    arithMapFile = GET_FILE_PATH(GENESIS_2_DIR, ARITH_MAP_FILE);
+                    allArithMapFile = GET_FILE_PATH(GENESIS_2_DIR, ALL_ARITH_MAP_FILE);
+                    break;
+                }    
+                case Technologies::GENERIC: {
+                    break;
+                }    
+            }
+            switch (tech) {
+                case Technologies::GENESIS:
+                case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                     run("stat");
 #endif
                     switch (infer_carry) {
                         case CarryMode::AUTO: {
-                            run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE));
+                            run("techmap -map +/techmap.v -map" + arithMapFile);
                             break;
                         }
                         case CarryMode::ALL: {
-                            run("techmap -map +/techmap.v -map" GET_FILE_PATH(GENESIS_DIR, ALL_ARITH_MAP_FILE));
+                            run("techmap -map +/techmap.v -map" + allArithMapFile);
                             break;
                         }
                         case CarryMode::NO: {
@@ -967,13 +1027,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                     break;    
                 }    
-                case GENESIS_2: {
-                    // TODO: Add Carry inference
-                    log_warning("Carry inference is not yet implemented for Genesis_2 technology.");
-                    run("techmap");
-                    break;
-                }    
-                // Just to make compiler happy
                 case Technologies::GENERIC: {
                     run("techmap");
                     break;
@@ -1058,7 +1111,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                 string techMapArgs = " -map +/techmap.v -map";
                 switch (tech) {
-                    case GENESIS: {
+                    case Technologies::GENESIS: {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
@@ -1085,7 +1138,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         techMapArgs += GET_FILE_PATH(GENESIS_DIR, FFS_MAP_FILE);
                         break;    
                     }    
-                    case GENESIS_2: {
+                    case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
