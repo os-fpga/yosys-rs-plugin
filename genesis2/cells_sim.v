@@ -292,6 +292,7 @@ endmodule
 module latchnr(
     input D,
     input G,
+    input R,
     output reg Q
 );
 initial begin
