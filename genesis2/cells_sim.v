@@ -292,6 +292,7 @@ endmodule
 module latchnr(
     input D,
     input G,
+    input R,
     output reg Q
 );
 initial begin
@@ -302,4 +303,17 @@ end
             Q <= 1'b0;
         else if (G == 1'b0)
             Q <= D;
+endmodule
+
+//------------------------------------------------------------------------------
+// 1 bit adder_carry
+//------------------------------------------------------------------------------
+module fa_1bit (p, g, cin, sum, cout);
+    input p;
+    input g;
+    input cin;
+    output sum;
+    output cout;
+
+    assign {cout, sum} = {p ? cin : g, p ^ cin};
 endmodule
