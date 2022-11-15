@@ -18,7 +18,9 @@ struct RsPackDspRegsWorker
     RsPackDspRegsWorker(RTLIL::Module *module) :
         m_module(module), m_sigmap(module), m_initvals(&m_sigmap, module) {}
 
-    void run () {
+    bool run_opt_clean = false;
+
+    void run_scr () {
 
         std::vector<Cell *> DSP_used_cells;
         std::vector<Cell *> DFF_used_cells;
@@ -261,6 +263,8 @@ struct RsPackDspRegsWorker
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
             // Getting DSP reset port to connect it with DFF reset port
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+
+            run_opt_clean = true;
         }
     }
 };
@@ -284,9 +288,11 @@ struct RsPackDspRegsPass : public Pass {
         extra_args(a_Args, 1, design);
 
         for (auto mod : design->selected_modules()) {
-			RsPackDspRegsWorker worker(mod);
-			worker.run();
-		}
+            RsPackDspRegsWorker worker(mod);
+            worker.run_scr();
+            if (worker.run_opt_clean)
+                Pass::call(design, "opt_clean");
+        }
     }
 } RsPackDspRegsPass;
 

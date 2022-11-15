@@ -932,9 +932,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
-                        run("opt_clean");
                         run("rs-pack-dsp-regs");
-                        run("opt_clean");
                         run("rs_dsp_io_regs");
 
                         if (cec)
