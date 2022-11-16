@@ -51,7 +51,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 88
+#define VERSION_PATCH 89
 
 enum Strategy {
     AREA,
@@ -944,7 +944,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
-
+                        run("rs-pack-dsp-regs");
                         run("rs_dsp_io_regs");
 
                         if (cec)
@@ -970,9 +970,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
             run("stat");
 #endif
-
             run("memory -nomap");
-
 #ifdef DEV_BUILD
             run("stat");
 #endif
