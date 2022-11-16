@@ -7,6 +7,7 @@ TESTS = dffs\
 		dsp_macc\
 		dsp_mult\
 		dsp_simd\
+		pack_dsp_regs\
 		bram_tdp\
 		bram_sdp\
 		bram_sdp_split\
@@ -21,6 +22,7 @@ VALGRIND_TESTS = valgrind/dffs\
 				 valgrind/dsp_macc\
 				 valgrind/dsp_mult\
 				 valgrind/dsp_simd\
+				 valgrind/pack_dsp_regs\
 				 valgrind/bram_tdp\
 				 valgrind/bram_sdp\
 				 valgrind/bram_sdp_split\
