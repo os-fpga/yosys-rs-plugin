@@ -1,36 +1,146 @@
+// Copyright (C) 2022 RapidSilicon
+//11/11/2022
+
+`timescale  1 ps / 1 ps
+
+module TDP_BRAM18 (
+    (* clkbuf_sink *)
+    input wire CLOCKA,
+    (* clkbuf_sink *)
+    input wire CLOCKB,
+    input wire READENABLEA,
+    input wire READENABLEB,
+    input wire [13:0] ADDRA,
+    input wire [13:0] ADDRB,
+    input wire [15:0] WRITEDATAA,
+    input wire [15:0] WRITEDATAB,
+    input wire [1:0] WRITEDATAAP,
+    input wire [1:0] WRITEDATABP,
+    input wire WRITEENABLEA,
+    input wire WRITEENABLEB,
+    input wire [1:0] BYTEENABLEA,
+    input wire [1:0] BYTEENABLEB,
+    //input [2:0] WRITEDATAWIDTHA,
+    //input [2:0] WRITEDATAWIDTHB,
+    //input [2:0] READDATAWIDTHA,
+    //input [2:0] READDATAWIDTHB,
+    output wire [15:0] READDATAA,
+    output wire [15:0] READDATAB,
+    output wire [1:0] READDATAAP,
+    output wire [1:0] READDATABP
+);
+    parameter INITP_00 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_01 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_02 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_03 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_04 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_05 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_06 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INITP_07 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_00 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_01 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_02 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_03 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_04 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_05 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_06 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_07 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_08 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_09 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_0A = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_0B = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_0C = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_0D = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_0E = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_0F = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_10 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_11 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_12 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_13 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_14 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_15 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_16 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_17 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_18 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_19 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_1A = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_1B = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_1C = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_1D = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_1E = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_1F = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_20 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_21 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_22 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_23 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_24 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_25 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_26 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_27 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_28 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_29 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_2A = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_2B = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_2C = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_2D = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_2E = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_2F = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_30 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_31 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_32 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_33 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_34 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_35 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_36 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_37 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_38 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_39 = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_3A = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_3B = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_3C = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_3D = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_3E = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter INIT_3F = 256'h0000000000000000000000000000000000000000000000000000000000000000;
+    parameter integer READ_WIDTH_A = 0;
+    parameter integer READ_WIDTH_B = 0;
+    parameter integer WRITE_WIDTH_A = 0;
+    parameter integer WRITE_WIDTH_B = 0;
+
+endmodule
+
 `default_nettype wire
-module TDP36K (
-    RESET_ni,
-    WEN_A1_i,
-    WEN_B1_i,
-    REN_A1_i,
-    REN_B1_i,
-    CLK_A1_i,
-    CLK_B1_i,
-    BE_A1_i,
-    BE_B1_i,
-    ADDR_A1_i,
-    ADDR_B1_i,
-    WDATA_A1_i,
-    WDATA_B1_i,
-    RDATA_A1_o,
-    RDATA_B1_o,
-    FLUSH1_i,
-    WEN_A2_i,
-    WEN_B2_i,
-    REN_A2_i,
-    REN_B2_i,
-    CLK_A2_i,
-    CLK_B2_i,
-    BE_A2_i,
-    BE_B2_i,
-    ADDR_A2_i,
-    ADDR_B2_i,
-    WDATA_A2_i,
-    WDATA_B2_i,
-    RDATA_A2_o,
-    RDATA_B2_o,
-    FLUSH2_i
+module RS_TDP36K (
+//    RESET_n,
+    WEN_A1,
+    WEN_B1,
+    REN_A1,
+    REN_B1,
+    CLK_A1,
+    CLK_B1,
+    BE_A1,
+    BE_B1,
+    ADDR_A1,
+    ADDR_B1,
+    WDATA_A1,
+    WDATA_B1,
+    RDATA_A1,
+    RDATA_B1,
+    FLUSH1,
+    WEN_A2,
+    WEN_B2,
+    REN_A2,
+    REN_B2,
+    CLK_A2,
+    CLK_B2,
+    BE_A2,
+    BE_B2,
+    ADDR_A2,
+    ADDR_B2,
+    WDATA_A2,
+    WDATA_B2,
+    RDATA_A2,
+    RDATA_B2,
+    FLUSH2
 );
     parameter [80:0] MODE_BITS = 81'd0;
 
@@ -66,42 +176,42 @@ module TDP36K (
     parameter [36863:0] INIT_i = 36864'h0;
 
 
-    input wire RESET_ni;
+ //   input wire RESET_n;
 
-    input wire WEN_A1_i;
-    input wire WEN_B1_i;
-    input wire REN_A1_i;
-    input wire REN_B1_i;
+    input wire WEN_A1;
+    input wire WEN_B1;
+    input wire REN_A1;
+    input wire REN_B1;
     (* clkbuf_sink *)
-    input wire CLK_A1_i;
+    input wire CLK_A1;
     (* clkbuf_sink *)
-    input wire CLK_B1_i;
-    input wire [1:0] BE_A1_i;
-    input wire [1:0] BE_B1_i;
-    input wire [14:0] ADDR_A1_i;
-    input wire [14:0] ADDR_B1_i;
-    input wire [17:0] WDATA_A1_i;
-    input wire [17:0] WDATA_B1_i;
-    output reg [17:0] RDATA_A1_o;
-    output reg [17:0] RDATA_B1_o;
-    input wire FLUSH1_i;
-    input wire WEN_A2_i;
-    input wire WEN_B2_i;
-    input wire REN_A2_i;
-    input wire REN_B2_i;
+    input wire CLK_B1;
+    input wire [1:0] BE_A1;
+    input wire [1:0] BE_B1;
+    input wire [14:0] ADDR_A1;
+    input wire [14:0] ADDR_B1;
+    input wire [17:0] WDATA_A1;
+    input wire [17:0] WDATA_B1;
+    output reg [17:0] RDATA_A1;
+    output reg [17:0] RDATA_B1;
+    input wire FLUSH1;
+    input wire WEN_A2;
+    input wire WEN_B2;
+    input wire REN_A2;
+    input wire REN_B2;
     (* clkbuf_sink *)
-    input wire CLK_A2_i;
+    input wire CLK_A2;
     (* clkbuf_sink *)
-    input wire CLK_B2_i;
-    input wire [1:0] BE_A2_i;
-    input wire [1:0] BE_B2_i;
-    input wire [13:0] ADDR_A2_i;
-    input wire [13:0] ADDR_B2_i;
-    input wire [17:0] WDATA_A2_i;
-    input wire [17:0] WDATA_B2_i;
-    output reg [17:0] RDATA_A2_o;
-    output reg [17:0] RDATA_B2_o;
-    input wire FLUSH2_i;
+    input wire CLK_B2;
+    input wire [1:0] BE_A2;
+    input wire [1:0] BE_B2;
+    input wire [13:0] ADDR_A2;
+    input wire [13:0] ADDR_B2;
+    input wire [17:0] WDATA_A2;
+    input wire [17:0] WDATA_B2;
+    output reg [17:0] RDATA_A2;
+    output reg [17:0] RDATA_B2;
+    input wire FLUSH2;
     wire EMPTY2;
     wire EPO2;
     wire EWM2;
@@ -182,70 +292,81 @@ module TDP36K (
     wire sreset;
     wire flush1;
     wire flush2;
-    assign sreset = RESET_ni;
-    assign flush1 = ~FLUSH1_i;
-    assign flush2 = ~FLUSH2_i;
+    reg RESET_n_i;
+    
+   //Avinash - Delay for initial global reset 
+    initial begin
+      RESET_n_i = 1'b0;
+     #10000
+      RESET_n_i = 1'b1;
+    end
+
+    
+    
+    assign sreset = RESET_n_i;
+    assign flush1 = ~FLUSH1;
+    assign flush2 = ~FLUSH2;
     assign ram_fmode1 = FMODE1_i & SPLIT_i;
     assign ram_fmode2 = FMODE2_i & SPLIT_i;
-    assign smux_clk_a1 = CLK_A1_i;
-    assign smux_clk_b1 = (FMODE1_i ? (SYNC_FIFO1_i ? CLK_A1_i : CLK_B1_i) : CLK_B1_i);
-    assign smux_clk_a2 = (SPLIT_i ? CLK_A2_i : CLK_A1_i);
-    assign smux_clk_b2 = (SPLIT_i ? (FMODE2_i ? (SYNC_FIFO2_i ? CLK_A2_i : CLK_B2_i) : CLK_B2_i) : (FMODE1_i ? (SYNC_FIFO1_i ? CLK_A1_i : CLK_B1_i) : CLK_B1_i));
+    assign smux_clk_a1 = CLK_A1;
+    assign smux_clk_b1 = (FMODE1_i ? (SYNC_FIFO1_i ? CLK_A1 : CLK_B1) : CLK_B1);
+    assign smux_clk_a2 = (SPLIT_i ? CLK_A2 : CLK_A1);
+    assign smux_clk_b2 = (SPLIT_i ? (FMODE2_i ? (SYNC_FIFO2_i ? CLK_A2 : CLK_B2) : CLK_B2) : (FMODE1_i ? (SYNC_FIFO1_i ? CLK_A1 : CLK_B1) : CLK_B1));
     assign sclk_a1 = smux_clk_a1;
     assign sclk_a2 = smux_clk_a2;
     assign sclk_b1 = smux_clk_b1;
     assign sclk_b2 = smux_clk_b2;
-    assign ram_ren_a1 = (SPLIT_i ? REN_A1_i : (FMODE1_i ? 0 : REN_A1_i));
-    assign ram_ren_a2 = (SPLIT_i ? REN_A2_i : (FMODE1_i ? 0 : REN_A1_i));
-    assign ram_ren_b1 = (SPLIT_i ? REN_B1_i : (FMODE1_i ? ren_o : REN_B1_i));
-    assign ram_ren_b2 = (SPLIT_i ? REN_B2_i : (FMODE1_i ? ren_o : REN_B1_i));
+    assign ram_ren_a1 = (SPLIT_i ? REN_A1 : (FMODE1_i ? 0 : REN_A1));
+    assign ram_ren_a2 = (SPLIT_i ? REN_A2 : (FMODE1_i ? 0 : REN_A1));
+    assign ram_ren_b1 = (SPLIT_i ? REN_B1 : (FMODE1_i ? ren_o : REN_B1));
+    assign ram_ren_b2 = (SPLIT_i ? REN_B2 : (FMODE1_i ? ren_o : REN_B1));
     localparam MODE_36 = 3'b011;
-    assign ram_wen_a1 = (SPLIT_i ? WEN_A1_i : (FMODE1_i ? ~FULL3 & WEN_A1_i : (WMODE_A1_i == MODE_36 ? WEN_A1_i : WEN_A1_i & ~ADDR_A1_i[4])));
-    assign ram_wen_a2 = (SPLIT_i ? WEN_A2_i : (FMODE1_i ? ~FULL3 & WEN_A1_i : (WMODE_A1_i == MODE_36 ? WEN_A1_i : WEN_A1_i & ADDR_A1_i[4])));
-    assign ram_wen_b1 = (SPLIT_i ? WEN_B1_i : (WMODE_B1_i == MODE_36 ? WEN_B1_i : WEN_B1_i & ~ADDR_B1_i[4]));
-    assign ram_wen_b2 = (SPLIT_i ? WEN_B2_i : (WMODE_B1_i == MODE_36 ? WEN_B1_i : WEN_B1_i & ADDR_B1_i[4]));
-    assign ram_addr_a1 = (SPLIT_i ? ADDR_A1_i[13:0] : (FMODE1_i ? {ff_waddr[11:2], ff_waddr[0], 3'b000} : {ADDR_A1_i[14:5], ADDR_A1_i[3:0]}));
-    assign ram_addr_b1 = (SPLIT_i ? ADDR_B1_i[13:0] : (FMODE1_i ? {ff_raddr[11:2], ff_raddr[0], 3'b000} : {ADDR_B1_i[14:5], ADDR_B1_i[3:0]}));
-    assign ram_addr_a2 = (SPLIT_i ? ADDR_A2_i[13:0] : (FMODE1_i ? {ff_waddr[11:2], ff_waddr[0], 3'b000} : {ADDR_A1_i[14:5], ADDR_A1_i[3:0]}));
-    assign ram_addr_b2 = (SPLIT_i ? ADDR_B2_i[13:0] : (FMODE1_i ? {ff_raddr[11:2], ff_raddr[0], 3'b000} : {ADDR_B1_i[14:5], ADDR_B1_i[3:0]}));
-    assign bwl = (SPLIT_i ? ADDR_A1_i[4:3] : (FMODE1_i ? ff_waddr[1:0] : ADDR_A1_i[4:3]));
+    assign ram_wen_a1 = (SPLIT_i ? WEN_A1 : (FMODE1_i ? ~FULL3 & WEN_A1 : (WMODE_A1_i == MODE_36 ? WEN_A1 : WEN_A1 & ~ADDR_A1[4])));
+    assign ram_wen_a2 = (SPLIT_i ? WEN_A2 : (FMODE1_i ? ~FULL3 & WEN_A1 : (WMODE_A1_i == MODE_36 ? WEN_A1 : WEN_A1 & ADDR_A1[4])));
+    assign ram_wen_b1 = (SPLIT_i ? WEN_B1 : (WMODE_B1_i == MODE_36 ? WEN_B1 : WEN_B1 & ~ADDR_B1[4]));
+    assign ram_wen_b2 = (SPLIT_i ? WEN_B2 : (WMODE_B1_i == MODE_36 ? WEN_B1 : WEN_B1 & ADDR_B1[4]));
+    assign ram_addr_a1 = (SPLIT_i ? ADDR_A1[13:0] : (FMODE1_i ? {ff_waddr[11:2], ff_waddr[0], 3'b000} : {ADDR_A1[14:5], ADDR_A1[3:0]}));
+    assign ram_addr_b1 = (SPLIT_i ? ADDR_B1[13:0] : (FMODE1_i ? {ff_raddr[11:2], ff_raddr[0], 3'b000} : {ADDR_B1[14:5], ADDR_B1[3:0]}));
+    assign ram_addr_a2 = (SPLIT_i ? ADDR_A2[13:0] : (FMODE1_i ? {ff_waddr[11:2], ff_waddr[0], 3'b000} : {ADDR_A1[14:5], ADDR_A1[3:0]}));
+    assign ram_addr_b2 = (SPLIT_i ? ADDR_B2[13:0] : (FMODE1_i ? {ff_raddr[11:2], ff_raddr[0], 3'b000} : {ADDR_B1[14:5], ADDR_B1[3:0]}));
+    assign bwl = (SPLIT_i ? ADDR_A1[4:3] : (FMODE1_i ? ff_waddr[1:0] : ADDR_A1[4:3]));
     localparam MODE_18 = 3'b010;
     localparam MODE_9 = 3'b001;
     always @(*) begin : WDATA_SEL
         case (SPLIT_i)
             1: begin
-                ram_wdata_a1 = WDATA_A1_i;
-                ram_wdata_a2 = WDATA_A2_i;
-                ram_wdata_b1 = WDATA_B1_i;
-                ram_wdata_b2 = WDATA_B2_i;
-                ram_be_a2 = BE_A2_i;
-                ram_be_b2 = BE_B2_i;
-                ram_be_a1 = BE_A1_i;
-                ram_be_b1 = BE_B1_i;
+                ram_wdata_a1 = WDATA_A1;
+                ram_wdata_a2 = WDATA_A2;
+                ram_wdata_b1 = WDATA_B1;
+                ram_wdata_b2 = WDATA_B2;
+                ram_be_a2 = BE_A2;
+                ram_be_b2 = BE_B2;
+                ram_be_a1 = BE_A1;
+                ram_be_b1 = BE_B1;
             end
             0: begin
                 case (WMODE_A1_i)
                     MODE_36: begin
-                        ram_wdata_a1 = WDATA_A1_i;
-                        ram_wdata_a2 = WDATA_A2_i;
-                        ram_be_a2 = (FMODE1_i ? 2'b11 : BE_A2_i);
-                        ram_be_a1 = (FMODE1_i ? 2'b11 : BE_A1_i);
+                        ram_wdata_a1 = WDATA_A1;
+                        ram_wdata_a2 = WDATA_A2;
+                        ram_be_a2 = (FMODE1_i ? 2'b11 : BE_A2);
+                        ram_be_a1 = (FMODE1_i ? 2'b11 : BE_A1);
                     end
                     MODE_18: begin
-                        ram_wdata_a1 = WDATA_A1_i;
-                        ram_wdata_a2 = WDATA_A1_i;
-                        ram_be_a1 = (FMODE1_i ? (ff_waddr[1] ? 2'b00 : 2'b11) : BE_A1_i);
-                        ram_be_a2 = (FMODE1_i ? (ff_waddr[1] ? 2'b11 : 2'b00) : BE_A1_i);
+                        ram_wdata_a1 = WDATA_A1;
+                        ram_wdata_a2 = WDATA_A1;
+                        ram_be_a1 = (FMODE1_i ? (ff_waddr[1] ? 2'b00 : 2'b11) : BE_A1);
+                        ram_be_a2 = (FMODE1_i ? (ff_waddr[1] ? 2'b11 : 2'b00) : BE_A1);
                     end
                     MODE_9: begin
-                        ram_wdata_a1[7:0] = WDATA_A1_i[7:0];
-                        ram_wdata_a1[16] = WDATA_A1_i[16];
-                        ram_wdata_a1[15:8] = WDATA_A1_i[7:0];
-                        ram_wdata_a1[17] = WDATA_A1_i[16];
-                        ram_wdata_a2[7:0] = WDATA_A1_i[7:0];
-                        ram_wdata_a2[16] = WDATA_A1_i[16];
-                        ram_wdata_a2[15:8] = WDATA_A1_i[7:0];
-                        ram_wdata_a2[17] = WDATA_A1_i[16];
+                        ram_wdata_a1[7:0] = WDATA_A1[7:0];
+                        ram_wdata_a1[16] = WDATA_A1[16];
+                        ram_wdata_a1[15:8] = WDATA_A1[7:0];
+                        ram_wdata_a1[17] = WDATA_A1[16];
+                        ram_wdata_a2[7:0] = WDATA_A1[7:0];
+                        ram_wdata_a2[16] = WDATA_A1[16];
+                        ram_wdata_a2[15:8] = WDATA_A1[7:0];
+                        ram_wdata_a2[17] = WDATA_A1[16];
                         case (bwl)
                             0: {ram_be_a2, ram_be_a1} = 4'b0001;
                             1: {ram_be_a2, ram_be_a1} = 4'b0010;
@@ -254,35 +375,35 @@ module TDP36K (
                         endcase
                     end
                     default: begin
-                        ram_wdata_a1 = WDATA_A1_i;
-                        ram_wdata_a2 = WDATA_A1_i;
-                        ram_be_a2 = (FMODE1_i ? 2'b11 : BE_A1_i);
-                        ram_be_a1 = (FMODE1_i ? 2'b11 : BE_A1_i);
+                        ram_wdata_a1 = WDATA_A1;
+                        ram_wdata_a2 = WDATA_A1;
+                        ram_be_a2 = (FMODE1_i ? 2'b11 : BE_A1);
+                        ram_be_a1 = (FMODE1_i ? 2'b11 : BE_A1);
                     end
                 endcase
                 case (WMODE_B1_i)
                     MODE_36: begin
-                        ram_wdata_b1 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1_i);
-                        ram_wdata_b2 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B2_i);
-                        ram_be_b2 = BE_B2_i;
-                        ram_be_b1 = BE_B1_i;
+                        ram_wdata_b1 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1);
+                        ram_wdata_b2 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B2);
+                        ram_be_b2 = BE_B2;
+                        ram_be_b1 = BE_B1;
                     end
                     MODE_18: begin
-                        ram_wdata_b1 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1_i);
-                        ram_wdata_b2 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1_i);
-                        ram_be_b1 = BE_B1_i;
-                        ram_be_b2 = BE_B1_i;
+                        ram_wdata_b1 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1);
+                        ram_wdata_b2 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1);
+                        ram_be_b1 = BE_B1;
+                        ram_be_b2 = BE_B1;
                     end
                     MODE_9: begin
-                        ram_wdata_b1[7:0] = WDATA_B1_i[7:0];
-                        ram_wdata_b1[16] = WDATA_B1_i[16];
-                        ram_wdata_b1[15:8] = WDATA_B1_i[7:0];
-                        ram_wdata_b1[17] = WDATA_B1_i[16];
-                        ram_wdata_b2[7:0] = WDATA_B1_i[7:0];
-                        ram_wdata_b2[16] = WDATA_B1_i[16];
-                        ram_wdata_b2[15:8] = WDATA_B1_i[7:0];
-                        ram_wdata_b2[17] = WDATA_B1_i[16];
-                        case (ADDR_B1_i[4:3])
+                        ram_wdata_b1[7:0] = WDATA_B1[7:0];
+                        ram_wdata_b1[16] = WDATA_B1[16];
+                        ram_wdata_b1[15:8] = WDATA_B1[7:0];
+                        ram_wdata_b1[17] = WDATA_B1[16];
+                        ram_wdata_b2[7:0] = WDATA_B1[7:0];
+                        ram_wdata_b2[16] = WDATA_B1[16];
+                        ram_wdata_b2[15:8] = WDATA_B1[7:0];
+                        ram_wdata_b2[17] = WDATA_B1[16];
+                        case (ADDR_B1[4:3])
                             0: {ram_be_b2, ram_be_b1} = 4'b0001;
                             1: {ram_be_b2, ram_be_b1} = 4'b0010;
                             2: {ram_be_b2, ram_be_b1} = 4'b0100;
@@ -290,10 +411,10 @@ module TDP36K (
                         endcase
                     end
                     default: begin
-                        ram_wdata_b1 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1_i);
-                        ram_wdata_b2 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1_i);
-                        ram_be_b2 = BE_B1_i;
-                        ram_be_b1 = BE_B1_i;
+                        ram_wdata_b1 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1);
+                        ram_wdata_b2 = (FMODE1_i ? 18'b000000000000000000 : WDATA_B1);
+                        ram_be_b2 = BE_B1;
+                        ram_be_b1 = BE_B1;
                     end
                 endcase
             end
@@ -327,81 +448,81 @@ module TDP36K (
     always @(*) begin : RDATA_SEL
         case (SPLIT_i)
             1: begin
-                RDATA_A1_o = (FMODE1_i ? {10'b0000000000, EMPTY1, EPO1, EWM1, UNDERRUN1, FULL1, FMO1, FWM1, OVERRUN1} : ram_rdata_a1);
-                RDATA_B1_o = ram_rdata_b1;
-                RDATA_A2_o = (FMODE2_i ? {10'b0000000000, EMPTY2, EPO2, EWM2, UNDERRUN2, FULL2, FMO2, FWM2, OVERRUN2} : ram_rdata_a2);
-                RDATA_B2_o = ram_rdata_b2;
+                RDATA_A1 = (FMODE1_i ? {10'b0000000000, EMPTY1, EPO1, EWM1, UNDERRUN1, FULL1, FMO1, FWM1, OVERRUN1} : ram_rdata_a1);
+                RDATA_B1 = ram_rdata_b1;
+                RDATA_A2 = (FMODE2_i ? {10'b0000000000, EMPTY2, EPO2, EWM2, UNDERRUN2, FULL2, FMO2, FWM2, OVERRUN2} : ram_rdata_a2);
+                RDATA_B2 = ram_rdata_b2;
             end
             0: begin
                 if (FMODE1_i) begin
-                    RDATA_A1_o = {10'b0000000000, EMPTY3, EPO3, EWM3, UNDERRUN3, FULL3, FMO3, FWM3, OVERRUN3};
-                    RDATA_A2_o = 18'b000000000000000000;
+                    RDATA_A1 = {10'b0000000000, EMPTY3, EPO3, EWM3, UNDERRUN3, FULL3, FMO3, FWM3, OVERRUN3};
+                    RDATA_A2 = 18'b000000000000000000;
                 end
                 else
                     case (RMODE_A1_i)
                         MODE_36: begin
-                            RDATA_A1_o = {ram_rdata_a1[17:0]};
-                            RDATA_A2_o = {ram_rdata_a2[17:0]};
+                            RDATA_A1 = {ram_rdata_a1[17:0]};
+                            RDATA_A2 = {ram_rdata_a2[17:0]};
                         end
                         MODE_18: begin
-                            RDATA_A1_o = (laddr_a1[4] ? ram_rdata_a2 : ram_rdata_a1);
-                            RDATA_A2_o = 18'b000000000000000000;
+                            RDATA_A1 = (laddr_a1[4] ? ram_rdata_a2 : ram_rdata_a1);
+                            RDATA_A2 = 18'b000000000000000000;
                         end
                         MODE_9: begin
-                            RDATA_A1_o = (laddr_a1[4] ? {{2 {ram_rdata_a2[16]}}, {2 {ram_rdata_a2[7:0]}}} : {{2 {ram_rdata_a1[16]}}, {2 {ram_rdata_a1[7:0]}}});
-                            RDATA_A2_o = 18'b000000000000000000;
+                            RDATA_A1 = (laddr_a1[4] ? {{2 {ram_rdata_a2[16]}}, {2 {ram_rdata_a2[7:0]}}} : {{2 {ram_rdata_a1[16]}}, {2 {ram_rdata_a1[7:0]}}});
+                            RDATA_A2 = 18'b000000000000000000;
                         end
                         MODE_4: begin
-                            RDATA_A2_o = 18'b000000000000000000;
-                            RDATA_A1_o[17:4] = 14'b00000000000000;
-                            RDATA_A1_o[3:0] = (laddr_a1[4] ? ram_rdata_a2[3:0] : ram_rdata_a1[3:0]);
+                            RDATA_A2 = 18'b000000000000000000;
+                            RDATA_A1[17:4] = 14'b00000000000000;
+                            RDATA_A1[3:0] = (laddr_a1[4] ? ram_rdata_a2[3:0] : ram_rdata_a1[3:0]);
                         end
                         MODE_2: begin
-                            RDATA_A2_o = 18'b000000000000000000;
-                            RDATA_A1_o[17:2] = 16'b0000000000000000;
-                            RDATA_A1_o[1:0] = (laddr_a1[4] ? ram_rdata_a2[1:0] : ram_rdata_a1[1:0]);
+                            RDATA_A2 = 18'b000000000000000000;
+                            RDATA_A1[17:2] = 16'b0000000000000000;
+                            RDATA_A1[1:0] = (laddr_a1[4] ? ram_rdata_a2[1:0] : ram_rdata_a1[1:0]);
                         end
                         MODE_1: begin
-                            RDATA_A2_o = 18'b000000000000000000;
-                            RDATA_A1_o[17:1] = 17'b00000000000000000;
-                            RDATA_A1_o[0] = (laddr_a1[4] ? ram_rdata_a2[0] : ram_rdata_a1[0]);
+                            RDATA_A2 = 18'b000000000000000000;
+                            RDATA_A1[17:1] = 17'b00000000000000000;
+                            RDATA_A1[0] = (laddr_a1[4] ? ram_rdata_a2[0] : ram_rdata_a1[0]);
                         end
                         default: begin
-                            RDATA_A1_o = {ram_rdata_a2[1:0], ram_rdata_a1[15:0]};
-                            RDATA_A2_o = {ram_rdata_a2[17:16], ram_rdata_a1[17:16], ram_rdata_a2[15:2]};
+                            RDATA_A1 = {ram_rdata_a2[1:0], ram_rdata_a1[15:0]};
+                            RDATA_A2 = {ram_rdata_a2[17:16], ram_rdata_a1[17:16], ram_rdata_a2[15:2]};
                         end
                     endcase
                 case (RMODE_B1_i)
                     MODE_36: begin
-                        RDATA_B1_o = {ram_rdata_b1};
-                        RDATA_B2_o = {ram_rdata_b2};
+                        RDATA_B1 = {ram_rdata_b1};
+                        RDATA_B2 = {ram_rdata_b2};
                     end
                     MODE_18: begin
-                        RDATA_B1_o = (FMODE1_i ? fifo_rdata[17:0] : (laddr_b1[4] ? ram_rdata_b2 : ram_rdata_b1));
-                        RDATA_B2_o = 18'b000000000000000000;
+                        RDATA_B1 = (FMODE1_i ? fifo_rdata[17:0] : (laddr_b1[4] ? ram_rdata_b2 : ram_rdata_b1));
+                        RDATA_B2 = 18'b000000000000000000;
                     end
                     MODE_9: begin
-                        RDATA_B1_o = (FMODE1_i ? {fifo_rdata[17:0]} : (laddr_b1[4] ? {1'b0, ram_rdata_b2[16], 8'b00000000, ram_rdata_b2[7:0]} : {1'b0, ram_rdata_b1[16], 8'b00000000, ram_rdata_b1[7:0]}));
-                        RDATA_B2_o = 18'b000000000000000000;
+                        RDATA_B1 = (FMODE1_i ? {fifo_rdata[17:0]} : (laddr_b1[4] ? {1'b0, ram_rdata_b2[16], 8'b00000000, ram_rdata_b2[7:0]} : {1'b0, ram_rdata_b1[16], 8'b00000000, ram_rdata_b1[7:0]}));
+                        RDATA_B2 = 18'b000000000000000000;
                     end
                     MODE_4: begin
-                        RDATA_B2_o = 18'b000000000000000000;
-                        RDATA_B1_o[17:4] = 14'b00000000000000;
-                        RDATA_B1_o[3:0] = (laddr_b1[4] ? ram_rdata_b2[3:0] : ram_rdata_b1[3:0]);
+                        RDATA_B2 = 18'b000000000000000000;
+                        RDATA_B1[17:4] = 14'b00000000000000;
+                        RDATA_B1[3:0] = (laddr_b1[4] ? ram_rdata_b2[3:0] : ram_rdata_b1[3:0]);
                     end
                     MODE_2: begin
-                        RDATA_B2_o = 18'b000000000000000000;
-                        RDATA_B1_o[17:2] = 16'b0000000000000000;
-                        RDATA_B1_o[1:0] = (laddr_b1[4] ? ram_rdata_b2[1:0] : ram_rdata_b1[1:0]);
+                        RDATA_B2 = 18'b000000000000000000;
+                        RDATA_B1[17:2] = 16'b0000000000000000;
+                        RDATA_B1[1:0] = (laddr_b1[4] ? ram_rdata_b2[1:0] : ram_rdata_b1[1:0]);
                     end
                     MODE_1: begin
-                        RDATA_B2_o = 18'b000000000000000000;
-                        RDATA_B1_o[17:1] = 17'b00000000000000000;
-                        RDATA_B1_o[0] = (laddr_b1[4] ? ram_rdata_b2[0] : ram_rdata_b1[0]);
+                        RDATA_B2 = 18'b000000000000000000;
+                        RDATA_B1[17:1] = 17'b00000000000000000;
+                        RDATA_B1[0] = (laddr_b1[4] ? ram_rdata_b2[0] : ram_rdata_b1[0]);
                     end
                     default: begin
-                        RDATA_B1_o = ram_rdata_b1;
-                        RDATA_B2_o = ram_rdata_b2;
+                        RDATA_B1 = ram_rdata_b1;
+                        RDATA_B2 = ram_rdata_b2;
                     end
                 endcase
             end
@@ -411,12 +532,12 @@ module TDP36K (
         if (sreset == 0)
             laddr_a1 <= 1'sb0;
         else
-            laddr_a1 <= ADDR_A1_i;
+            laddr_a1 <= ADDR_A1;
     always @(posedge sclk_b1 or negedge sreset)
         if (sreset == 0)
             laddr_b1 <= 1'sb0;
         else
-            laddr_b1 <= ADDR_B1_i;
+            laddr_b1 <= ADDR_B1;
     assign fifo_wmode = ((WMODE_A1_i == MODE_36) ? 2'b00 : ((WMODE_A1_i == MODE_18) ? 2'b01 : ((WMODE_A1_i == MODE_9) ? 2'b10 : 2'b00)));
     assign fifo_rmode = ((RMODE_B1_i == MODE_36) ? 2'b00 : ((RMODE_B1_i == MODE_18) ? 2'b01 : ((RMODE_B1_i == MODE_9) ? 2'b10 : 2'b00)));
     fifo_ctl #(
@@ -428,7 +549,7 @@ module TDP36K (
         .rst_R_n(flush1),
         .wclk(sclk_a1),
         .rst_W_n(flush1),
-        .ren(REN_B1_i),
+        .ren(REN_B1),
         .wen(ram_wen_a1),
         .sync(SYNC_FIFO1_i),
         .rmode(fifo_rmode),
@@ -517,7 +638,6 @@ module TDP36K (
         .FMODE_i(ram_fmode2)
     );
 endmodule
-
 module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN);
     parameter CFG_ABITS = 11;
     parameter CFG_DBITS = 18;
@@ -653,47 +773,47 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_A2_ADDR = E1EN ? E1ADDR_TOTAL : (F1EN ? F1ADDR_TOTAL : 14'd0);
             assign PORT_B2_ADDR = G1EN ? G1ADDR_TOTAL : (H1EN ? H1ADDR_TOTAL : 14'd0);
 
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_1, MODE_1, MODE_1, MODE_1, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_1, MODE_1, MODE_1, MODE_1, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
         
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
         
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
         
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -702,47 +822,47 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 1) : (D1EN ? (D1ADDR_TOTAL << 1) : 14'd0);
             assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 1) : (F1EN ? (F1ADDR_TOTAL << 1) : 14'd0);
             assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 1) : (H1EN ? (H1ADDR_TOTAL << 1) : 14'd0);
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_2, MODE_2, MODE_2, MODE_2, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_2, MODE_2, MODE_2, MODE_2, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
         
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
         
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
         
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -751,47 +871,47 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 2) : (D1EN ? (D1ADDR_TOTAL << 2) : 14'd0);
             assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 2) : (F1EN ? (F1ADDR_TOTAL << 2) : 14'd0);
             assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 2) : (H1EN ? (H1ADDR_TOTAL << 2) : 14'd0);
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_4, MODE_4, MODE_4, MODE_4, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_4, MODE_4, MODE_4, MODE_4, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
         
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
         
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
         
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -800,47 +920,47 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 3) : (D1EN ? (D1ADDR_TOTAL << 3) : 14'd0);
             assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 3) : (F1EN ? (F1ADDR_TOTAL << 3) : 14'd0);
             assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 3) : (H1EN ? (H1ADDR_TOTAL << 3) : 14'd0);
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_9, MODE_9, MODE_9, MODE_9, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_9, MODE_9, MODE_9, MODE_9, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
         
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
         
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
         
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -849,47 +969,47 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 4) : (D1EN ? (D1ADDR_TOTAL << 4) : 14'd0);
             assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 4) : (F1EN ? (F1ADDR_TOTAL << 4) : 14'd0);
             assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 4) : (H1EN ? (H1ADDR_TOTAL << 4) : 14'd0);
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_18, MODE_18, MODE_18, MODE_18, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_18, MODE_18, MODE_18, MODE_18, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
         
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
         
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
         
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -898,47 +1018,47 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = C1EN ? C1ADDR_TOTAL : (D1EN ? D1ADDR_TOTAL : 14'd0);
             assign PORT_A2_ADDR = E1EN ? E1ADDR_TOTAL : (F1EN ? F1ADDR_TOTAL : 14'd0);
             assign PORT_B2_ADDR = G1EN ? G1ADDR_TOTAL : (H1EN ? H1ADDR_TOTAL : 14'd0);
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
         
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
         
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
         
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
     endcase
@@ -1067,46 +1187,46 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = B1ADDR_TOTAL;
             assign PORT_A2_ADDR = C1ADDR_TOTAL;
             assign PORT_B2_ADDR = D1ADDR_TOTAL;
-	        TDP36K #(.MODE_BITS({ 1'b1,
+	        RS_TDP36K #(.MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_1, MODE_1, MODE_1, MODE_1, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_1, MODE_1, MODE_1, MODE_1, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
 
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
 
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
 
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
 
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -1115,46 +1235,46 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = B1ADDR_TOTAL << 1;
             assign PORT_A2_ADDR = C1ADDR_TOTAL << 1;
             assign PORT_B2_ADDR = D1ADDR_TOTAL << 1;
-	        TDP36K #(.MODE_BITS({ 1'b1,
+	        RS_TDP36K #(.MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_2, MODE_2, MODE_2, MODE_2, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_2, MODE_2, MODE_2, MODE_2, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
 
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
 
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
 
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
 
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -1163,46 +1283,46 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = B1ADDR_TOTAL << 2;
             assign PORT_A2_ADDR = C1ADDR_TOTAL << 2;
             assign PORT_B2_ADDR = D1ADDR_TOTAL << 2;
-	        TDP36K #(.MODE_BITS({ 1'b1,
+	        RS_TDP36K #(.MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_4, MODE_4, MODE_4, MODE_4, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_4, MODE_4, MODE_4, MODE_4, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
 
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
 
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
 
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
 
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -1211,46 +1331,46 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = B1ADDR_TOTAL << 3;
             assign PORT_A2_ADDR = C1ADDR_TOTAL << 3;
             assign PORT_B2_ADDR = D1ADDR_TOTAL << 3;
-	        TDP36K #(.MODE_BITS({ 1'b1,
+	        RS_TDP36K #(.MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_9, MODE_9, MODE_9, MODE_9, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_9, MODE_9, MODE_9, MODE_9, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
 
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
 
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
 
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
 
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -1259,46 +1379,46 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = B1ADDR_TOTAL << 4;
             assign PORT_A2_ADDR = C1ADDR_TOTAL << 4;
             assign PORT_B2_ADDR = D1ADDR_TOTAL << 4;
-	        TDP36K #(.MODE_BITS({ 1'b1,
+	        RS_TDP36K #(.MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_18, MODE_18, MODE_18, MODE_18, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_18, MODE_18, MODE_18, MODE_18, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
 
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
 
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
 
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
 
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
@@ -1307,46 +1427,46 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
             assign PORT_B1_ADDR = B1ADDR_TOTAL;
             assign PORT_A2_ADDR = D1ADDR_TOTAL;
             assign PORT_B2_ADDR = C1ADDR_TOTAL;
-	        TDP36K #(.MODE_BITS({ 1'b1,
+	        RS_TDP36K #(.MODE_BITS({ 1'b1,
                 11'd10, 11'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0
                 }),
                 .INIT_i({INIT0[0*18432+:18432],INIT1[0*18432+:18432]})
             )bram_2x18k(
-                .WDATA_A1_i(PORT_A1_WDATA),
-                .RDATA_A1_o(PORT_A1_RDATA),
-                .ADDR_A1_i(PORT_A1_ADDR),
-                .CLK_A1_i(PORT_A1_CLK),
-                .REN_A1_i(PORT_A1_REN),
-                .WEN_A1_i(PORT_A1_WEN),
-                .BE_A1_i(PORT_A1_BE),
+                .WDATA_A1(PORT_A1_WDATA),
+                .RDATA_A1(PORT_A1_RDATA),
+                .ADDR_A1(PORT_A1_ADDR),
+                .CLK_A1(PORT_A1_CLK),
+                .REN_A1(PORT_A1_REN),
+                .WEN_A1(PORT_A1_WEN),
+                .BE_A1(PORT_A1_BE),
 
-                .WDATA_A2_i(PORT_A2_WDATA),
-                .RDATA_A2_o(PORT_A2_RDATA),
-                .ADDR_A2_i(PORT_A2_ADDR),
-                .CLK_A2_i(PORT_A2_CLK),
-                .REN_A2_i(PORT_A2_REN),
-                .WEN_A2_i(PORT_A2_WEN),
-                .BE_A2_i(PORT_A2_BE),
+                .WDATA_A2(PORT_A2_WDATA),
+                .RDATA_A2(PORT_A2_RDATA),
+                .ADDR_A2(PORT_A2_ADDR),
+                .CLK_A2(PORT_A2_CLK),
+                .REN_A2(PORT_A2_REN),
+                .WEN_A2(PORT_A2_WEN),
+                .BE_A2(PORT_A2_BE),
 
-                .WDATA_B1_i(PORT_B1_WDATA),
-                .RDATA_B1_o(PORT_B1_RDATA),
-                .ADDR_B1_i(PORT_B1_ADDR),
-                .CLK_B1_i(PORT_B1_CLK),
-                .REN_B1_i(PORT_B1_REN),
-                .WEN_B1_i(PORT_B1_WEN),
-                .BE_B1_i(PORT_B1_BE),
+                .WDATA_B1(PORT_B1_WDATA),
+                .RDATA_B1(PORT_B1_RDATA),
+                .ADDR_B1(PORT_B1_ADDR),
+                .CLK_B1(PORT_B1_CLK),
+                .REN_B1(PORT_B1_REN),
+                .WEN_B1(PORT_B1_WEN),
+                .BE_B1(PORT_B1_BE),
 
-                .WDATA_B2_i(PORT_B2_WDATA),
-                .RDATA_B2_o(PORT_B2_RDATA),
-                .ADDR_B2_i(PORT_B2_ADDR),
-                .CLK_B2_i(PORT_B2_CLK),
-                .REN_B2_i(PORT_B2_REN),
-                .WEN_B2_i(PORT_B2_WEN),
-                .BE_B2_i(PORT_B2_BE),
+                .WDATA_B2(PORT_B2_WDATA),
+                .RDATA_B2(PORT_B2_RDATA),
+                .ADDR_B2(PORT_B2_ADDR),
+                .CLK_B2(PORT_B2_CLK),
+                .REN_B2(PORT_B2_REN),
+                .WEN_B2(PORT_B2_WEN),
+                .BE_B2(PORT_B2_BE),
 
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
     endcase
@@ -1354,9 +1474,9 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 endmodule
 
 module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST, WR_ADDR, WR_CLK, WR_DATA, WR_EN);
-    localparam CFG_ABITS = 10;
-    localparam CFG_DBITS = 36;
-    localparam CFG_ENABLE_B = 4;
+    parameter CFG_ABITS = 10;
+    parameter CFG_DBITS = 36;
+    parameter CFG_ENABLE_B = 4;
 
     localparam CLKPOL2 = 1;
     localparam CLKPOL3 = 1;
@@ -1441,319 +1561,319 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
         1: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL;
             assign WR_ADDR_15 = WR_ADDR_TOTAL;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_1, MODE_1, MODE_1, MODE_1, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_1, MODE_1, MODE_1, MODE_1, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+              //  .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
         2: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL << 1;
             assign WR_ADDR_15 = WR_ADDR_TOTAL << 1;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_2, MODE_2, MODE_2, MODE_2, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_2, MODE_2, MODE_2, MODE_2, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+               // .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
         4: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL << 2;
             assign WR_ADDR_15 = WR_ADDR_TOTAL << 2;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_4, MODE_4, MODE_4, MODE_4, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_4, MODE_4, MODE_4, MODE_4, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+               // .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
         8, 9: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL << 3;
             assign WR_ADDR_15 = WR_ADDR_TOTAL << 3;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_9, MODE_9, MODE_9, MODE_9, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_9, MODE_9, MODE_9, MODE_9, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+               // .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
 
         16, 18: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL << 4;
             assign WR_ADDR_15 = WR_ADDR_TOTAL << 4;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_18, MODE_18, MODE_18, MODE_18, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_18, MODE_18, MODE_18, MODE_18, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+               // .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
         32, 36: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL << 5;
             assign WR_ADDR_15 = WR_ADDR_TOTAL << 5;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+               // .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
         default: begin
             assign RD_ADDR_15 = RD_ADDR_TOTAL;
             assign WR_ADDR_15 = WR_ADDR_TOTAL;
-            TDP36K #(
+            RS_TDP36K #(
                 .MODE_BITS({ 1'b0,
                 11'd10, 11'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0,
                 12'd10, 12'd10, 4'd0, MODE_36, MODE_36, MODE_36, MODE_36, 1'd0
                 }),
                 .INIT_i(INIT[0*36864+:36864])
             )bram_asymmetric(
-                .RESET_ni(1'b1),
-                .WDATA_A1_i(18'h3FFFF),
-                .WDATA_A2_i(18'h3FFFF),
-                .RDATA_A1_o(RD_DATA_TOTAL[17:0]),
-                .RDATA_A2_o(RD_DATA_TOTAL[35:18]),
-                .ADDR_A1_i(RD_ADDR_15),
-                .ADDR_A2_i(RD_ADDR_15),
-                .CLK_A1_i(RD_CLK),
-                .CLK_A2_i(RD_CLK),
-                .REN_A1_i(RD_EN),
-                .REN_A2_i(RD_EN),
-                .WEN_A1_i(1'b0),
-                .WEN_A2_i(1'b0),
-                .BE_A1_i({RD_EN, RD_EN}),
-                .BE_A2_i({RD_EN, RD_EN}),
+               // .RESET_n(1'b1),
+                .WDATA_A1(18'h3FFFF),
+                .WDATA_A2(18'h3FFFF),
+                .RDATA_A1(RD_DATA_TOTAL[17:0]),
+                .RDATA_A2(RD_DATA_TOTAL[35:18]),
+                .ADDR_A1(RD_ADDR_15),
+                .ADDR_A2(RD_ADDR_15),
+                .CLK_A1(RD_CLK),
+                .CLK_A2(RD_CLK),
+                .REN_A1(RD_EN),
+                .REN_A2(RD_EN),
+                .WEN_A1(1'b0),
+                .WEN_A2(1'b0),
+                .BE_A1({RD_EN, RD_EN}),
+                .BE_A2({RD_EN, RD_EN}),
         
-                .WDATA_B1_i(WR_DATA[17:0]),
-                .WDATA_B2_i(WR_DATA[35:18]),
-                .RDATA_B1_o(DOBDO[17:0]),
-                .RDATA_B2_o(DOBDO[35:18]),
-                .ADDR_B1_i(WR_ADDR_15),
-                .ADDR_B2_i(WR_ADDR_15),
-                .CLK_B1_i(WR_CLK),
-                .CLK_B2_i(WR_CLK),
-                .REN_B1_i(1'b0),
-                .REN_B2_i(1'b0),
-                .WEN_B1_i(WR_EN[0]),
-                .WEN_B2_i(WR_EN[0]),
-                .BE_B1_i(WR_EN[1:0]),
-                .BE_B2_i(WR_EN[3:2]),
+                .WDATA_B1(WR_DATA[17:0]),
+                .WDATA_B2(WR_DATA[35:18]),
+                .RDATA_B1(DOBDO[17:0]),
+                .RDATA_B2(DOBDO[35:18]),
+                .ADDR_B1(WR_ADDR_15),
+                .ADDR_B2(WR_ADDR_15),
+                .CLK_B1(WR_CLK),
+                .CLK_B2(WR_CLK),
+                .REN_B1(1'b0),
+                .REN_B2(1'b0),
+                .WEN_B1(WR_EN[0]),
+                .WEN_B2(WR_EN[0]),
+                .BE_B1(WR_EN[1:0]),
+                .BE_B2(WR_EN[3:2]),
         
-                .FLUSH1_i(FLUSH1),
-                .FLUSH2_i(FLUSH2)
+                .FLUSH1(FLUSH1),
+                .FLUSH2(FLUSH2)
             );
         end
     endcase
