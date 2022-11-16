@@ -51,7 +51,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 87
+#define VERSION_PATCH 89
 
 enum Strategy {
     AREA,
@@ -544,11 +544,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             std::string scriptName = "abc_tmp_" + std::to_string(index) + ".scr";
             string tmp_file = get_shared_tmp_dirname() + "/" + scriptName;
             std::ofstream out(tmp_file);
-            std::string in_eqn_file = "in_" + std::to_string(index) + ".eqn";
-            std::string out_eqn_file = "out_" + std::to_string(index) + ".eqn";
+            std::string in_blif_file = "in_" + std::to_string(index) + ".blif";
+            std::string out_blif_file = "out_" + std::to_string(index) + ".blif";
 
             if (cec)
-                out << "write_eqn " + in_eqn_file + ";";
+                out << "write_blif " + in_blif_file + ";";
 
             switch(effort_lvl) {
                 case EffortLevel::HIGH: {
@@ -604,9 +604,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             out << abcCommands;
 
             if (cec) {
-                out << "write_eqn " + out_eqn_file + ";";
+                out << "write_blif " + out_blif_file + ";";
 		// cec command is not called, so as not to impact on runtime.
-	        // out << "cec " + in_eqn_file + " " + out_eqn_file;
+	        // out << "cec " + in_blif_file + " " + out_blif_file;
             }
             out.close();
 
@@ -640,7 +640,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10);
 
-        for (int n=1; n <= 4; n++) { // perform 4 calls as a good trade-off QoR / runtime
+        int maxLoop = 4;
+
+        int nbInst = getNumberOfInstances();
+
+        if (nbInst > 800000) { // skip "abc -dff" for very big designs
+           maxLoop = 0;
+        }
+
+        if (nbInst > 400000) { // minimum call to "abc -dff" for medium designs
+           maxLoop = 1;
+        }
+
+        for (int n=1; n <= maxLoop; n++) { 
 
             run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
 
