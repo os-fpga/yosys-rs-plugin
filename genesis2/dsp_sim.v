@@ -681,7 +681,6 @@ module RS_DSP_MULTACC (
     input  wire        subtract
     //input  wire        register_inputs
 );
-   /
     parameter [79:0] MODE_BITS = 80'd0;
 
     localparam [19:0] COEFF_0 = MODE_BITS[19:0];
@@ -986,6 +985,40 @@ module dsp_t1_20x18x64_cfg_ports (
         .subtract(subtract_i)
     );
 endmodule
+
+
+module dsp_t1_sim_cfg_ports # (
+    parameter NBITS_ACC  = 64,
+    parameter NBITS_A    = 20,
+    parameter NBITS_B    = 18,
+    parameter NBITS_Z    = 38
+)(
+    input  wire [NBITS_A-1:0] a_i,
+    input  wire [NBITS_B-1:0] b_i,
+    output wire [NBITS_Z-1:0] z_o,
+    output reg  [NBITS_B-1:0] dly_b_o,
+
+    input  wire [5:0]         acc_fir_i,
+    input  wire [2:0]         feedback_i,
+    input  wire               load_acc_i,
+
+    input  wire               unsigned_a_i,
+    input  wire               unsigned_b_i,
+
+    input  wire               clock_i,
+    input  wire               s_reset,
+
+    input  wire               saturate_enable_i,
+    input  wire [2:0]         output_select_i,
+    input  wire               round_i,
+    input  wire [5:0]         shift_right_i,
+    input  wire               subtract_i,
+    input  wire               register_inputs_i,
+    input  wire [NBITS_A-1:0] coef_0_i,
+    input  wire [NBITS_A-1:0] coef_1_i,
+    input  wire [NBITS_A-1:0] coef_2_i,
+    input  wire [NBITS_A-1:0] coef_3_i
+);
 
 // FIXME: The version of Icarus Verilog from Conda seems not to recognize the
 // $error macro. Disable this sanity check for now because of that.
