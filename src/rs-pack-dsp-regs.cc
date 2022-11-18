@@ -9,6 +9,9 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83
+#define MODE_BITS_REGISTER_INPUTS_ID 92
+
 struct RsPackDspRegsWorker
 {
     RTLIL::Module *m_module;
@@ -29,7 +32,9 @@ struct RsPackDspRegsWorker
         for (auto cell : m_module->selected_cells()) {
             // Get name of DSP for checking type
             std::string cell_type_str = cell->type.str();
-            if (cell_type_str == RTLIL::escape_id("RS_DSP2") || cell_type_str == RTLIL::escape_id("RS_DSP3")) {
+            if (cell_type_str == RTLIL::escape_id("RS_DSP2") ||
+                    cell_type_str == RTLIL::escape_id("RS_DSP3") ||
+                    cell_type_str == RTLIL::escape_id("RS_DSP")) {
                 //adding all DSP cells of design
                 DSP_used_cells.push_back(cell);
                 // if cell type not DSP or DFF add as other cell
@@ -251,18 +256,27 @@ struct RsPackDspRegsWorker
             // Getting DSP Reginster inputs port to change value 1
             if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP2"))
                 DSP_driven_DFF->setPort(RTLIL::escape_id("register_inputs"), RTLIL::S1);
-            if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP3")){
+            else if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP3")){
                 // Getting RS_DSP3 MODE_BITS param;
                 RTLIL::Const dsp_mode_bits_const = DSP_driven_DFF->getParam(RTLIL::escape_id("MODE_BITS"));
                 // Changing RS_DSP3 MODE_BITS param with index 92, which is REGISTER_INPUTS
-                dsp_mode_bits_const[92] = RTLIL::S1;
+                dsp_mode_bits_const[MODE_BITS_REGISTER_INPUTS_ID] = RTLIL::S1;
+                DSP_driven_DFF->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
+            } else {
+                // Getting RS_DSP MODE_BITS param;
+                RTLIL::Const dsp_mode_bits_const = DSP_driven_DFF->getParam(RTLIL::escape_id("MODE_BITS"));
+                // Changing RS_DSP MODE_BITS param with index 83, which is REGISTER_INPUTS
+                dsp_mode_bits_const[MODE_BITS_GENESIS2_REGISTER_INPUTS_ID] = RTLIL::S1;
                 DSP_driven_DFF->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
             }
 
             // Getting DSP clock port to connect it with DFF clock port
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
             // Getting DSP reset port to connect it with DFF reset port
-            DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+            if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP"))
+                DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
+            else
+                DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
 
             run_opt_clean = true;
         }

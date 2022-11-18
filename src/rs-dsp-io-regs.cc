@@ -89,19 +89,6 @@ struct rsDspIORegs : public Pass {
                     cell_type == RTLIL::escape_id("RS_DSP")) {
                 auto dsp = cell.second;
 
-                // If the cell does not have the "is_inferred" attribute set
-                // then don't touch it.
-                if (cell_type == RTLIL::escape_id("RS_DSP2")) {
-                    if (dsp->getPort(RTLIL::escape_id("register_inputs")).as_int() == 1) {
-                        continue;
-                    }
-                } else {
-                    RTLIL::Const dsp_mode_bits_const = dsp->getParam(RTLIL::escape_id("MODE_BITS"));
-                    if (dsp_mode_bits_const[92] == RTLIL::S1) {
-                        continue;
-                    }
-                }
-
                 if (!dsp->has_attribute(RTLIL::escape_id("is_inferred")) || dsp->get_bool_attribute(RTLIL::escape_id("is_inferred")) == false) {
                     continue;
                 }
