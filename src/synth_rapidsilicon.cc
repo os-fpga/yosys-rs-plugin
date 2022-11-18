@@ -51,7 +51,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 89
+#define VERSION_PATCH 90
 
 enum Strategy {
     AREA,
@@ -390,6 +390,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             tech = Technologies::GENESIS_2;
             sdffr = true;
             nosdff_str = "";
+            // no_cfp_params mode for Genesis2
+            use_dsp_cfg_params = "";
         }
         else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
@@ -689,13 +691,25 @@ struct SynthRapidSiliconPass : public ScriptPass {
             We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on smallest DSP to biggest one. 
             The idea is that if there is a perfect fit we want to assign the smallest DSP to the RTL operator.
         */
+        std::vector<DspParams> dsp_rules_loop1;
         switch (tech) {
-            case Technologies::GENESIS:
+            case Technologies::GENESIS: {
+                dsp_rules_loop1.push_back({10, 9, 4, 4, "$__RS_MUL10X9"});
+                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                break;
+            }
+            // Genesis2 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_2: {
-                const std::vector<DspParams> dsp_rules_loop1 = {
-                    {10, 9, 4, 4, "$__RS_MUL10X9"},
-                    {20, 18, 11, 10, "$__RS_MUL20X18"},
-                };
+                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                break;
+            }
+            case Technologies::GENERIC: {
+                break;
+            }
+        }
+        switch (tech) {
+            case Technologies::GENESIS: 
+            case Technologies::GENESIS_2: {
                 for (const auto &rule : dsp_rules_loop1) {
                     run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
                                 " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
@@ -709,25 +723,29 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                     run("chtype -set $mul t:$__soft_mul");
                 }
-                /* 
-                    In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
-                    The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
-                */
-                const std::vector<DspParams> dsp_rules_loop2 = {
-                    {20, 18, 11, 10, "$__RS_MUL20X18"},
-                    {10, 9, 4, 4, "$__RS_MUL10X9"},
-                };
-                for (const auto &rule : dsp_rules_loop2) {
-                    run(stringf("techmap -map +/mul2dsp.v "
-                                "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                "-D DSP_NAME=%s",
-                                rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
-                    if (cec)
-                        run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
+                // Genesis2 technology doesn't support fractured mode for DSPs, so no need for second iteration.
+                if (tech != Technologies::GENESIS_2) {
+                    /* 
+                       In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
+                       The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
+                       */
+                    const std::vector<DspParams> dsp_rules_loop2 = {
+                        {20, 18, 11, 10, "$__RS_MUL20X18"},
+                        {10, 9, 4, 4, "$__RS_MUL10X9"},
+                    };
+                    for (const auto &rule : dsp_rules_loop2) {
+                        run(stringf("techmap -map +/mul2dsp.v "
+                                    "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                    "-D DSP_NAME=%s",
+                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
-                    run("chtype -set $mul t:$__soft_mul");
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
+
+                        run("chtype -set $mul t:$__soft_mul");
+                    }
                 }
                 break;
             }
@@ -905,6 +923,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if(!nodsp){
                 std::string dspMapFile;
                 std::string dspFinalMapFile;
+                std::string genesis2;
                 switch (tech) {
                     case Technologies::GENESIS: {
                         dspMapFile = GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE);
@@ -914,6 +933,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     case Technologies::GENESIS_2: {
                         dspMapFile = GET_FILE_PATH(GENESIS_2_DIR, DSP_MAP_FILE);
                         dspFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, DSP_FINAL_MAP_FILE);
+                        genesis2 = " -genesis2";
                         break;
                     }
                     case Technologies::GENERIC: {
@@ -927,7 +947,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("wreduce t:$mul");
-                        run("rs_dsp_macc" + use_dsp_cfg_params);
+                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis2);
 
                         processDsp(cec);
 
@@ -939,11 +959,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
 
-                        run("rs_dsp_simd");
+                        // Fractuated mode has been disabled for Genesis2
+                        if (tech != Technologies::GENESIS_2)
+                            run("rs_dsp_simd");
                         run("techmap -map " + dspFinalMapFile);
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
+
                         run("rs-pack-dsp-regs");
                         run("rs_dsp_io_regs");
 
