@@ -39,7 +39,20 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/sram1024x18.v \
 				  $(GENESIS)/ufifo_ctl.v \
 				  $(GENESIS2)/cells_sim.v \
+				  $(GENESIS2)/dsp_sim.v \
+				  $(GENESIS2)/brams_sim.v \
 				  $(GENESIS2)/ffs_map.v \
+				  $(GENESIS2)/dsp_map.v \
+				  $(GENESIS2)/dsp_final_map.v \
+				  $(GENESIS2)/arith_map.v \
+				  $(GENESIS2)/all_arith_map.v \
+				  $(GENESIS2)/brams_map.v \
+				  $(GENESIS2)/brams_final_map.v \
+				  $(GENESIS2)/brams.txt \
+				  $(GENESIS2)/brams_async.txt \
+				  $(GENESIS2)/TDP18K_FIFO.v \
+				  $(GENESIS2)/sram1024x18.v \
+				  $(GENESIS2)/ufifo_ctl.v \
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
@@ -48,7 +61,8 @@ SOURCES = src/rs-dsp.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
-		  src/rs-bram-asymmetric.cc
+		  src/rs-bram-asymmetric.cc \
+		  src/rs-pack-dsp-regs.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
