@@ -1,5 +1,6 @@
 #include "kernel/sigtools.h"
 #include "kernel/yosys.h"
+#include "libs/fst/fstapi.h"
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
