@@ -21,6 +21,7 @@ COMMON			= common
 GENESIS			= genesis
 GENESIS2		= genesis2
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
+				  $(COMMON)/simlib.v \
 				  $(GENESIS)/cells_sim.v \
 				  $(GENESIS)/dsp_sim.v \
 				  $(GENESIS)/ffs_map.v \
@@ -53,6 +54,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS2)/TDP18K_FIFO.v \
 				  $(GENESIS2)/sram1024x18.v \
 				  $(GENESIS2)/ufifo_ctl.v \
+				  $(GENESIS2)/cell_sim_blackbox.v
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
