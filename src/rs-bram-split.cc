@@ -100,11 +100,11 @@ struct RsBramSplitPass : public Pass {
     // SDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target SDP BRAM 2x18 cell for new mapping
     const std::vector<std::pair<std::string, std::string>> m_BramSDPDataPortsNew_0 = {
       std::make_pair("PORT_A_ADDR", "A1ADDR"), std::make_pair("PORT_A_RD_DATA", "A1DATA"), std::make_pair("PORT_A_RD_EN", "A1EN"), std::make_pair("PORT_B_ADDR", "B1ADDR"),
-      std::make_pair("PORT_B_WR_DATA", "B1DATA"), std::make_pair("PORT_B_WR_EN", "B1EN"),     std::make_pair("PORT_A_CLK", "CLK1")};
+      std::make_pair("PORT_B_WR_DATA", "B1DATA"), std::make_pair("PORT_B_WR_EN", "B1EN"), std::make_pair("PORT_A_CLK", "CLK1"), std::make_pair("PORT_B_CLK", "CLK2")};
     // SDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target SDP BRAM 2x18 cell for new mapping
     const std::vector<std::pair<std::string, std::string>> m_BramSDPDataPortsNew_1 = {
       std::make_pair("PORT_A_ADDR", "C1ADDR"), std::make_pair("PORT_A_RD_DATA", "C1DATA"), std::make_pair("PORT_A_RD_EN", "C1EN"), std::make_pair("PORT_B_ADDR", "D1ADDR"),
-      std::make_pair("PORT_B_WR_DATA", "D1DATA"), std::make_pair("PORT_B_WR_EN", "D1EN"),     std::make_pair("PORT_B_CLK", "CLK2")};
+      std::make_pair("PORT_B_WR_DATA", "D1DATA"), std::make_pair("PORT_B_WR_EN", "D1EN"), std::make_pair("PORT_A_CLK", "CLK3"), std::make_pair("PORT_B_CLK", "CLK4")};
     // Source BRAM SDP cell type (1x18K)
     const std::string m_Bram1x18SDPType = "$__RS_FACTOR_BRAM18_SDP";
     // Target BRAM SDP cell type for the split mode

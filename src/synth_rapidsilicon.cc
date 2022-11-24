@@ -814,10 +814,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("techmap -map" + bramFinalMapFile);
                     }
                     else {
+                        run("stat");
                         run("memory_libmap -lib" + bramTxt);
+                        run("stat");
                         run("rs_bram_split -new_mapping");
+                        run("stat");
                         run("techmap -autoproc -map" + bramMapFile);
+                        run("stat");
                         run("techmap -map" + bramFinalMapFile);
+                        run("stat");
                     }
 
                     if (cec)
