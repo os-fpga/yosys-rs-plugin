@@ -95,12 +95,13 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 	wire [14:0] PORT_B1_ADDR;
 	wire [14:0] PORT_B2_ADDR;
 
+	assign PORT_A1_ADDR = A1EN ? (A1ADDR_TOTAL << 1) : (B1EN ? (B1ADDR_TOTAL << 1) : 15'd0);
+	assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 1) : (D1EN ? (D1ADDR_TOTAL << 1) : 15'd0);
+	assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 1) : (F1EN ? (F1ADDR_TOTAL << 1) : 15'd0);
+	assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 1) : (H1EN ? (H1ADDR_TOTAL << 1) : 15'd0);
+
 	case (CFG_DBITS)
 		1: begin
-			assign PORT_A1_ADDR = A1EN ? A1ADDR_TOTAL : (B1EN ? B1ADDR_TOTAL : 15'd0);
-			assign PORT_B1_ADDR = C1EN ? C1ADDR_TOTAL : (D1EN ? D1ADDR_TOTAL : 15'd0);
-			assign PORT_A2_ADDR = E1EN ? E1ADDR_TOTAL : (F1EN ? F1ADDR_TOTAL : 15'd0);
-			assign PORT_B2_ADDR = G1EN ? G1ADDR_TOTAL : (H1EN ? H1ADDR_TOTAL : 15'd0);
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
@@ -108,10 +109,6 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		2: begin
-			assign PORT_A1_ADDR = A1EN ? (A1ADDR_TOTAL << 1) : (B1EN ? (B1ADDR_TOTAL << 1) : 15'd0);
-			assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 1) : (D1EN ? (D1ADDR_TOTAL << 1) : 15'd0);
-			assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 1) : (F1EN ? (F1ADDR_TOTAL << 1) : 15'd0);
-			assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 1) : (H1EN ? (H1ADDR_TOTAL << 1) : 15'd0);
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
@@ -119,10 +116,6 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		4: begin
-			assign PORT_A1_ADDR = A1EN ? (A1ADDR_TOTAL << 2) : (B1EN ? (B1ADDR_TOTAL << 2) : 15'd0);
-			assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 2) : (D1EN ? (D1ADDR_TOTAL << 2) : 15'd0);
-			assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 2) : (F1EN ? (F1ADDR_TOTAL << 2) : 15'd0);
-			assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 2) : (H1EN ? (H1ADDR_TOTAL << 2) : 15'd0);
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
@@ -130,10 +123,6 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		8, 9: begin
-			assign PORT_A1_ADDR = A1EN ? (A1ADDR_TOTAL << 3) : (B1EN ? (B1ADDR_TOTAL << 3) : 15'd0);
-			assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 3) : (D1EN ? (D1ADDR_TOTAL << 3) : 15'd0);
-			assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 3) : (F1EN ? (F1ADDR_TOTAL << 3) : 15'd0);
-			assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 3) : (H1EN ? (H1ADDR_TOTAL << 3) : 15'd0);
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
@@ -141,10 +130,6 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		16, 18: begin
-			assign PORT_A1_ADDR = A1EN ? (A1ADDR_TOTAL << 4) : (B1EN ? (B1ADDR_TOTAL << 4) : 15'd0);
-			assign PORT_B1_ADDR = C1EN ? (C1ADDR_TOTAL << 4) : (D1EN ? (D1ADDR_TOTAL << 4) : 15'd0);
-			assign PORT_A2_ADDR = E1EN ? (E1ADDR_TOTAL << 4) : (F1EN ? (F1ADDR_TOTAL << 4) : 15'd0);
-			assign PORT_B2_ADDR = G1EN ? (G1ADDR_TOTAL << 4) : (H1EN ? (H1ADDR_TOTAL << 4) : 15'd0);
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
@@ -152,10 +137,6 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		default: begin
-			assign PORT_A1_ADDR = A1EN ? A1ADDR_TOTAL : (B1EN ? B1ADDR_TOTAL : 15'd0);
-			assign PORT_B1_ADDR = C1EN ? C1ADDR_TOTAL : (D1EN ? D1ADDR_TOTAL : 15'd0);
-			assign PORT_A2_ADDR = E1EN ? E1ADDR_TOTAL : (F1EN ? F1ADDR_TOTAL : 15'd0);
-			assign PORT_B2_ADDR = G1EN ? G1ADDR_TOTAL : (H1EN ? H1ADDR_TOTAL : 15'd0);
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
@@ -320,12 +301,13 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 	wire [14:0] PORT_B1_ADDR;
 	wire [14:0] PORT_B2_ADDR;
 
+	assign PORT_A1_ADDR = A1ADDR_TOTAL << 1;
+	assign PORT_B1_ADDR = B1ADDR_TOTAL << 1;
+	assign PORT_A2_ADDR = C1ADDR_TOTAL << 1;
+	assign PORT_B2_ADDR = D1ADDR_TOTAL << 1;
+
 	case (CFG_DBITS)
 		1: begin
-			assign PORT_A1_ADDR = A1ADDR_TOTAL;
-			assign PORT_B1_ADDR = B1ADDR_TOTAL;
-			assign PORT_A2_ADDR = C1ADDR_TOTAL;
-			assign PORT_B2_ADDR = D1ADDR_TOTAL;
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
@@ -333,10 +315,6 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		2: begin
-			assign PORT_A1_ADDR = A1ADDR_TOTAL << 1;
-			assign PORT_B1_ADDR = B1ADDR_TOTAL << 1;
-			assign PORT_A2_ADDR = C1ADDR_TOTAL << 1;
-			assign PORT_B2_ADDR = D1ADDR_TOTAL << 1;
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
@@ -344,10 +322,6 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		4: begin
-			assign PORT_A1_ADDR = A1ADDR_TOTAL << 2;
-			assign PORT_B1_ADDR = B1ADDR_TOTAL << 2;
-			assign PORT_A2_ADDR = C1ADDR_TOTAL << 2;
-			assign PORT_B2_ADDR = D1ADDR_TOTAL << 2;
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
@@ -355,10 +329,6 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		8, 9: begin
-			assign PORT_A1_ADDR = A1ADDR_TOTAL << 3;
-			assign PORT_B1_ADDR = B1ADDR_TOTAL << 3;
-			assign PORT_A2_ADDR = C1ADDR_TOTAL << 3;
-			assign PORT_B2_ADDR = D1ADDR_TOTAL << 3;
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
@@ -366,10 +336,6 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		16, 18: begin
-			assign PORT_A1_ADDR = A1ADDR_TOTAL << 4;
-			assign PORT_B1_ADDR = B1ADDR_TOTAL << 4;
-			assign PORT_A2_ADDR = C1ADDR_TOTAL << 4;
-			assign PORT_B2_ADDR = D1ADDR_TOTAL << 4;
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
@@ -377,10 +343,6 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 		end
 
 		default: begin
-			assign PORT_A1_ADDR = A1ADDR_TOTAL;
-			assign PORT_B1_ADDR = B1ADDR_TOTAL;
-			assign PORT_A2_ADDR = D1ADDR_TOTAL;
-			assign PORT_B2_ADDR = C1ADDR_TOTAL;
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
 				11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
 				12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
