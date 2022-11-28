@@ -110,5 +110,6 @@ clean:
 	@find . -name "*.log" | xargs rm -rf
 	@find . -name "valgrindok" | xargs rm -rf
 	@find . -name "*.eqn" | xargs rm -rf
+	@find . -name "*post_synth.v" | xargs rm -rf
 
 valgrind: $(VALGRIND_TESTS)
