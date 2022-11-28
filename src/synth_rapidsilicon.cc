@@ -788,10 +788,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 break;
             }
             case Technologies::GENESIS_2: {
-                bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_TXT);
-                bramAsyncTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_ASYNC_TXT);
-                bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_FILE);
-                bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_FILE);
+                if(nolibmap) {
+                    bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_TXT);
+                    bramAsyncTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_ASYNC_TXT);
+                    bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_FILE);
+                } else {
+                    bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB);
+                    bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_NEW_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_NEW_FILE);
+                }
                 break;
             }
             case Technologies::GENERIC: {
@@ -801,8 +807,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         switch (tech) {
             case Technologies::GENESIS:
             case Technologies::GENESIS_2: {
-                // libmap pass in not implemented yet for Genesis2
-                if (!(tech == Technologies::GENESIS_2 && !nolibmap)) {
                     run("rs_bram_asymmetric");
                     if (nolibmap) {
                         run("memory_bram -rules" + bramTxt);
@@ -827,7 +831,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                     if (cec)
                         run("write_verilog -noattr -nohex after_bram_map.v");
-                    }
                 break;
             }
             case Technologies::GENERIC: {

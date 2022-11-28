@@ -48,8 +48,11 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS2)/arith_map.v \
 				  $(GENESIS2)/all_arith_map.v \
 				  $(GENESIS2)/brams_map.v \
+				  $(GENESIS2)/brams_map_new.v \
 				  $(GENESIS2)/brams_final_map.v \
+				  $(GENESIS2)/brams_final_map_new.v \
 				  $(GENESIS2)/brams.txt \
+				  $(GENESIS2)/brams_new.txt \
 				  $(GENESIS2)/brams_async.txt \
 				  $(GENESIS2)/TDP18K_FIFO.v \
 				  $(GENESIS2)/sram1024x18.v \
