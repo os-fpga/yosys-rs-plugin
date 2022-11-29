@@ -893,6 +893,10 @@ endmodule
 
 (* blackbox *)
 module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST, WR_ADDR, WR_CLK, WR_DATA, WR_EN);
+    localparam CFG_ABITS = 10;
+    localparam CFG_DBITS = 36;
+    localparam CFG_ENABLE_B = 4;
+
     parameter READ_ADDR_WIDTH = 11;
     parameter READ_DATA_WIDTH = 16;
     parameter WRITE_ADDR_WIDTH = 10;
