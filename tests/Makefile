@@ -105,7 +105,7 @@ all: $(TESTS)
 $(foreach test,$(TESTS),$(eval $(call test_tpl,$(test))))
 $(foreach test,$(TESTS),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 
-clean:
+clean_tests:
 	@find . -name "ok" | xargs rm -rf
 	@find . -name "*.log" | xargs rm -rf
 	@find . -name "valgrindok" | xargs rm -rf
