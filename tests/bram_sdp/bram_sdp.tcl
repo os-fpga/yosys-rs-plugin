@@ -8,7 +8,7 @@ yosys -import  ;
 yosys read -sv bram_sdp.v
 select BRAM_SDP_36x1024
 select *
-synth_rs -tech genesis -top BRAM_SDP_36x1024 -goal area -de 
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_36x1024 -goal area -de 
 opt_expr -undriven
 opt_clean
 stat
@@ -21,7 +21,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_32x1024
 select *
-synth_rs -tech genesis -top BRAM_SDP_32x1024 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_32x1024 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -34,7 +34,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_18x2048
 select *
-synth_rs -tech genesis -top BRAM_SDP_18x2048 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_18x2048 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -47,7 +47,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_16x2048
 select *
-synth_rs -tech genesis -top BRAM_SDP_16x2048 -goal area -de 
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_16x2048 -goal area -de 
 opt_expr -undriven
 opt_clean
 stat
@@ -60,7 +60,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_9x4096
 select *
-synth_rs -tech genesis -top BRAM_SDP_9x4096 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_9x4096 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -73,7 +73,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_8x4096
 select *
-synth_rs -tech genesis -top BRAM_SDP_8x4096 -goal area -de 
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_8x4096 -goal area -de 
 opt_expr -undriven
 opt_clean
 stat
@@ -86,7 +86,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_4x8192
 select *
-synth_rs -tech genesis -top BRAM_SDP_4x8192 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_4x8192 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -99,7 +99,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_2x16384
 select *
-synth_rs -tech genesis -top BRAM_SDP_2x16384 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_2x16384 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -112,7 +112,7 @@ design -reset
 yosys read -sv bram_sdp.v
 select BRAM_SDP_1x32768
 select *
-synth_rs -tech genesis -top BRAM_SDP_1x32768 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_SDP_1x32768 -goal area -de
 opt_expr -undriven
 opt_clean
 stat

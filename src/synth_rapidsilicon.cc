@@ -39,9 +39,12 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
+#define BRAM_LIB brams_new.txt
 #define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
+#define BRAM_MAP_NEW_FILE brams_map_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
+#define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -192,6 +195,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default call simplify.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -no_libmap\n");
+        log("        By default call memory_libmap for Block RAM mapping.\n");
+        log("        Specifying this switch turns it to memory_bram.\n");
+        log("\n");
         log("    -keep_tribuf\n");
         log("        By default translate TBUF into logic.\n");
         log("        Specify this to keep TBUF primitives.\n");
@@ -232,6 +239,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sdffr;
     bool nosimplify;
     bool keep_tribuf;
+    bool nolibmap;
     int de_max_threads;
     RTLIL::Design *_design;
     string nosdff_str;
@@ -259,6 +267,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         de_max_threads = -1;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
+        nolibmap = false;
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
@@ -360,6 +369,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-no_simplify") {
                 nosimplify = true;
+                continue;
+            }
+            if (args[argidx] == "-no_libmap") {
+                nolibmap = true;
                 continue;
             }
             if (args[argidx] == "-keep_tribuf") {
@@ -762,17 +775,29 @@ struct SynthRapidSiliconPass : public ScriptPass {
         std::string bramFinalMapFile;
         switch (tech) {
             case Technologies::GENESIS: {
-                bramTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_TXT);
-                bramAsyncTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT);
-                bramMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE);
-                bramFinalMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE);
+                if(nolibmap) {
+                    bramTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_TXT);
+                    bramAsyncTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_ASYNC_TXT);
+                    bramMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE);
+                } else {
+                    bramTxt = GET_FILE_PATH(GENESIS_DIR, BRAM_LIB);
+                    bramMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_NEW_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_NEW_FILE);
+                }
                 break;
             }
             case Technologies::GENESIS_2: {
-                bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_TXT);
-                bramAsyncTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_ASYNC_TXT);
-                bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_FILE);
-                bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_FILE);
+                if(nolibmap) {
+                    bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_TXT);
+                    bramAsyncTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_ASYNC_TXT);
+                    bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_FILE);
+                } else {
+                    bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB);
+                    bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_NEW_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_NEW_FILE);
+                }
                 break;
             }
             case Technologies::GENERIC: {
@@ -782,17 +807,30 @@ struct SynthRapidSiliconPass : public ScriptPass {
         switch (tech) {
             case Technologies::GENESIS:
             case Technologies::GENESIS_2: {
-                run("rs_bram_asymmetric");
-                run("memory_bram -rules" + bramTxt);
-                if (areMemCellsLeft()) {
-                    run("memory_bram -rules" + bramAsyncTxt);
-                }
-                run("rs_bram_split");
-                run("techmap -autoproc -map" + bramMapFile);
-                run("techmap -map" + bramFinalMapFile);
+                    run("rs_bram_asymmetric");
+                    if (nolibmap) {
+                        run("memory_bram -rules" + bramTxt);
+                        if (areMemCellsLeft()) {
+                            run("memory_bram -rules" + bramAsyncTxt);
+                        }
+                        run("rs_bram_split");
+                        run("techmap -autoproc -map" + bramMapFile);
+                        run("techmap -map" + bramFinalMapFile);
+                    }
+                    else {
+                        run("stat");
+                        run("memory_libmap -lib" + bramTxt);
+                        run("stat");
+                        run("rs_bram_split -new_mapping");
+                        run("stat");
+                        run("techmap -autoproc -map" + bramMapFile);
+                        run("stat");
+                        run("techmap -map" + bramFinalMapFile);
+                        run("stat");
+                    }
 
-                if (cec)
-                    run("write_verilog -noattr -nohex after_bram_map.v");
+                    if (cec)
+                        run("write_verilog -noattr -nohex after_bram_map.v");
                 break;
             }
             case Technologies::GENERIC: {

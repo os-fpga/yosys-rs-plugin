@@ -8,7 +8,7 @@ yosys -import  ;
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x18x1024
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x18x1024 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x18x1024 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -21,7 +21,7 @@ design -reset
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x16x1024
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x16x1024 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x16x1024 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -34,7 +34,7 @@ design -reset
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x9x2048
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x9x2048 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x9x2048 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -47,7 +47,7 @@ design -reset
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x8x2048
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x8x2048 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x8x2048 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -60,7 +60,7 @@ design -reset
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x4x4096
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x4x4096 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x4x4096 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -73,7 +73,7 @@ design -reset
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x2x8192
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x2x8192 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x2x8192 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
@@ -86,7 +86,7 @@ design -reset
 yosys read -sv bram_tdp_split.v
 select BRAM_TDP_SPLIT_2x1x16384
 select *
-synth_rs -tech genesis -top BRAM_TDP_SPLIT_2x1x16384 -goal area -de
+synth_rs -no_libmap -tech genesis -top BRAM_TDP_SPLIT_2x1x16384 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
