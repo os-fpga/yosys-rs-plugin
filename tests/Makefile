@@ -11,7 +11,11 @@ TESTS = dffs\
 		bram_tdp\
 		bram_sdp\
 		bram_sdp_split\
-		bram_tdp_split
+		bram_tdp_split\
+		bram_tdp_new\
+		bram_sdp_new\
+		bram_sdp_split_new\
+		bram_tdp_split_new
 		#bram_asymmetric_wider_read\
 		#bram_asymmetric_wider_write
 
@@ -106,5 +110,6 @@ clean:
 	@find . -name "*.log" | xargs rm -rf
 	@find . -name "valgrindok" | xargs rm -rf
 	@find . -name "*.eqn" | xargs rm -rf
+	@find . -name "*post_synth.v" | xargs rm -rf
 
 valgrind: $(VALGRIND_TESTS)
