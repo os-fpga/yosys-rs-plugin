@@ -265,6 +265,7 @@ module TDP18K_FIFO (
 		end
 	end
 	always @(*) begin : RDATA_A_MODE_SEL
+		if (ram_ren_a == 1)
 		case (RMODE_A_i)
 			default: RDATA_A_o = 18'h00000;
 			MODE_18: RDATA_A_o = ram_rdata_a;
@@ -298,9 +299,8 @@ module TDP18K_FIFO (
 				RDATA_A_o[17:1] = 17'h00000;
 				RDATA_A_o[0] = ram_rdata_a[ram_addr_a[3:0]];
 			end
-		endcase
-	end
-	always @(*)
+        endcase
+		if (ram_ren_b == 1)
 		case (RMODE_B_i)
 			default: RDATA_B_o = 18'h15566;
 			MODE_18: RDATA_B_o = ram_rdata_b;
@@ -328,5 +328,6 @@ module TDP18K_FIFO (
 				endcase
 			MODE_1: RDATA_B_o[0] = ram_rdata_b[{1'b0, ram_addr_b[3:0]}];
 		endcase
+end
 endmodule
 `default_nettype none
