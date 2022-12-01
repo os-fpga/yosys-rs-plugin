@@ -2,6 +2,11 @@
  *  Copyright (C) 2022 RapidSilicon
  *
  */
+
+#ifdef PRODUCTION_BUILD
+#include "License_manager.hpp"
+#endif
+
 #include "kernel/celltypes.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
@@ -13,9 +18,7 @@
 #include <fstream>
 #include <regex>
 
-#ifdef PRODUCTION_BUILD
-#include "License_manager.hpp"
-#endif
+
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
