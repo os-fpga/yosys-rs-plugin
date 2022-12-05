@@ -49,11 +49,12 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-bram-asymmetric.cc 
 		#   src/fv/synth_formal.cc
 
-fv_srcs = src/fv/src/synth_formal.cc \
-		  src/fv/src/synthesis_watcher.cc
+fv_srcs = src/fv/src/synth_formal.cc 
+		#   src/fv/src/synthesis_watcher.cc
 
 fv_deps = src/fv/src//synth_formal.h \
-		  src/fv/src/synthesis_watcher.h
+		  src/fv/src/test.h 
+		#   src/fv/src/synthesis_watcher.h
 
 simulation_model = src/fv/src/sim_par.cc
 execute_Sim_parse:
