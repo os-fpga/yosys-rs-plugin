@@ -25,13 +25,10 @@ module RS_DSP (
     input  wire       unsigned_a,
     input  wire       unsigned_b,
 
-    //-- Avinash -- input  wire       f_mode,
-    //-- Avinash -- input  wire [2:0] output_select,
     input  wire       saturate_enable,
     input  wire [5:0] shift_right,
     input  wire       round,
     input  wire       subtract
-    //-- Avinash --input  wire       register_inputs
 );
 
 	//-- Aram -- register_inputs and output_select are part of MODE_BITS
@@ -46,128 +43,50 @@ module RS_DSP (
     localparam [2:0] output_select = MODE_BITS[82:80];
     localparam register_inputs = MODE_BITS[83];
 
-    wire f_mode;
-    assign f_mode=0;
-
-
-
     localparam NBITS_ACC = 64;
     localparam NBITS_A = 20;
     localparam NBITS_B = 18;
     localparam NBITS_Z = 38;
 
     wire [NBITS_Z-1:0] dsp_full_z;
-    wire [(NBITS_Z/2)-1:0] dsp_frac0_z;
-    wire [(NBITS_Z/2)-1:0] dsp_frac1_z;
-
     wire [NBITS_B-1:0] dsp_full_dly_b;
-    wire [(NBITS_B/2)-1:0] dsp_frac0_dly_b;
-    wire [(NBITS_B/2)-1:0] dsp_frac1_dly_b;
 
-    assign z = f_mode ? {dsp_frac1_z, dsp_frac0_z} : dsp_full_z;
-    assign dly_b = f_mode ? {dsp_frac1_dly_b, dsp_frac0_dly_b} : dsp_full_dly_b;
+    assign z = dsp_full_z;
+    assign dly_b = dsp_full_dly_b;
 
-    // Output used when fmode == 1
-        dsp_t1_sim_cfg_ports #(
-        .NBITS_A(NBITS_A/2),
-            .NBITS_B(NBITS_B/2),
-            .NBITS_ACC(NBITS_ACC/2),
-            .NBITS_Z(NBITS_Z/2)
-        ) dsp_frac0 (
-            .a_i(a[(NBITS_A/2)-1:0]),
-            .b_i(b[(NBITS_B/2)-1:0]),
-            .z_o(dsp_frac0_z),
-            .dly_b_o(dsp_frac0_dly_b),
+    dsp_t1_sim_cfg_ports #(
+        .NBITS_A(NBITS_A),
+        .NBITS_B(NBITS_B),
+        .NBITS_ACC(NBITS_ACC),
+        .NBITS_Z(NBITS_Z)
+    ) dsp_full (
+        .a_i(a),
+        .b_i(b),
+        .z_o(dsp_full_z),
+        .dly_b_o(dsp_full_dly_b),
 
-            .acc_fir_i(acc_fir),
-            .feedback_i(feedback),
-            .load_acc_i(load_acc),
+        .acc_fir_i(acc_fir),
+        .feedback_i(feedback),
+        .load_acc_i(load_acc),
 
-            .unsigned_a_i(unsigned_a),
-            .unsigned_b_i(unsigned_b),
+        .unsigned_a_i(unsigned_a),
+        .unsigned_b_i(unsigned_b),
 
-            .clock_i(clk),
-            .s_reset(lreset),
+        .clock_i(clk),
+        .s_reset(lreset),
 
-            .saturate_enable_i(saturate_enable),
-            .output_select_i(output_select),
-            .round_i(round),
-            .shift_right_i(shift_right),
-            .subtract_i(subtract),
-            .register_inputs_i(register_inputs),
-            .coef_0_i(COEFF_0[(NBITS_A/2)-1:0]),
-            .coef_1_i(COEFF_1[(NBITS_A/2)-1:0]),
-            .coef_2_i(COEFF_2[(NBITS_A/2)-1:0]),
-            .coef_3_i(COEFF_3[(NBITS_A/2)-1:0])
-        );
+        .saturate_enable_i(saturate_enable),
+        .round_i(round),
+        .shift_right_i(shift_right),
+        .subtract_i(subtract),
 
-    // Output used when fmode == 1
-        dsp_t1_sim_cfg_ports #(
-        .NBITS_A(NBITS_A/2),
-            .NBITS_B(NBITS_B/2),
-            .NBITS_ACC(NBITS_ACC/2),
-            .NBITS_Z(NBITS_Z/2)
-        ) dsp_frac1 (
-            .a_i(a[NBITS_A-1:NBITS_A/2]),
-            .b_i(b[NBITS_B-1:NBITS_B/2]),
-            .z_o(dsp_frac1_z),
-            .dly_b_o(dsp_frac1_dly_b),
-
-            .acc_fir_i(acc_fir),
-            .feedback_i(feedback),
-            .load_acc_i(load_acc),
-
-            .unsigned_a_i(unsigned_a),
-            .unsigned_b_i(unsigned_b),
-
-            .clock_i(clk),
-            .s_reset(lreset),
-
-            .saturate_enable_i(saturate_enable),
-            .output_select_i(output_select),
-            .round_i(round),
-            .shift_right_i(shift_right),
-            .subtract_i(subtract),
-            .register_inputs_i(register_inputs),
-            .coef_0_i(COEFF_0[NBITS_A-1:NBITS_A/2]),
-            .coef_1_i(COEFF_1[NBITS_A-1:NBITS_A/2]),
-            .coef_2_i(COEFF_2[NBITS_A-1:NBITS_A/2]),
-            .coef_3_i(COEFF_3[NBITS_A-1:NBITS_A/2])
-        );
-
-    // Output used when fmode == 0
-        dsp_t1_sim_cfg_ports #(
-            .NBITS_A(NBITS_A),
-            .NBITS_B(NBITS_B),
-            .NBITS_ACC(NBITS_ACC),
-            .NBITS_Z(NBITS_Z)
-        ) dsp_full (
-            .a_i(a),
-            .b_i(b),
-            .z_o(dsp_full_z),
-            .dly_b_o(dsp_full_dly_b),
-
-            .acc_fir_i(acc_fir),
-            .feedback_i(feedback),
-            .load_acc_i(load_acc),
-
-            .unsigned_a_i(unsigned_a),
-            .unsigned_b_i(unsigned_b),
-
-            .clock_i(clk),
-            .s_reset(lreset),
-
-            .saturate_enable_i(saturate_enable),
-            .output_select_i(output_select),
-            .round_i(round),
-            .shift_right_i(shift_right),
-            .subtract_i(subtract),
-            .register_inputs_i(register_inputs),
-            .coef_0_i(COEFF_0),
-            .coef_1_i(COEFF_1),
-            .coef_2_i(COEFF_2),
-            .coef_3_i(COEFF_3)
-        );
+        .output_select_i(output_select),
+        .register_inputs_i(register_inputs),
+        .coef_0_i(COEFF_0),
+        .coef_1_i(COEFF_1),
+        .coef_2_i(COEFF_2),
+        .coef_3_i(COEFF_3)
+    );
 endmodule
 
 
@@ -176,15 +95,9 @@ module RS_DSP_MULT (
     input  wire [17:0] b,
     output wire [37:0] z,
 
-    input  wire       lreset,
-
     input  wire [2:0] feedback,
     input  wire       unsigned_a,
     input  wire       unsigned_b
-
-    //Avinash input  wire       f_mode,
-    //Avinash input  wire [2:0] output_select,
-    //Avinash input  wire       register_inputs
 );
 
 
@@ -199,24 +112,13 @@ module RS_DSP_MULT (
     localparam [2:0] output_select = 3'b000;
     localparam register_inputs = 1'b0;
 
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .lreset(lreset),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b)
     );
@@ -235,10 +137,6 @@ module RS_DSP_MULT_REGIN (
     input  wire [2:0] feedback,
     input  wire       unsigned_a,
     input  wire       unsigned_b
-
-    //input  wire       f_mode,
-    //input  wire [2:0] output_select,
-    //input  wire       register_inputs
 );
 
 
@@ -253,25 +151,15 @@ module RS_DSP_MULT_REGIN (
     localparam [2:0] output_select = 3'b000;
     localparam register_inputs = 1'b1;
 
-
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
         .clk(clk),
         .lreset(lreset)
     );
@@ -290,9 +178,6 @@ module RS_DSP_MULT_REGOUT (
     input  wire [2:0] feedback,
     input  wire       unsigned_a,
     input  wire       unsigned_b
-    //input  wire       f_mode,
-    //input  wire [2:0] output_select,
-    //input  wire       register_inputs
 );
 
 
@@ -307,25 +192,15 @@ module RS_DSP_MULT_REGOUT (
     localparam [2:0] output_select = 3'b100;
     localparam register_inputs = 1'b0;
 
-
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
         .clk(clk),
         .lreset(lreset)
     );
@@ -344,9 +219,6 @@ module RS_DSP_MULT_REGIN_REGOUT (
     input  wire [2:0] feedback,
     input  wire       unsigned_a,
     input  wire       unsigned_b
-    //input  wire       f_mode,
-    //input  wire [2:0] output_select,
-    //input  wire       register_inputs
 );
 
 
@@ -361,24 +233,15 @@ module RS_DSP_MULT_REGIN_REGOUT (
     localparam [2:0] output_select = 3'b100;
     localparam register_inputs = 1'b1;
 
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
         .clk(clk),
         .lreset(lreset)
     );
@@ -390,7 +253,8 @@ module RS_DSP_MULTADD (
     input  wire [17:0] b,
     output wire [37:0] z,
 
-    input  wire        lreset,
+    input  wire       clk,
+    input  wire       lreset,
 
     input  wire [ 2:0] feedback,
     input  wire [ 5:0] acc_fir,
@@ -398,13 +262,10 @@ module RS_DSP_MULTADD (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
 
 
@@ -415,14 +276,9 @@ module RS_DSP_MULTADD (
     localparam [19:0] COEFF_2 = MODE_BITS[59:40];
     localparam [19:0] COEFF_3 = MODE_BITS[79:60];
 
-
     //Avinash// RS_DSP_MULTADD
     localparam [2:0] output_select = 3'b010;
     localparam register_inputs = 1'b0;
-
-    wire f_mode;
-    assign f_mode=0;
-
 
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
@@ -430,18 +286,13 @@ module RS_DSP_MULTADD (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
+        .clk(clk),
         .lreset(lreset),
-
         .saturate_enable(saturate_enable),
         .shift_right(shift_right),
         .round(round),
@@ -466,13 +317,10 @@ module RS_DSP_MULTADD_REGIN (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
 
 
@@ -488,29 +336,19 @@ module RS_DSP_MULTADD_REGIN (
      localparam register_inputs = 1'b1;
 
 
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
         .clk(clk),
         .lreset(lreset),
-
         .saturate_enable(saturate_enable),
         .shift_right(shift_right),
         .round(round),
@@ -535,15 +373,11 @@ module RS_DSP_MULTADD_REGOUT (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
-
 
     parameter [79:0] MODE_BITS = 80'd0;
 
@@ -556,31 +390,19 @@ module RS_DSP_MULTADD_REGOUT (
     localparam [2:0] output_select = 3'b110;
     localparam register_inputs = 1'b0;
 
-
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
         .clk(clk),
         .lreset(lreset),
-
         .saturate_enable(saturate_enable),
         .shift_right(shift_right),
         .round(round),
@@ -605,13 +427,10 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
 
 
@@ -626,25 +445,15 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
     localparam [2:0] output_select = 3'b110;
     localparam register_inputs = 1'b1;
 
-
-      // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
 
@@ -673,13 +482,10 @@ module RS_DSP_MULTACC (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
     parameter [79:0] MODE_BITS = 80'd0;
 
@@ -692,29 +498,18 @@ module RS_DSP_MULTACC (
     localparam [2:0] output_select = 3'b001;
     localparam register_inputs = 1'b0;
 
-
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .load_acc(load_acc),
-
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
-
         .clk(clk),
         .lreset(lreset),
-
         .saturate_enable(saturate_enable),
         .shift_right(shift_right),
         .round(round),
@@ -737,13 +532,10 @@ module RS_DSP_MULTACC_REGIN (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
 
 
@@ -758,21 +550,12 @@ module RS_DSP_MULTACC_REGIN (
     localparam [2:0] output_select = 3'b001;
     localparam register_inputs = 1'b1;
 
-
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .load_acc(load_acc),
 
@@ -805,13 +588,10 @@ module RS_DSP_MULTACC_REGOUT (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
 
 
@@ -826,21 +606,12 @@ module RS_DSP_MULTACC_REGOUT (
     localparam [2:0] output_select = 3'b101;
     localparam register_inputs = 1'b0;
 
-
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
-
         .feedback(feedback),
         .load_acc(load_acc),
 
@@ -873,13 +644,10 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
     input  wire        unsigned_a,
     input  wire        unsigned_b,
 
-    //input  wire        f_mode,
-    //input  wire [ 2:0] output_select,
     input  wire        saturate_enable,
     input  wire [ 5:0] shift_right,
     input  wire        round,
     input  wire        subtract
-    //input  wire        register_inputs
 );
 
 
@@ -894,18 +662,12 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
     localparam [2:0] output_select = 3'b101;
     localparam register_inputs = 1'b1;
 
-    // Avinash - tied f_mode = 0, as per Robs doc//
-    wire f_mode;
-    assign f_mode=0;
-
     RS_DSP #(
         .MODE_BITS({register_inputs, output_select, COEFF_3, COEFF_2, COEFF_1, COEFF_0})
     ) dsp (
         .a(a),
         .b(b),
         .z(z),
-
-        .f_mode(f_mode),
 
         .feedback(feedback),
         .load_acc(load_acc),
@@ -966,8 +728,6 @@ module dsp_t1_20x18x64_cfg_ports (
         .b(b_i),
         .z(z_o),
         .dly_b(dly_b_o),
-
-        .f_mode(1'b0),  // 20x18x64 DSP
 
         .acc_fir(acc_fir_i),
         .feedback(feedback_i),

@@ -241,8 +241,6 @@ module RS_DSP_MULT (
     input   [17:0] b,
     output  [37:0] z,
 
-    input         lreset,
-
     input   [2:0] feedback,
     input         unsigned_a,
     input         unsigned_b
@@ -321,6 +319,8 @@ module RS_DSP_MULTADD (
     input   [17:0] b,
     output  [37:0] z,
 
+    (* clkbuf_sink *)
+    input          clk,
     input          lreset,
 
     input   [ 2:0] feedback,
