@@ -42,10 +42,12 @@ std::string synth_dir = (cwd_dir.generic_string()+"/");
 std::cout<<"This is our current directory in RS: "<<synth_dir<<std::endl;
 std::ifstream file1;
 std::ifstream file2;
+std::ifstream file3;
 std::ofstream sim_model; 
 // 
 file2.open (synth_dir+"/genesis/cells_sim.v");
 file1.open (synth_dir+"../yosys/techlibs/common/simlib.v");
+file3.open (synth_dir+"../yosys/techlibs/common/simcells.v");
 if( remove( (synth_dir+"sim_models.v").c_str() ) != 0 )
     std::cout<<"Error deleting file"<<endl;
 sim_model.open (synth_dir+"sim_models.v",ios::app);
@@ -59,7 +61,10 @@ if (file2.fail())
 	std::cout<<"File2 failed to open"<<endl;
 	return 1;
 }
+
+writing (file1,sim_model,"module \\$alu (A, B, CI, BI, X, Y, CO);", "endmodule");
 writing (file1,sim_model,"module \\$bmux (A, S, Y);", "endmodule");
+writing (file3,sim_model,"module \\$_BUF_ (A, Y);", "endmodule");
 writing (file1,sim_model,"module \\$lut (A, Y);", "endmodule");
 writing (file2,sim_model,"module dffsre(", "endmodule");
 writing (file2,sim_model,"module dffnsre(", "endmodule");
@@ -69,6 +74,7 @@ writing (file2,sim_model,"module sh_dff(", "endmodule");
 writing (file2,sim_model,"module adder_carry(", "endmodule");
 file1.close();
 file2.close();
+file3.close();
 sim_model.close();
 return 0;	
 }
