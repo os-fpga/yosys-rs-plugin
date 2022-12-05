@@ -91,8 +91,9 @@ enum ClockEnableStrategy {
 struct SynthRapidSiliconPass : public ScriptPass {
 
     SynthRapidSiliconPass() : ScriptPass(STR(PASS_NAME), "Synthesis for RapidSilicon FPGAs") {}
-    pthread_t fv_t;
-    struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+    int thread_no{};
+    vector <string> stages;
+    vector <pthread_t> FVTs;
     void help() override
     {
         log("\n");
@@ -489,31 +490,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if(fast && effort == EffortLevel::LOW)
             log_warning("\"-effort low\" and \"-fast\" options are set.");
 
-        
-        if (fv){
-            if (!verilog_file.empty()) {
-                fvarg->final_stage=&verilog_file;
-            }
-            else{
-                finl_stg="post_synthesis.v";
-                fvarg->final_stage=&finl_stg;
-            }
-            dir_name = proc_share_dirname();
-            fvarg->shared_dir_path=&dir_name;
-            fvarg->top_module=&top_opt;
-            fvarg->ref_net = &golden_netlist;
-            fvarg->fv_timeout = &fv_timout_limit;
-            fvarg->bram_inf = &nobram;
-            fvarg->dsp_inf = &nodsp;
-            fvarg->retiming = &nosimplify;
-            fvarg->fv_cec = &cec;
-            fvarg->synth_status = false;
-            // cout<<"Shared Directory Path in struct: "<<*fvarg->shared_dir_path<<endl;
-            if (pthread_create(&fv_t,NULL, run_fv,(void *)fvarg)!=0){
-                std::cout<<"Error creating thread"<<std::endl;
-            }; 
-             
-        }
         run_script(design, run_from, run_to);
 
         log_pop();
@@ -784,7 +760,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("techmap -autoproc -map" GET_FILE_PATH(GENESIS_DIR, BRAM_MAP_FILE));
                 run("techmap -map" GET_FILE_PATH(GENESIS_DIR, BRAM_FINAL_MAP_FILE));
 
-                if (cec)
+                if (cec || fv)
                     run("write_verilog -noattr -nohex after_bram_map.v");
                 break;
             }
@@ -837,6 +813,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
         msg << "NOTE: Please review MEMORY_BRAM pass logs for details.\n";
         log("\n"); // Skip line to make the error more focused.
         log_error("%s\n", msg.str().c_str());
+    }
+
+    void fv_param(struct fv_args *fvarg, string stage1, string stage2){
+        dir_name = proc_share_dirname();
+        fvarg->shared_dir_path=&dir_name;
+        fvarg->top_module=&top_opt;
+        fvarg->ref_net = &golden_netlist;
+        fvarg->fv_timeout = &fv_timout_limit;
+        if (!(stage1.empty()))
+            stages.push_back(stage1);
+        stages.push_back(stage2);
+        fvarg->stage1 = &stages.at(thread_no);
+        fvarg->stage2 = &stages.at(thread_no+1);
+        thread_no++;
     }
 
     void script() override
@@ -947,7 +937,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         run("rs_dsp_io_regs");
 
-                        if (cec)
+                        if (cec || fv)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
 
                         break;
@@ -960,6 +950,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     case GENERIC: {
                         break;
                     }
+                }
+                if (fv){
+                    struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+                    fv_param(fvarg, "RTL", "after_dsp_map5");
+                    pthread_t fv_t; 
+                    FVTs.push_back(fv_t);
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                    if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
+                        std::cout<<"Error creating thread"<<std::endl;
+                    };
                 }
             }
 
@@ -991,6 +991,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (!nobram){
             mapBrams();
+            if (fv){
+                struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+                if (nodsp && !nobram)
+                    fv_param(fvarg, "RTL", "after_bram_map");
+                else
+                    fv_param(fvarg, "", "after_bram_map");
+                pthread_t fv_t; 
+                FVTs.push_back(fv_t);
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
+                    std::cout<<"Error creating thread"<<std::endl;
+                };
+            }
         }
 
         run("pmuxtree");
@@ -1048,8 +1061,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("opt_expr -full");
             }
 
-            if (cec)
+            if (cec||fv)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
+
+            if (fv){
+                struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+                if (nodsp && nobram)
+                    fv_param(fvarg, "RTL", "after_opt-fast-full");
+                else
+                    fv_param(fvarg, "", "after_opt-fast-full");
+                pthread_t fv_t; 
+                FVTs.push_back(fv_t);
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
+                    std::cout<<"Error creating thread"<<std::endl;
+                };
+
+            }
         }
 
 #if 1
@@ -1096,8 +1124,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                 simplify();
 
-                if (cec)
+                if (cec || fv)
                     run("write_verilog -noattr -nohex after_simplify.v");
+                if (fv){
+                    struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+                    fv_param(fvarg, "", "after_simplify");
+                    pthread_t fv_t; 
+                    FVTs.push_back(fv_t);
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                    if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
+                        std::cout<<"Error creating thread"<<std::endl;
+                    };
+                }
             }
         }
 
@@ -1204,7 +1242,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean -purge");
         }
 
-        if (fv && (verilog_file.empty())){
+        if (fv){
             run("write_verilog -noattr -nohex post_synthesis.v");
         }
 
@@ -1213,16 +1251,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run(stringf("write_blif %s", blif_file.c_str()));
             }
         }
-
+        
         if (check_label("verilog")) {
             if (!verilog_file.empty()) {
                 run("write_verilog -noattr -nohex " + verilog_file);
             }
         }
 
-        fvarg->synth_status = true;
-        if(fv){
-            pthread_join(fv_t,NULL);
+        if (fv){
+            struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
+            fv_param(fvarg, "", "post_synthesis");
+            pthread_t fv_t; 
+            FVTs.push_back(fv_t);
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
+                std::cout<<"Error creating thread"<<std::endl;
+            };
+        }
+
+        for (auto fvt: FVTs){
+            pthread_join(fvt,NULL);
         }
     }
 
