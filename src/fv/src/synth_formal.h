@@ -15,20 +15,15 @@
 using namespace std; 
 
 struct fv_args{
+    
+    string *stage1;
+    string *stage2;
     std::string *ref_net;
     int *fv_timeout;
-    bool *bram_inf;
-    bool *dsp_inf;
-    bool *retiming;
-    std::string *strategy;
-    bool synth_status;
-    bool *fv_cec;
     std::string *top_module;
-    std::string *final_stage;
     std::string *shared_dir_path;
 };
 
-
-void process_stage(struct fv_args *stage_arg);
+// void process_stage(struct fv_args *stage_arg);
 
 void *run_fv(void* flow);
