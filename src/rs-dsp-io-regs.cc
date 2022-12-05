@@ -174,6 +174,8 @@ struct rsDspIORegs : public Pass {
                     case 3:
                     case 5:
                     case 7:
+                        if (is_genesis2)
+                            del_clk = false;
                         new_type += "ADD";
                         break;
                     default:
@@ -196,8 +198,12 @@ struct rsDspIORegs : public Pass {
 
                 std::vector<std::string> ports2del;
 
-                if (del_clk)
+                if (del_clk) {
                     ports2del.push_back("clk");
+                    if (is_genesis2)
+                        ports2del.push_back("lreset");
+
+                }
 
                 switch (out_sel_i) {
                 case 0:
