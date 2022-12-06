@@ -215,7 +215,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Run logic equivalence check to verify the functionality of post synthesis netlist\n");
         log("        By default fv is not called with synthesis\n");
         log("\n");
-        log("    -onespin_path <executable_path>\n");
+        log("    -fv_tool <tool_name>\n");
+        log("        Supported values:\n");
+        log("        - onespin\n");
+        log("        - Formality\n");
+        log("        - both\n");
         log("        Executable path for Onespin360-ECFPGA, executable is mendatory with -fv option\n");
         log("\n");
         log("    -fv_timout_limit <hours>\n");
@@ -250,7 +254,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool keep_tribuf;
     int de_max_threads;
     bool fv;
-    string onespin_path;
+    string fv_tool;
     string golden_netlist;
     int fv_timout_limit;
     RTLIL::Design *_design;
@@ -283,7 +287,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         use_dsp_cfg_params = "";
         fv = false;
         fv_timout_limit = 4;
-        onespin_path="";
+        fv_tool="";
         golden_netlist="";
     }
 
@@ -397,8 +401,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 fv = true;
                 continue;
             }
-            if (args[argidx] == "-onespin_path" && argidx + 1 < args.size()) {
-                onespin_path = args[++argidx];
+            if (args[argidx] == "-fv_tool" && argidx + 1 < args.size()) {
+                fv_tool = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-fv_timout_limit" && argidx + 1 < args.size()) {
@@ -480,6 +484,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (!de) {
             log_cmd_error("This version of synth_rs works only with DE enabled.\n"
                     "Please provide '-de' option to enable DE.");
+        }
+
+        if (fv && !(fv_tool == "onespin" || fv_tool == "formality" || fv_tool == "both")) {
+            log_cmd_error("This version of synth_rs required formal verification tool.\n"
+                    "Please provide '-fv_tool <tool>' option to enable FV.\n");
         }
 
 
@@ -821,6 +830,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         fvarg->top_module=&top_opt;
         fvarg->ref_net = &golden_netlist;
         fvarg->fv_timeout = &fv_timout_limit;
+        fvarg->fv_tool = &fv_tool;
         if (!(stage1.empty()))
             stages.push_back(stage1);
         stages.push_back(stage2);

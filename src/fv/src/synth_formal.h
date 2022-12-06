@@ -19,6 +19,7 @@ struct fv_args{
     string *stage1;
     string *stage2;
     std::string *ref_net;
+    string *fv_tool;
     int *fv_timeout;
     std::string *top_module;
     std::string *shared_dir_path;

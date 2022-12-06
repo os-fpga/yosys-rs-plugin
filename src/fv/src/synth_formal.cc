@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <vector>
+#include <map>
 #include <fstream>
 #include <string>
 #include <regex>
@@ -15,7 +16,7 @@
 #include <signal.h>
 #include <mutex>
 #include "synth_formal.h"
-#include "test.h"
+// #include "test.h"
 #include <filesystem>
 
 #define READ   0
@@ -23,6 +24,8 @@ namespace fs = std::filesystem;
 mutex mtx;
 using namespace std;
 
+vector <string> fv_stages;
+map <string, string> stage_status;
 
 struct hdl_args{
     string hdl_type;
@@ -33,8 +36,11 @@ struct hdl_args{
     string file_sep;
     vector<string>golden;
     vector<string>revised;
+
+    string stage2;
     string stage;
     string top;
+    string tool;
 };
 
 
@@ -47,11 +53,12 @@ struct fm_setting{
     string init;
 };
 
-string FV_TOOL = "";
+string TCL_TOOL = "";
 
 string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
 
     char buffer[256];
+    onespin_lic_fail = false;
     bool lic_captured = false;
     string result = "", str_buff="";
     smatch lic_match,lic_match1;
@@ -63,6 +70,9 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
 
     cout<<"PID: "<<getpid()<<endl;
     
+    stage_status.insert({stage, ""});
+    auto itr = stage_status.find(stage);
+
     pid_t child_id;
     cout<<"Child ID:" <<child_id<<endl;
     FILE* pipe = popen(command.c_str(), "r");
@@ -73,7 +83,7 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
         while (!feof(pipe)) {
             if (fgets(buffer, 256, pipe) != NULL){
                 result.append(buffer);
-                cout<<buffer;
+                // cout<<buffer;
             }
             if (!onespin_lic_fail){
                 str_buff = buffer;
@@ -82,12 +92,18 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
                 if(lic_match[1].str().length()>0){
                     std::cerr<<"Cannot get the license for Onespin"<<endl;
                     onespin_lic_fail=true;
+                    if (itr != stage_status.end()){
+                        itr->second = "lic_check_fail";
+                    }
                 }
                 else if(lic_match1[1].str().length()>0){
                     std::cout<<"Succeeded to get the Onepsin License"<<endl;
                     onespin_lic_fail=false;
                     if (!lic_captured){
-                        onespin_lic++;
+                        if (itr != stage_status.end()){
+                            itr->second = "busy";
+                        }
+
                         lic_captured=true;
                     }
                 }
@@ -96,10 +112,14 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
     }
     
     ofstream pipe_out;
-    pipe_out.open(stage+".log", ios::out);
+    pipe_out.open(stage+".log", ios::app);
     pipe_out<<result<<endl;
-    if (lic_captured)
-        onespin_lic--;
+    if (lic_captured){  
+        if (itr != stage_status.end()){
+            itr->second = "done";
+        }
+        cout<<"Staus Done:  "<<endl;
+    }
    pclose(pipe);
    
    return result;
@@ -108,7 +128,7 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
 string fm_exe(string cmd, string stage, bool &fm_lic_fail){
     char buffer[256];
     bool lic_captured =false;
-    
+    fm_lic_fail = false;
     string result = "", str_buff="";
     smatch lic_match,lic_match1,fv_pass, fv_fail;
     regex _lic_pass_("(.*Loading.*db?)");
@@ -117,7 +137,10 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail){
     regex _fv_failed_ ("(.*Verification.*FAILED.*?)");
     ofstream pipe_out;
 
-    pipe_out.open(stage+"_"+FV_TOOL+".log", ios::app);
+    stage_status.insert({stage, ""});
+    auto itr = stage_status.find(stage);
+
+    pipe_out.open(stage+"_"+TCL_TOOL+".log", ios::app);
 
     string command  = "fm_shell -f "+cmd;
     command.append(" 2>&1");
@@ -144,12 +167,17 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail){
                 if(lic_match[1].str().length()>0){
                     std::cerr<<"Cannot get the license for Formality "<<stage<<endl;
                     fm_lic_fail=true;
+                    if (itr != stage_status.end()){
+                        itr->second = "lic_check_fail";
+                    }
                 }
                 else if(lic_match1[1].str().length()>0){
                     std::cout<<"Succeeded to get the Formality License "<<stage<<endl;
                     fm_lic_fail=false;
                     if (!lic_captured){
-                        formality_lic++;
+                        if (itr != stage_status.end()){
+                            itr->second = "busy";
+                        }
                         lic_captured=true;
                     }
                 }
@@ -174,10 +202,10 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail){
     }
     // Release the formal verification tool license
     if (lic_captured){
-        formality_lic--;
+        if (itr != stage_status.end()){
+            itr->second = "done";
+        }
     }
-
-    cout<<"fm_lic in exe "<<formality_lic<<endl;
    return result;
 }
 
@@ -215,13 +243,13 @@ void sett_onespin(ofstream& fv_script){
 
 void tool_settings(std::ofstream& fv_script){
     
-    if (FV_TOOL=="fm"){
+    if (TCL_TOOL=="formality"){
         fm_guid(fv_script);
     }
-    else if (FV_TOOL=="onespin"){
+    else if (TCL_TOOL=="onespin"){
         sett_onespin(fv_script);
     }
-    else if(FV_TOOL=="conformal"){
+    else if(TCL_TOOL=="conformal"){
         cerr<<"[ERROR] Cadence Conformal is not part of Yosys synthesis verification"<<endl;
         // throw unkown_tool();
     }
@@ -301,7 +329,7 @@ void hdl_proccessing(std::ofstream& fv_script,struct hdl_args hdlarg){
     // struct hdl_args hdlarg;
 
     if (regex_match (hdlarg.golden[0], regex("(.*..*vh)") ) | regex_match (hdlarg.golden[0], regex("(.*.v)") ) | regex_match (hdlarg.golden[0], regex("(.*.sv)") )){   
-        if(FV_TOOL=="fm"){
+        if(TCL_TOOL=="formality"){
             hdlarg.hdl_type        = "read_sverilog ";
             hdlarg.ref_container   = "-container r ";
             hdlarg.hdl_sett        = "-libname WORK { \\\n";
@@ -313,7 +341,7 @@ void hdl_proccessing(std::ofstream& fv_script,struct hdl_args hdlarg){
             write_hdl(fv_script,hdlarg.revised,hdlarg); // Reading Revised Design
             fv_script<<"set_top i:/WORK/"+hdlarg.top+"\n";
         }
-        else if(FV_TOOL=="onespin"){
+        else if(TCL_TOOL=="onespin"){
             cout<<"Generating TCL for Onespin"<<endl;
             hdlarg.hdl_type = "read_verilog ";
             hdlarg.ref_container = "-golden ";
@@ -323,7 +351,7 @@ void hdl_proccessing(std::ofstream& fv_script,struct hdl_args hdlarg){
             hdlarg.ref_container   = "-revised ";
             write_hdl(fv_script,hdlarg.revised,hdlarg); // Reading Revised Design
         }
-        else if(FV_TOOL=="conformal"){
+        else if(TCL_TOOL=="conformal"){
             cerr<<"[ERROR] Cadence Conformal is not part of Yosys synthesis verification"<<endl;
             // throw unkown_tool();
         }
@@ -333,7 +361,7 @@ void hdl_proccessing(std::ofstream& fv_script,struct hdl_args hdlarg){
         }
     }
     else if (regex_match (hdlarg.golden[0], regex("(.*.vhd)") ) | regex_match (hdlarg.golden[0], regex("(.*.vhdl)") )){
-        if(FV_TOOL=="fm"){
+        if(TCL_TOOL=="formality"){
             hdlarg.hdl_type        = "read_vhdl ";
             hdlarg.ref_container   = "-container r ";
             hdlarg.hdl_sett        = "-libname WORK { \\\n";
@@ -346,7 +374,7 @@ void hdl_proccessing(std::ofstream& fv_script,struct hdl_args hdlarg){
             write_hdl(fv_script,hdlarg.revised,hdlarg); // Reading Revised Design
             fv_script<<"set_top i:/WORK/"+hdlarg.top+"\n";
         }
-        else if(FV_TOOL=="onespin"){
+        else if(TCL_TOOL=="onespin"){
             hdlarg.hdl_type     = "read_vhdl ";
             hdlarg.ref_container = "-golden ";
             hdlarg.hdl_sett = "-pragma_ignore {}  -version 2008 { \\\n";
@@ -357,7 +385,7 @@ void hdl_proccessing(std::ofstream& fv_script,struct hdl_args hdlarg){
             hdlarg.hdl_sett = "-pragma_ignore {}  -version sv2012 { \\\n"; 
             write_hdl(fv_script,hdlarg.revised,hdlarg); // Reading Revised Design
         }
-        else if(FV_TOOL=="conformal"){
+        else if(TCL_TOOL=="conformal"){
             cerr<<"[ERROR] Cadence Conformal is not part of Yosys synthesis verification"<<endl;
             // throw unkown_tool();
         }
@@ -409,9 +437,9 @@ void compile(std::ofstream& fv_script){
 
 void mapping(std::ofstream& fv_script, bool extra_map){
     
-    if (FV_TOOL=="fm")
+    if (TCL_TOOL=="formality")
         fv_script<<"\nmatch\n";
-    else if (FV_TOOL=="onespin"){
+    else if (TCL_TOOL=="onespin"){
         fv_script<<"set_mode ec\n";
         if (!extra_map){
             fv_script<<"map\n";
@@ -428,12 +456,12 @@ void mapping(std::ofstream& fv_script, bool extra_map){
 
 void compare(std::ofstream& fv_script,struct hdl_args hdlarg){
 
-    if (FV_TOOL=="fm"){
+    if (TCL_TOOL=="formality"){
         fv_script<<"\nverify\nexit\n"; 
     }
-    else if (FV_TOOL=="onespin"){
+    else if (TCL_TOOL=="onespin"){
         fv_script<<"set_limit -command_real_time 3600\n compare\n"; 
-        fv_script<<"\n\nsave_result_file "<<hdlarg.top<<"_"<<hdlarg.stage<<"_results.log\nexit -force";
+        fv_script<<"\n\nsave_result_file "<<hdlarg.top<<"_"<<hdlarg.stage2<<"_results.log\nexit -force";
     }
  
 }
@@ -446,10 +474,10 @@ void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path){
     fv_script.open(*tclout_path,ios::app);
     tool_settings(fv_script);
     hdl_proccessing(fv_script,hdlarg);
-    if (FV_TOOL == "fm"){
+    if (TCL_TOOL == "formality"){
         fm_design_setup(fv_script,fm_set);
     }
-    else if (FV_TOOL=="onespin"){
+    else if (TCL_TOOL=="onespin"){
         elaboration(fv_script,hdlarg);
         compile(fv_script);
     }
@@ -458,52 +486,57 @@ void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path){
     fv_script.close();
 }
 
-string exec_pipe(struct hdl_args hdlarg,string stage,string synth_dir_) {
+string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string synth_dir_) {
     string result = "";
     bool onespin_lic_fail=false;
     bool fm_lic_fail=false;
 
-    int lic_o=onespin_lic;
-    int lic_f=formality_lic;
     string tclout_path_fm = "";
     string tclout_path_onespin = "";
-    // if (FV_TOOL=="fm"){
-    FV_TOOL="onespin";
-    tclout_path_onespin = synth_dir_+stage+"_onespin.tcl";
-    gen_tcl(hdlarg, &tclout_path_onespin);
+  
+    if (tool == "onespin" || tool== "both"){
+        fv_stages.push_back(stage);
+        TCL_TOOL = "onespin";
+        tclout_path_onespin = synth_dir_+stage+"_onespin.tcl";
+        gen_tcl(hdlarg, &tclout_path_onespin);
+        onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
 
-    onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
-
-    if (onespin_lic_fail){
-        FV_TOOL="fm";
+        if (stage_status[stage] == "lic_check_fail" && tool=="onespin"){
+            int time_count = 0;
+            while (1){
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+                time_count = time_count +5;
+                onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
+                if (stage_status[stage] == "done" || time_count >= 900) {
+                    break;
+                }
+            }
+        }
+    }
+    if (tool=="formality" || (stage_status[stage] == "lic_check_fail" && tool == "both")){
+        TCL_TOOL = "formality";
         tclout_path_fm = synth_dir_+stage+"_fm.tcl";
         gen_tcl(hdlarg, &tclout_path_fm);
 
         fm_exe(tclout_path_fm,  stage, fm_lic_fail);
     }
-    if (fm_lic_fail){
+    if (stage_status[stage] == "lic_check_fail" && tool != "onespin"){
+        int time_count = 0;
         while (1){
-            std::this_thread::sleep_for(std::chrono::seconds(3));
-            cout<<"fm_lic "<<formality_lic<<" lic_f: " <<lic_f<<endl;
-            if (onespin_lic<lic_o){
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            time_count = time_count +5;
+            if (tool == "both"){
                 onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
-                cout<<"Break loop inside onespin"<<" Local Lic: "<<lic_o<< " Onespin Lic: "<<onespin_lic<<endl;
-                lic_o = onespin_lic;
+                if (stage_status[stage] == "done" || time_count >= 900) {
+                    break;
+                }
+            }
+            fm_exe(tclout_path_fm,  stage, fm_lic_fail);
+            if (stage_status[stage] == "done" || time_count >= 900) {
                 break;
             }
-            if (formality_lic<lic_f){
-                fm_exe(tclout_path_fm,  stage, fm_lic_fail);
-                cout<<"Break loop inside Formality"<<" Local Lic: "<<lic_f<< " Formality Lic: "<<formality_lic<<endl;
-                lic_f = formality_lic;
-                break;
-            }
-
-            if (formality_lic == 0 && onespin_lic ==0 && lic_o==0 && lic_f == 0) break;
-        }
-        
+        }   
     }
-    // }
-    cout<<stage<<"License "<<fm_lic_fail<<endl;
    return result ;
 }
 
@@ -523,6 +556,7 @@ void *run_fv(void* flow) {
     struct hdl_args hdlarg;
 
     hdlarg.stage=*fvargs->stage1;
+    hdlarg.stage2=*fvargs->stage2;
     if (*fvargs->stage1=="RTL")get_rtl(ys_script,hdlarg.golden);
     else{
         hdlarg.golden.push_back(synth_dir_+*fvargs->stage1+".v");
@@ -531,6 +565,7 @@ void *run_fv(void* flow) {
     hdlarg.revised.push_back(synth_dir_+*fvargs->stage2+".v");
     hdlarg.revised.push_back(shared_dir+"rapidsilicon/sim_models.v");
     
+    // hdlarg.tool == *fvargs->fv_tool;
     // for (auto file: hdlarg.golden)cout<<"File Golden: "<<file<<endl;
     // for (auto file: hdlarg.revised)cout<<"File Revised: "<<file<<endl;
     istringstream ss(*fvargs->top_module);
@@ -541,6 +576,7 @@ void *run_fv(void* flow) {
     }
     hdlarg.top = top_mod;
 
+    // cout << "FV TOOL = "<<hdlarg.tool<<endl;
     // cout<<"Top Module: "<<hdlarg.top<<endl;
     // cout<<"Stage1: "<<*fvargs->stage1<<endl<<"Stage2: "<<*fvargs->stage2<<endl;
     // cout<<"Synthesis Directory: "<<synth_dir_<<endl;
@@ -548,7 +584,7 @@ void *run_fv(void* flow) {
     
     mtx.unlock();
 
-    string result = exec_pipe(hdlarg,*fvargs->stage2,synth_dir_);
+    string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,synth_dir_);
 
     pthread_exit(NULL);
     return NULL;
