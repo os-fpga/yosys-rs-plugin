@@ -21,6 +21,7 @@ COMMON			= common
 GENESIS			= genesis
 GENESIS2		= genesis2
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
+				  $(COMMON)/simlib.v \
 				  $(GENESIS)/cells_sim.v \
 				  $(GENESIS)/dsp_sim.v \
 				  $(GENESIS)/ffs_map.v \
@@ -29,14 +30,34 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/arith_map.v \
 				  $(GENESIS)/all_arith_map.v \
 				  $(GENESIS)/brams_map.v \
+				  $(GENESIS)/brams_map_new.v \
 				  $(GENESIS)/brams_final_map.v \
+				  $(GENESIS)/brams_final_map_new.v \
 				  $(GENESIS)/brams.txt \
+				  $(GENESIS)/brams_new.txt \
 				  $(GENESIS)/brams_async.txt \
 				  $(GENESIS)/TDP18K_FIFO.v \
 				  $(GENESIS)/sram1024x18.v \
 				  $(GENESIS)/ufifo_ctl.v \
 				  $(GENESIS2)/cells_sim.v \
+				  $(GENESIS2)/dsp_sim.v \
+				  $(GENESIS2)/brams_sim.v \
 				  $(GENESIS2)/ffs_map.v \
+				  $(GENESIS2)/dsp_map.v \
+				  $(GENESIS2)/dsp_final_map.v \
+				  $(GENESIS2)/arith_map.v \
+				  $(GENESIS2)/all_arith_map.v \
+				  $(GENESIS2)/brams_map.v \
+				  $(GENESIS2)/brams_map_new.v \
+				  $(GENESIS2)/brams_final_map.v \
+				  $(GENESIS2)/brams_final_map_new.v \
+				  $(GENESIS2)/brams.txt \
+				  $(GENESIS2)/brams_new.txt \
+				  $(GENESIS2)/brams_async.txt \
+				  $(GENESIS2)/TDP18K_FIFO.v \
+				  $(GENESIS2)/sram1024x18.v \
+				  $(GENESIS2)/ufifo_ctl.v \
+				  $(GENESIS2)/cell_sim_blackbox.v
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
@@ -45,7 +66,8 @@ SOURCES = src/rs-dsp.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
-		  src/rs-bram-asymmetric.cc
+		  src/rs-bram-asymmetric.cc \
+		  src/rs-pack-dsp-regs.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
@@ -96,7 +118,7 @@ test:
 
 clean:
 	rm -rf src/*.d src/*.o *.so pmgen*
-	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
+	$(MAKE) -C tests clean_tests YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:
-	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
+	$(MAKE) -C tests clean_tests YOSYS_PATH=$(YOSYS_PATH)

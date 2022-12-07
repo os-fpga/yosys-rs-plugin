@@ -7,10 +7,15 @@ TESTS = dffs\
 		dsp_macc\
 		dsp_mult\
 		dsp_simd\
+		pack_dsp_regs\
 		bram_tdp\
 		bram_sdp\
 		bram_sdp_split\
-		bram_tdp_split
+		bram_tdp_split\
+		bram_tdp_new\
+		bram_sdp_new\
+		bram_sdp_split_new\
+		bram_tdp_split_new
 		#bram_asymmetric_wider_read\
 		#bram_asymmetric_wider_write
 
@@ -21,6 +26,7 @@ VALGRIND_TESTS = valgrind/dffs\
 				 valgrind/dsp_macc\
 				 valgrind/dsp_mult\
 				 valgrind/dsp_simd\
+				 valgrind/pack_dsp_regs\
 				 valgrind/bram_tdp\
 				 valgrind/bram_sdp\
 				 valgrind/bram_sdp_split\
@@ -99,10 +105,11 @@ all: $(TESTS)
 $(foreach test,$(TESTS),$(eval $(call test_tpl,$(test))))
 $(foreach test,$(TESTS),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 
-clean:
+clean_tests:
 	@find . -name "ok" | xargs rm -rf
 	@find . -name "*.log" | xargs rm -rf
 	@find . -name "valgrindok" | xargs rm -rf
 	@find . -name "*.eqn" | xargs rm -rf
+	@find . -name "*post_synth.v" | xargs rm -rf
 
 valgrind: $(VALGRIND_TESTS)

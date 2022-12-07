@@ -9,6 +9,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define MODE_BITS_OUTPUT_SELECT_START_ID 81
 #define MODE_BITS_OUTPUT_SELECT_WIDTH 3
 
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83 
+#define MODE_BITS_GENESIS2_OUTPUT_SELECT_START_ID 80
+#define MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH 3
+
 // ============================================================================
 
 struct rsDspIORegs : public Pass {
@@ -81,17 +85,18 @@ struct rsDspIORegs : public Pass {
 
         for (auto cell : module->cells_) {
             std::string cell_type = cell.second->type.str();
-            if (cell_type == RTLIL::escape_id("RS_DSP2") || cell_type == RTLIL::escape_id("RS_DSP3")) {
+            if (cell_type == RTLIL::escape_id("RS_DSP2") ||
+                    cell_type == RTLIL::escape_id("RS_DSP3") || 
+                    cell_type == RTLIL::escape_id("RS_DSP")) {
                 auto dsp = cell.second;
 
-                // If the cell does not have the "is_inferred" attribute set
-                // then don't touch it.
                 if (!dsp->has_attribute(RTLIL::escape_id("is_inferred")) || dsp->get_bool_attribute(RTLIL::escape_id("is_inferred")) == false) {
                     continue;
                 }
 
                 bool del_clk = true;
                 bool use_dsp_cfg_params = (cell_type == RTLIL::escape_id("RS_DSP3"));
+                bool is_genesis2 = (cell_type == RTLIL::escape_id("RS_DSP"));
 
                 int reg_in_i;
                 int out_sel_i;
@@ -106,6 +111,16 @@ struct rsDspIORegs : public Pass {
 
                     RTLIL::Const output_select;
                     output_select = mode_bits->extract(MODE_BITS_OUTPUT_SELECT_START_ID, MODE_BITS_OUTPUT_SELECT_WIDTH);
+                    out_sel_i = output_select.as_int();
+                } else if (is_genesis2) {
+                    // Read MODE_BITS at correct indexes
+                    auto mode_bits = &dsp->getParam(RTLIL::escape_id("MODE_BITS"));
+                    RTLIL::Const register_inputs;
+                    register_inputs = mode_bits->bits.at(MODE_BITS_GENESIS2_REGISTER_INPUTS_ID);
+                    reg_in_i = register_inputs.as_int();
+
+                    RTLIL::Const output_select;
+                    output_select = mode_bits->extract(MODE_BITS_GENESIS2_OUTPUT_SELECT_START_ID, MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH);
                     out_sel_i = output_select.as_int();
                 } else {
                     // Read dedicated configuration ports
@@ -160,6 +175,8 @@ struct rsDspIORegs : public Pass {
                     case 3:
                     case 5:
                     case 7:
+                        if (is_genesis2)
+                            del_clk = false;
                         new_type += "ADD";
                         break;
                     default:
@@ -182,8 +199,12 @@ struct rsDspIORegs : public Pass {
 
                 std::vector<std::string> ports2del;
 
-                if (del_clk)
+                if (del_clk) {
                     ports2del.push_back("clk");
+                    if (is_genesis2)
+                        ports2del.push_back("lreset");
+
+                }
 
                 switch (out_sel_i) {
                 case 0:
