@@ -1,7 +1,7 @@
 Write-Output "	yosys_rs_plugin start  "
 
 
-mkdir pmgen
+mkdir -Force pmgen
 wget -nc -O pmgen.py https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py
 
 Write-Output " Running python3..."
