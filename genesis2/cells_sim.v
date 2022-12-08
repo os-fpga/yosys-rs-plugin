@@ -11,8 +11,9 @@ module dff(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(posedge C)
         Q <= D;
@@ -26,8 +27,9 @@ module dffn(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(negedge C)
         Q <= D;
@@ -42,8 +44,9 @@ module sdff(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(posedge C)
         if (R == 1'b1)
@@ -61,8 +64,9 @@ module sdffn(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(negedge C)
         if (R == 1'b1)
@@ -80,8 +84,9 @@ module dffr(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(posedge C or posedge R)
         if (R == 1'b1)
@@ -99,8 +104,9 @@ module dffnr(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(negedge C or posedge R)
         if (R == 1'b1)
@@ -118,8 +124,9 @@ module dffe(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(posedge C)
         if (E == 1'b1)
@@ -135,8 +142,9 @@ module dffne(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(negedge C)
         if (E == 1'b1)
@@ -156,11 +164,9 @@ module sdffre(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
-end
-initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(posedge C)
         if (R == 1'b1)
@@ -181,8 +187,9 @@ module sdffnre(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(negedge C)
         if (R == 1'b1)
@@ -203,8 +210,9 @@ module dffre(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(posedge C or posedge R)
         if (R == 1'b1)
@@ -225,8 +233,9 @@ module dffnre(
     input C,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @(negedge C or posedge R)
         if (R == 1'b1)
@@ -243,8 +252,9 @@ module latch(
     input G,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @*
         if (G == 1'b1)
@@ -259,8 +269,9 @@ module latchn(
     input G,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @*
         if (G == 1'b0)
@@ -276,8 +287,9 @@ module latchr(
     input R,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @*
         if (R == 1'b1)
@@ -295,8 +307,9 @@ module latchnr(
     input R,
     output reg Q
 );
+parameter INIT_VALUE = 1'b0;
 initial begin
-    Q = 0;
+    Q = INIT_VALUE;
 end
     always @*
         if (R == 1'b1)
