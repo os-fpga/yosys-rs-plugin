@@ -23,6 +23,7 @@ GENESIS2		= genesis2
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(COMMON)/simlib.v \
 				  $(GENESIS)/cells_sim.v \
+				  $(GENESIS)/cells_sim.vhd \
 				  $(GENESIS)/dsp_sim.v \
 				  $(GENESIS)/ffs_map.v \
 				  $(GENESIS)/dsp_map.v \
@@ -40,6 +41,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/sram1024x18.v \
 				  $(GENESIS)/ufifo_ctl.v \
 				  $(GENESIS2)/cells_sim.v \
+				  $(GENESIS2)/cells_sim.vhd \
 				  $(GENESIS2)/dsp_sim.v \
 				  $(GENESIS2)/brams_sim.v \
 				  $(GENESIS2)/ffs_map.v \
