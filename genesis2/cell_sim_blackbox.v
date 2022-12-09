@@ -200,6 +200,7 @@ endmodule
 module latchnr(
     input D,
     input G,
+    input R,
     output reg Q
 );
 endmodule
