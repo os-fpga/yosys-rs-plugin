@@ -39,7 +39,15 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/TDP18K_FIFO.v \
 				  $(GENESIS)/sram1024x18.v \
 				  $(GENESIS)/ufifo_ctl.v \
+				  $(GENESIS)/cells_sim.vhd \
+				  $(GENESIS)/adder_carry.vhdl \
+				  $(GENESIS)/dffnsre.vhdl \
+				  $(GENESIS)/dffsre.vhdl \
+				  $(GENESIS)/latchsre.vhdl \
+				  $(GENESIS)/lut.vhdl \
+				  $(GENESIS)/shr.vhdl \
 				  $(GENESIS2)/cells_sim.v \
+				  $(GENESIS2)/cells_sim.vhd \
 				  $(GENESIS2)/dsp_sim.v \
 				  $(GENESIS2)/brams_sim.v \
 				  $(GENESIS2)/ffs_map.v \
