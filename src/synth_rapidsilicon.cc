@@ -1186,7 +1186,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        run("shregmap -minlen 8 -maxlen 20");
+                        run("shregmap -minlen 8 -maxlen 20 -clkpol pos");
                         if (sdffr) {
                             run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
