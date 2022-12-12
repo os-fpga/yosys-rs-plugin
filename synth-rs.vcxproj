@@ -184,7 +184,7 @@
       <AdditionalDependencies>rs_licenseManager.lib;lm_new.obj;libsb.lib;libcrvs.lib;lmgr_dongle_stub.lib;.\activation\lib\libnoact.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Lib>
-      <AdditionalLibraryDirectories>$(SolutionDir)Raptor_Tools\Flex_LM\build\x64-Release;C:\Users\vorak\Desktop\Workspace_clean\experiment\yosys_verific_rs\Raptor_Tools\Flex_LM\x64_n6;C:\Users\vorak\Desktop\Workspace_clean\experiment\yosys_verific_rs\Raptor_Tools\Flex_LM\x64_n6\activation\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)Raptor_Tools\Flex_LM\build\x64-Release;$(SolutionDir)Raptor_Tools\Flex_LM\x64_n6;$(SolutionDir)Raptor_Tools\Flex_LM\x64_n6\activation\lib</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalOptions>/INCREMENTAL:NO %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Console</SubSystem>
