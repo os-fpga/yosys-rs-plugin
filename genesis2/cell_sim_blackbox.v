@@ -743,3 +743,13 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
 
   
 endmodule
+
+(* blackbox *)
+module \$lut (A, Y);
+parameter WIDTH = 0;
+parameter LUT = 0;
+
+input [WIDTH-1:0] A;
+output Y;
+
+endmodule
