@@ -47,14 +47,12 @@ SOURCES = src/rs-dsp.cc \
           src/rs-dsp-io-regs.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc 
-		#   src/fv/synth_formal.cc
 
-fv_srcs = src/fv/src/synth_formal.cc 
-		#   src/fv/src/synthesis_watcher.cc
+fv_srcs = src/fv/src/synth_formal.cc \
+		  src/fv/src/test_report.cc
 
 fv_deps = src/fv/src//synth_formal.h \
-		  src/fv/src/test.h 
-		#   src/fv/src/synthesis_watcher.h
+		  src/fv/src/report_fv.h
 
 simulation_model = src/fv/src/sim_par.cc
 execute_Sim_parse:
@@ -121,7 +119,7 @@ test:
 	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
-	rm -rf src/*.d src/*.o *.so pmgen*
+	rm -rf src/*.d src/*.o *.so pmgen* src/fv/src/*.o src/fv/src/*.d
 	$(MAKE) -C tests clean YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:
