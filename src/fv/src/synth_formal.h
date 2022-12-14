@@ -11,8 +11,16 @@
 #include <regex>
 #include <thread>
 #include <chrono>
+#include <tuple>
+#include <map>
 #include <filesystem>
+
 using namespace std; 
+#ifndef SYNTH_FORMAL_H
+#define SYNTH_FORMAL_H
+
+
+extern map<string, tuple<string,string,string,string,string,string,int>> fv_results;
 
 struct fv_args{
     
@@ -28,3 +36,5 @@ struct fv_args{
 // void process_stage(struct fv_args *stage_arg);
 
 void *run_fv(void* flow);
+
+#endif

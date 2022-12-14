@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <tuple>
 #include <fstream>
 #include <string>
 #include <regex>
@@ -16,7 +17,7 @@
 #include <signal.h>
 #include <mutex>
 #include "synth_formal.h"
-// #include "test.h"
+
 #include <filesystem>
 
 #define READ   0
@@ -54,27 +55,35 @@ struct fm_setting{
 };
 
 string TCL_TOOL = "";
+ 
+map <string, tuple<string,string,string,string,string,string,int>> fv_results;
 
-string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
+tuple<string,string,string,string,string,string,int> fv_results_tp;
+
+int verif_stage = 0;
+string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_time){
 
     char buffer[256];
     onespin_lic_fail = false;
     bool lic_captured = false;
     string result = "", str_buff="";
-    smatch lic_match,lic_match1;
+    smatch lic_match,lic_match1,fv_pass, fv_fail;
     regex _lic_pass_("(.*Loading.*'RTL2RTL'?)");
     regex _lic_fail_("(.*Error:.*Cannot.*get.*license?)");
+    regex _fv_succeeded_ ("(.*designs.*are equivalent.*?)");
+    regex _fv_failed_ ("(.*designs.*are not equivalent.*?)");
 
     string command  = "onespin_sh "+cmd;
     command.append(" 2>&1");
 
-    cout<<"PID: "<<getpid()<<endl;
+    // cout<<"PID: "<<getpid()<<endl;
     
     stage_status.insert({stage, ""});
     auto itr = stage_status.find(stage);
 
-    pid_t child_id;
-    cout<<"Child ID:" <<child_id<<endl;
+    // pid_t child_id;
+    // cout<<"Child ID:" <<child_id<<endl;
+    auto start = chrono::high_resolution_clock::now();
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe) {
         return "popen failed!";
@@ -114,18 +123,38 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail){
     ofstream pipe_out;
     pipe_out.open(stage+".log", ios::app);
     pipe_out<<result<<endl;
+    string fv_status;
+    // check for Formal Verification Status
+    regex_search(result, fv_pass, _fv_succeeded_);
+    regex_search(result, fv_fail, _fv_failed_);
+    if(fv_pass[1].str().length()>0){
+        fv_status = "Verification Succeeded";
+        std::cerr<<"Verification Succeeded for "<<stage<<endl;
+    }
+    else if(fv_fail[1].str().length()>0){
+        fv_status = "Verification Failed";
+        std::cout<<"Verification Failed for "<<stage<<endl;
+    }
+    else{
+        fv_status = "N/A";
+        std::cout<<"Verification Results not found for "<<stage<<endl;
+    }
+
     if (lic_captured){  
         if (itr != stage_status.end()){
             itr->second = "done";
+            auto stop = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
+            spent_time = duration.count();
         }
         cout<<"Staus Done:  "<<endl;
     }
    pclose(pipe);
    
-   return result;
+   return fv_status;
 }
 
-string fm_exe(string cmd, string stage, bool &fm_lic_fail){
+string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
     char buffer[256];
     bool lic_captured =false;
     fm_lic_fail = false;
@@ -149,6 +178,7 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail){
     
     pid_t child_id;
     cout<<"Child ID:" <<child_id<<endl;
+    auto start = chrono::high_resolution_clock::now();
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe) {
         return "popen failed!";
@@ -177,6 +207,7 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail){
                     if (!lic_captured){
                         if (itr != stage_status.end()){
                             itr->second = "busy";
+                            
                         }
                         lic_captured=true;
                     }
@@ -188,25 +219,34 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail){
 
    pclose(pipe);
    pipe_out.close();
+
+   string fv_status;
    // check for Formal Verification Status
    regex_search(result, fv_pass, _fv_succeeded_);
    regex_search(result, fv_fail, _fv_failed_);
    if(fv_pass[1].str().length()>0){
+        fv_status = "Verification Succeeded";
         std::cerr<<"Verification Succeeded for "<<stage<<endl;
     }
     else if(fv_fail[1].str().length()>0){
+        fv_status = "Verification Failed";
         std::cout<<"Verification Failed for "<<stage<<endl;
     }
     else{
+        fv_status = "N/A";
         std::cout<<"Verification Results not found for "<<stage<<endl;
     }
     // Release the formal verification tool license
     if (lic_captured){
         if (itr != stage_status.end()){
             itr->second = "done";
+            auto stop = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
+            spent_time = duration.count();
+
         }
     }
-   return result;
+   return fv_status;
 }
 
 void fm_guid(ofstream& fv_script){
@@ -486,11 +526,12 @@ void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path){
     fv_script.close();
 }
 
-string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string synth_dir_) {
+string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string key_stage, string synth_dir_) {
     string result = "";
+    string _fv_tool_ = "";
     bool onespin_lic_fail=false;
     bool fm_lic_fail=false;
-
+    int time_spent;
     string tclout_path_fm = "";
     string tclout_path_onespin = "";
   
@@ -499,14 +540,16 @@ string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string synth_di
         TCL_TOOL = "onespin";
         tclout_path_onespin = synth_dir_+stage+"_onespin.tcl";
         gen_tcl(hdlarg, &tclout_path_onespin);
-        onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
+        result = onespin_exe(tclout_path_onespin, stage, onespin_lic_fail,time_spent);
+        _fv_tool_ ="Onespin";
 
         if (stage_status[stage] == "lic_check_fail" && tool=="onespin"){
             int time_count = 0;
             while (1){
                 std::this_thread::sleep_for(std::chrono::seconds(5));
                 time_count = time_count +5;
-                onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
+                result = onespin_exe(tclout_path_onespin, stage, onespin_lic_fail,time_spent);
+                _fv_tool_ ="Onespin";
                 if (stage_status[stage] == "done" || time_count >= 900) {
                     break;
                 }
@@ -518,7 +561,8 @@ string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string synth_di
         tclout_path_fm = synth_dir_+stage+"_fm.tcl";
         gen_tcl(hdlarg, &tclout_path_fm);
 
-        fm_exe(tclout_path_fm,  stage, fm_lic_fail);
+        result = fm_exe(tclout_path_fm,  stage, fm_lic_fail,time_spent);
+        _fv_tool_ = "Formality";
     }
     if (stage_status[stage] == "lic_check_fail" && tool != "onespin"){
         int time_count = 0;
@@ -526,16 +570,26 @@ string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string synth_di
             std::this_thread::sleep_for(std::chrono::seconds(5));
             time_count = time_count +5;
             if (tool == "both"){
-                onespin_exe(tclout_path_onespin, stage, onespin_lic_fail);
+                result = onespin_exe(tclout_path_onespin, stage, onespin_lic_fail,time_spent);
+                _fv_tool_ ="Onespin";
                 if (stage_status[stage] == "done" || time_count >= 900) {
                     break;
                 }
             }
-            fm_exe(tclout_path_fm,  stage, fm_lic_fail);
+            result = fm_exe(tclout_path_fm,  stage, fm_lic_fail,time_spent);
+            _fv_tool_ ="Formality";
             if (stage_status[stage] == "done" || time_count >= 900) {
                 break;
             }
         }   
+    }
+
+    auto itr = fv_results.find(key_stage);
+    if (itr != fv_results.end()){
+        get<2>(itr->second) = result;
+        get<3>(itr->second) = _fv_tool_;
+        get<6>(itr->second) = time_spent;
+        cout<<"Verification Results\n"<<key_stage<<"\t"<<get<0>(itr->second)<<" VS "<<get<1>(itr->second)<<"\t"<<get<2>(itr->second)<<"\t"<<get<3>(itr->second)<<"\t"<<time_spent<<endl;
     }
    return result ;
 }
@@ -581,11 +635,13 @@ void *run_fv(void* flow) {
     // cout<<"Stage1: "<<*fvargs->stage1<<endl<<"Stage2: "<<*fvargs->stage2<<endl;
     // cout<<"Synthesis Directory: "<<synth_dir_<<endl;
     // cout<<"Shared Directory: "<<shared_dir<<endl;
-    
+    fv_results_tp = make_tuple(*fvargs->stage1,*fvargs->stage2,"N/A","N/A",synth_dir_,top_mod,0);
+    verif_stage++;
+    // fv_results_tp.clear();
+    fv_results.insert(make_pair(("stage"+to_string(verif_stage)),fv_results_tp));
     mtx.unlock();
 
-    string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,synth_dir_);
-
+    string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,"stage"+to_string(verif_stage),synth_dir_);
     pthread_exit(NULL);
     return NULL;
 }

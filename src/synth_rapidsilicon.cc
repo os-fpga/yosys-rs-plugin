@@ -14,6 +14,7 @@
 #include <regex>
 #include <thread>
 #include "fv/src/synth_formal.h"
+#include "fv/src/report_fv.h"
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
@@ -262,6 +263,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
     std::string dir_name;
+    // int test_fv_header;
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -1282,6 +1284,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         for (auto fvt: FVTs){
             pthread_join(fvt,NULL);
         }
+        gen_report(fv_results);
     }
 
 } SynthRapidSiliconPass;
