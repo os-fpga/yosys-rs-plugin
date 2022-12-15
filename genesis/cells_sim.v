@@ -34,8 +34,11 @@ module dffsre(
     input R,
     input S
 );
+ `ifndef VCS_EN
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
+`endif
+
 
     always @(posedge C or negedge S or negedge R)
         if (!R)
