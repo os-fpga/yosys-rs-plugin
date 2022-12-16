@@ -34,11 +34,10 @@ module dffsre(
     input R,
     input S
 );
- `ifndef VCS_EN
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
 `endif
-
 
     always @(posedge C or negedge S or negedge R)
         if (!R)
@@ -59,9 +58,10 @@ module dffnsre(
     input R,
     input S
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
-
+`endif
     always @(negedge C or negedge S or negedge R)
         if (!R)
             Q <= 1'b0;
@@ -80,8 +80,10 @@ module latchsre (
     input G,
     input E
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
+`endif
     always @*
         if (!R) 
             Q <= 1'b0;
@@ -99,8 +101,10 @@ module latchnsre (
     input G,
     input E
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
+`endif
     always @*
         if (!R) 
             Q <= 1'b0;
@@ -118,8 +122,10 @@ module io_scff(
     input R,
     input clk
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
+`endif
 
     always @(posedge clk or negedge R)
         if (!R)
@@ -139,9 +145,11 @@ module scff(
     input E,
     input clk
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
     initial SO = INIT;
+`endif
     wire out_w;
 
     assign out_w = E ? SI : D;
@@ -168,8 +176,10 @@ module sh_dff(
     (* clkbuf_sink *)
     input C
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
     initial Q = INIT;
+`endif
 
     always @(posedge C)
         Q <= D;
@@ -195,9 +205,11 @@ module sdffr(
     (* invertible_pin = "IS_C_INVERTED" *)
     input C
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
-    parameter [0:0] IS_C_INVERTED = 1'b0;
     initial Q = INIT;
+`endif
+    parameter [0:0] IS_C_INVERTED = 1'b0;
     case(|IS_C_INVERTED)
           1'b0:
             always @(posedge C)
@@ -222,9 +234,11 @@ module sdffs(
     input C,
     input S
 );
+ `ifndef VCS_MODE
     parameter [0:0] INIT = 1'b0;
-    parameter [0:0] IS_C_INVERTED = 1'b0;
     initial Q = INIT;
+`endif
+    parameter [0:0] IS_C_INVERTED = 1'b0;
     case(|IS_C_INVERTED)
           1'b0:
             always @(posedge C)
