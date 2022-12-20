@@ -1,8 +1,6 @@
 // Copyright (C) 2022 RapidSilicon
 //11/11/2022
 
-`timescale  1 ps / 1 ps
-
 module TDP_BRAM18 (
     (* clkbuf_sink *)
     input wire CLOCKA,
