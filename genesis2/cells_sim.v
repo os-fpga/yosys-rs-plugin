@@ -11,10 +11,12 @@ module dff(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(posedge C)
         Q <= D;
 endmodule
@@ -27,10 +29,12 @@ module dffn(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(negedge C)
         Q <= D;
 endmodule
@@ -44,10 +48,12 @@ module sdff(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(posedge C)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -64,10 +70,12 @@ module sdffn(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(negedge C)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -84,10 +92,12 @@ module dffr(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(posedge C or posedge R)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -104,10 +114,12 @@ module dffnr(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(negedge C or posedge R)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -124,10 +136,12 @@ module dffe(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(posedge C)
         if (E == 1'b1)
             Q <= D;
@@ -142,10 +156,12 @@ module dffne(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(negedge C)
         if (E == 1'b1)
             Q <= D;
@@ -164,10 +180,12 @@ module sdffre(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(posedge C)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -187,10 +205,12 @@ module sdffnre(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(negedge C)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -210,10 +230,12 @@ module dffre(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(posedge C or posedge R)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -233,10 +255,12 @@ module dffnre(
     input C,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @(negedge C or posedge R)
         if (R == 1'b1)
             Q <= 1'b0;
@@ -252,10 +276,12 @@ module latch(
     input G,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @*
         if (G == 1'b1)
             Q <= D;
@@ -269,10 +295,12 @@ module latchn(
     input G,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @*
         if (G == 1'b0)
             Q <= D;
@@ -287,10 +315,12 @@ module latchr(
     input R,
     output reg Q
 );
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @*
         if (R == 1'b1)
             Q <= 1'b0;
@@ -307,10 +337,13 @@ module latchnr(
     input R,
     output reg Q
 );
+
+`ifndef VCS_MODE
 parameter INIT_VALUE = 1'b0;
 initial begin
     Q = INIT_VALUE;
 end
+`endif
     always @*
         if (R == 1'b1)
             Q <= 1'b0;
