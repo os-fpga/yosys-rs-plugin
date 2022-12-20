@@ -66,7 +66,8 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS2)/sram1024x18.v \
 				  $(GENESIS2)/ufifo_ctl.v \
 				  $(GENESIS2)/cell_sim_blackbox.v \
-				  sim_models.v 
+				  sim_models.v
+				  
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
 		  src/rs-dsp-macc.cc \
@@ -87,6 +88,7 @@ simulation_model = src/fv/src/sim_par.cc
 execute_Sim_parse:
 	g++  -lstdc++fs -std=c++17  $(simulation_model)  -o sim_par 
 	./sim_par
+
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \

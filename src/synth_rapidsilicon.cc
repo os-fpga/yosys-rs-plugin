@@ -57,7 +57,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 81
+#define VERSION_PATCH 99
 
 enum Strategy {
     AREA,
@@ -249,7 +249,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
     Technologies tech; 
     string blif_file; 
     string verilog_file;
-    string finl_stg;
     string vhdl_file;
     Strategy goal;
     Encoding fsm_encoding;
@@ -275,7 +274,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
     std::string dir_name;
-    // int test_fv_header;
+
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -986,8 +985,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
-            if (cec)
-                run("write_verilog -noattr -nohex after_flatten.v");
             if (keep_tribuf)
                 run("tribuf -logic");
             else
@@ -1389,10 +1386,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_clean -purge");
         }
 
-        if (fv){
-            run("write_verilog -noattr -nohex post_synthesis.v");
-        }
-
         if (check_label("blif")) {
             if (!blif_file.empty()) {
                 run(stringf("write_blif %s", blif_file.c_str()));
@@ -1410,7 +1403,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_vhdl " + vhdl_file);
             }
         }
-	if (fv){
+        
+        if (fv){
+            run("write_verilog -noattr -nohex post_synthesis.v");
+        }
+
+        if (fv){
             struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
             fv_param(fvarg, "", "post_synthesis");
             pthread_t fv_t; 

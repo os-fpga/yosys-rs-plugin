@@ -139,13 +139,13 @@ void gen_report(map<string, tuple<string,string,string,string,string,string,int>
     int fvstats;
     bool misstat = false;
     for (auto const& key: fv_results){
-        if (get<2>(key.second) == "Verification Succeeded"){
+        if (get<2>(key.second) == "Verification Succeeded" && fvstats != 2 && fvstats != 3){
             fvstats = 1;
         }
         else if (get<2>(key.second) == "Verification Failed"){
-            fvstats = 2;
+            fvstats = 2; 
         }
-        else if (get<2>(key.second) == "Verification Inconclusive" && fvstats == 2){
+        else if (get<2>(key.second) == "Verification Inconclusive" && fvstats == 1){
             fvstats = 3;
         }
         else{

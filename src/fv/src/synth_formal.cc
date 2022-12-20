@@ -121,6 +121,8 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
     }
     
     ofstream pipe_out;
+    pipe_out.open(stage+".log", ios::out);
+    pipe_out.close(); 
     pipe_out.open(stage+".log", ios::app);
     pipe_out<<result<<endl;
     string fv_status;
@@ -168,7 +170,8 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
 
     stage_status.insert({stage, ""});
     auto itr = stage_status.find(stage);
-
+    pipe_out.open(stage+"_"+TCL_TOOL+".log", ios::out);
+    pipe_out.close();
     pipe_out.open(stage+"_"+TCL_TOOL+".log", ios::app);
 
     string command  = "fm_shell -f "+cmd;
@@ -494,7 +497,7 @@ void mapping(std::ofstream& fv_script, bool extra_map){
     }
 }
 
-void compare(std::ofstream& fv_script,struct hdl_args hdlarg){
+void compare(std::ofstream& fv_script,struct hdl_args hdlarg,std::string *out_path_rs){
 
     if (TCL_TOOL=="formality"){
         fv_script<<"\nverify\nexit\n"; 
@@ -503,14 +506,18 @@ void compare(std::ofstream& fv_script,struct hdl_args hdlarg){
         fv_script<<"set_limit -command_real_time 3600\n compare\n"; 
         fv_script<<"\n\nsave_result_file "<<hdlarg.top<<"_"<<hdlarg.stage2<<"_results.log\nexit -force";
     }
- 
+    
+    if( remove( (*out_path_rs+hdlarg.top+"_"+hdlarg.stage2+"_results.log").c_str() ) != 0 )
+    std::cout<<"Error deleting onespin result file"<<endl;
 }
 
-void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path){
+void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path ,string *w_dir_){
     std::ofstream fv_script;
     cout<<"TCL Path: "<<*tclout_path<<endl;
     struct fm_setting fm_set;
     fm_set.name_matching = true;
+    fv_script.open(*tclout_path,ios::out);
+    fv_script.close(); // clear the already written data
     fv_script.open(*tclout_path,ios::app);
     tool_settings(fv_script);
     hdl_proccessing(fv_script,hdlarg);
@@ -522,7 +529,7 @@ void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path){
         compile(fv_script);
     }
     mapping(fv_script, false);
-    compare(fv_script,hdlarg);
+    compare(fv_script,hdlarg,w_dir_);
     fv_script.close();
 }
 
@@ -539,7 +546,7 @@ string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string key_stag
         fv_stages.push_back(stage);
         TCL_TOOL = "onespin";
         tclout_path_onespin = synth_dir_+stage+"_onespin.tcl";
-        gen_tcl(hdlarg, &tclout_path_onespin);
+        gen_tcl(hdlarg, &tclout_path_onespin,&synth_dir_);
         result = onespin_exe(tclout_path_onespin, stage, onespin_lic_fail,time_spent);
         _fv_tool_ ="Onespin";
 
@@ -559,7 +566,7 @@ string exec_pipe(struct hdl_args hdlarg,string tool,string stage,string key_stag
     if (tool=="formality" || (stage_status[stage] == "lic_check_fail" && tool == "both")){
         TCL_TOOL = "formality";
         tclout_path_fm = synth_dir_+stage+"_fm.tcl";
-        gen_tcl(hdlarg, &tclout_path_fm);
+        gen_tcl(hdlarg, &tclout_path_fm,&synth_dir_);
 
         result = fm_exe(tclout_path_fm,  stage, fm_lic_fail,time_spent);
         _fv_tool_ = "Formality";
