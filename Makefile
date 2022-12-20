@@ -65,8 +65,8 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS2)/TDP18K_FIFO.v \
 				  $(GENESIS2)/sram1024x18.v \
 				  $(GENESIS2)/ufifo_ctl.v \
-				  $(GENESIS2)/cell_sim_blackbox.v
-
+				  $(GENESIS2)/cell_sim_blackbox.v \
+				  sim_models.v 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
 		  src/rs-dsp-macc.cc \
@@ -77,6 +77,16 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-bram-asymmetric.cc \
 		  src/rs-pack-dsp-regs.cc
 
+fv_srcs = src/fv/src/synth_formal.cc \
+		  src/fv/src/test_report.cc
+
+fv_deps = src/fv/src//synth_formal.h \
+		  src/fv/src/report_fv.h
+
+simulation_model = src/fv/src/sim_par.cc
+execute_Sim_parse:
+	g++  -lstdc++fs -std=c++17  $(simulation_model)  -o sim_par 
+	./sim_par
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \
@@ -101,6 +111,8 @@ pmgen.py:
 
 OBJS := $(SOURCES:cc=o)
 
+fv_srcs_obj := $(fv_srcs:cc=o)
+
 all: $(NAME).so
 
 $(OBJS): %.o: %.cc $(DEPS)
@@ -109,6 +121,15 @@ $(OBJS): %.o: %.cc $(DEPS)
 $(NAME).so: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
 
+# FV flow
+FVFLAG 	+= -std=c++17
+$(fv_srcs_obj): %.o: %.cc $(fv_deps)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) $(FVFLAG) -c -o $@ $(filter %.cc, $^)
+
+$(NAME).so: $(fv_srcs_obj)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FVFLAG) -shared -o $@ $^ $(LDLIBS)
+
+
 install_plugin: $(NAME).so
 	install -D $< $(PLUGINS_DIR)/$<
 
@@ -116,7 +137,7 @@ install_modules: $(VERILOG_MODULES)
 	$(foreach f,$^,install -D $(f) $(DATA_DIR)/rapidsilicon/$(f);)
 
 .PHONY: install
-install: install_plugin install_modules
+install: execute_Sim_parse install_plugin install_modules
 
 valgrind:
 	$(MAKE) -C tests valgrind YOSYS_PATH=$(YOSYS_PATH)
@@ -125,7 +146,7 @@ test:
 	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
-	rm -rf src/*.d src/*.o *.so pmgen*
+	rm -rf src/*.d src/*.o *.so pmgen* src/fv/src/*.o src/fv/src/*.d
 	$(MAKE) -C tests clean_tests YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:
