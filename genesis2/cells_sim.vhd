@@ -12,16 +12,26 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dff is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+              INIT_VALUE : std_logic := '0';
+              VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dff;
 
 architecture arch of dff is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='1') then
@@ -38,16 +48,26 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffn is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port( 
       c: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffn;
 
 architecture arch of dffn is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='0') then
@@ -65,17 +85,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity sdff is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
-   );
+      q: out std_logic
+  );
 end sdff;
 
 architecture arch of sdff is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='1') then
@@ -96,17 +126,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity sdffn is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false    
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end sdffn;
 
 architecture arch of sdffn is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='0') then
@@ -128,17 +168,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffr is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffr;
 
 architecture arch of dffr is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c,r)
    begin
       if (r='1') then
@@ -157,17 +207,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffnr is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffnr;
 
 architecture arch of dffnr is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c,r)
    begin
       if (r='1') then
@@ -186,17 +246,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffe is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       e: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffe;
 
 architecture arch of dffe is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='1') then
@@ -215,17 +285,27 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffne is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       e: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffne;
 
 architecture arch of dffne is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='0') then
@@ -246,18 +326,28 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity sdffre is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       e: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end sdffre;
 
 architecture arch of sdffre is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='1') then
@@ -280,18 +370,28 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity sdffnre is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       e: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end sdffnre;
 
 architecture arch of sdffnre is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c)
    begin
       if (c'event and c='0') then
@@ -314,18 +414,28 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffre is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       e: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffre;
 
 architecture arch of dffre is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c, r)
    begin
       if (r='1') then
@@ -348,18 +458,28 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity dffnre is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port(
       c: in std_logic;
       r: in std_logic;
       e: in std_logic;
       d: in std_logic;
-      q: out std_logic := INIT_VALUE
+      q: out std_logic
    );
 end dffnre;
 
 architecture arch of dffnre is
 begin
+   process_init : process
+   begin
+   if (not VCS_MODE) then
+           q <= INIT_VALUE;
+   end if;
+   wait;
+   end process;
    process(c, r)
    begin
       if (r='1') then
@@ -380,9 +500,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity latch is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port (
-     q : out std_logic := INIT_VALUE ;
+     q : out std_logic;
      g : in std_logic;
      d : in std_logic
    );
@@ -390,6 +513,13 @@ end latch;
 
 architecture arch of latch is
 begin
+  process_init : process
+  begin
+  if (not VCS_MODE) then
+          q <= INIT_VALUE;
+  end if;
+  wait;
+  end process;
   processing_1 : process(g, d)
   begin
     if (g='1') then
@@ -406,9 +536,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity latchn is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port (
-    q : out std_logic := INIT_VALUE ;
+    q : out std_logic; 
     g : in std_logic;
     d : in std_logic
   );
@@ -416,6 +549,13 @@ end latchn;
 
 architecture arch of latchn is
 begin
+  process_init : process
+  begin
+  if (not VCS_MODE) then
+          q <= INIT_VALUE;
+  end if;
+  wait;
+  end process;
   processing_1 : process(g, d)
   begin
     if (g='0') then
@@ -432,9 +572,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity latchr is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean :=false
+           );
    port (
-    q : out std_logic := INIT_VALUE ;
+    q : out std_logic;
     g : in std_logic;
     r : in std_logic;
     d : in std_logic
@@ -443,6 +586,13 @@ end latchr;
 
 architecture arch of latchr is
 begin
+  process_init : process
+  begin
+  if (not VCS_MODE) then
+          q <= INIT_VALUE;
+  end if;
+  wait;
+  end process;
   processing_1 : process(r, g, d)
   begin
     if (r='1') then
@@ -461,9 +611,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity latchnr is
-   generic (INIT_VALUE : std_logic := '0');
+   generic (
+               INIT_VALUE : std_logic := '0';
+               VCS_MODE : boolean := false
+           );
    port (
-    q : out std_logic := INIT_VALUE ;
+    q : out std_logic;
     g : in std_logic;
     r : in std_logic;
     d : in std_logic
@@ -472,6 +625,13 @@ end latchnr;
 
 architecture arch of latchnr is
 begin
+  process_init : process
+  begin
+  if (not VCS_MODE) then
+          q <= INIT_VALUE;
+  end if;
+  wait;
+  end process;
   processing_1 : process(r, g, d)
   begin
     if (r='1') then

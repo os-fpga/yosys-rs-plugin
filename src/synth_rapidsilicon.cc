@@ -54,7 +54,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 98
+#define VERSION_PATCH 100
 
 enum Strategy {
     AREA,
@@ -1186,7 +1186,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        run("shregmap -minlen 8 -maxlen 20");
+                        run("shregmap -minlen 8 -maxlen 20 -clkpol pos");
                         if (sdffr) {
                             run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
