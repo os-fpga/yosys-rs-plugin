@@ -92,6 +92,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity latchsre is
+  generic(VCS_MODE : boolean := false);
   port (
     Q : out std_logic;
     S : in std_logic;
@@ -103,12 +104,15 @@ entity latchsre is
 end latchsre;
 
 architecture RTL of latchsre is
-  constant INIT : std_logic := '0';
+        constant INIT : std_logic := '0';
 begin
 
   processing_0 : process
   begin
-    Q <= INIT;
+    if (not VCS_MODE) then
+     Q <= INIT;
+    end if;
+    wait;
   end process;
 
   processing_1 : process
@@ -146,7 +150,7 @@ architecture behave of lut is
   signal S : std_logic_vector(Y_WIDTH-1 downto 0);
 
 begin
- 
+
   process (A, B) is
   begin
     -- Right Shift
