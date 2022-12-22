@@ -17,6 +17,7 @@
 #include <signal.h>
 #include <mutex>
 #include "synth_formal.h"
+#include "../../synth_simulation/TBG.h"
 
 #include <filesystem>
 
@@ -329,7 +330,7 @@ void get_rtl(fs::path ys_script, vector<string> &rtl_files){
                         regex_search(word, match, str2);
                         if ((word !="verific") & !(match[1].str().length()>0) & (word != "\\"))  {
                            rtl_files.push_back(word);
-                           cout<<"FILES: "<<word<<endl;
+                        //    cout<<"FILES: "<<word<<endl;
                            if (*line.rbegin() == comp){
                               eseq=true;
                               break;
@@ -647,8 +648,20 @@ void *run_fv(void* flow) {
     // fv_results_tp.clear();
     fv_results.insert(make_pair(("stage"+to_string(verif_stage)),fv_results_tp));
     mtx.unlock();
+    // cout<<*fvargs->fv<<endl;
+    if (*fvargs->fv == "formal"){
+        string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,"stage"+to_string(verif_stage),synth_dir_);
+    }
+    else if (*fvargs->fv == "simulation"){
+        string sim_dir = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/test/";
+        string clock_ports="wb_clk_i"; // clocks are provided separated by commas
 
-    string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,"stage"+to_string(verif_stage),synth_dir_);
+        string reset_port= "arst_i,wb_rst_i";
+        string reset_value= "0,0"; // active low/high
+        cout<<"Befor generating testbench for synth_rs"<<endl;
+        wite_tb(sim_dir,clock_ports,reset_port,reset_value);
+        // cout<<"Generating testbench for synth_rs"<<endl;
+    }
     pthread_exit(NULL);
     return NULL;
 }

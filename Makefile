@@ -78,13 +78,15 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-bram-asymmetric.cc \
 		  src/rs-pack-dsp-regs.cc
 
-fv_srcs = src/fv/src/synth_formal.cc \
-		  src/fv/src/test_report.cc
+fv_srcs = src/synth_validation/synth_formal/src/synth_formal.cc \
+		  src/synth_validation/synth_formal/src/test_report.cc \
+		  src/synth_validation/synth_simulation/TBG.cc
 
-fv_deps = src/fv/src//synth_formal.h \
-		  src/fv/src/report_fv.h
+fv_deps = src/synth_validation/synth_formal/src//synth_formal.h \
+		  src/synth_validation/synth_formal/src/report_fv.h \
+		  src/synth_validation/synth_simulation/TBG.h
 
-simulation_model = src/fv/src/sim_par.cc
+simulation_model = src/synth_validation/synth_formal/src/sim_par.cc
 execute_Sim_parse:
 	g++  -lstdc++fs -std=c++17  $(simulation_model)  -o sim_par 
 	./sim_par
@@ -129,7 +131,7 @@ $(fv_srcs_obj): %.o: %.cc $(fv_deps)
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) $(FVFLAG) -c -o $@ $(filter %.cc, $^)
 
 $(NAME).so: $(fv_srcs_obj)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FVFLAG) -shared -o $@ $^ $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FVFLAG) -shared -o $@ $^ $(LDLIBS) 
 
 
 install_plugin: $(NAME).so
@@ -148,7 +150,7 @@ test:
 	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
-	rm -rf src/*.d src/*.o *.so pmgen* src/fv/src/*.o src/fv/src/*.d
+	rm -rf src/*.d src/*.o *.so pmgen* src/synth_validation/synth_formal/src/*.o src/synth_validation/synth_formal/src/*.d src/synth_validation/synth_simulation/*.o src/synth_validation/synth_simulation/*.d
 	$(MAKE) -C tests clean_tests YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:

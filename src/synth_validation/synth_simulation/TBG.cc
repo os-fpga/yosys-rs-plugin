@@ -1,14 +1,4 @@
-#include "json/json.h"
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <string>
-#include <regex>
-#include <stdexcept>
-#include <stdio.h>
-#include <algorithm>
-using namespace std;
-
+#include "TBG.h"
 //Parsing Port information from port_info.json file
 
 vector<string> _inputs_;
@@ -16,24 +6,24 @@ vector<string> _outputs_;
 
 string  tb_body(string port_info,vector<string> &inputs_,  vector<string> &outputs_){
 
-   Json::Value port;
-   ifstream port_file(port_info, ifstream::binary);
-   port_file >> port;
+//    Json::Value port;
+   ifstream port_file(port_info);
+   json port = json::parse(port_file);
    int n=0;
 
    string name_port;
    string tb_body = "";
-   string port_name = "module rs_tb_"+port[0]["topModule"].asString()+";\n\n";
-   string instance_ref = "\t"+port[0]["topModule"].asString()+" golden (\n";
-   string instance_imp = "\t"+port[0]["topModule"].asString()+"_post_synth revised (\n";
+   string port_name = "module rs_tb_"+port[0]["topModule"].get<string>()+";\n\n";
+   string instance_ref = "\t"+port[0]["topModule"].get<string>()+" golden (\n";
+   string instance_imp = "\t"+port[0]["topModule"].get<string>()+"_post_synth revised (\n";
 
    
    for (auto x: port[0]["ports"]){
       n++;
-      name_port = x["name"].asString();
+      name_port = x["name"].get<string>();
       if (x["direction"] == "Input"){
-         string inter = to_string(x["range"]["msb"].asInt());
-         port_name = port_name+"\treg ["+ to_string(x["range"]["msb"].asInt())+":"+to_string(x["range"]["lsb"].asInt())+"] "+ name_port+";\n";
+         string inter = to_string(x["range"]["msb"].get<int>());
+         port_name = port_name+"\treg ["+ to_string(x["range"]["msb"].get<int>())+":"+to_string(x["range"]["lsb"].get<int>())+"] "+ name_port+";\n";
          instance_ref = instance_ref + "\t\t."+name_port+"("+name_port+"),\n";
          instance_imp = instance_imp + "\t\t."+name_port+"("+name_port+"),\n";
          inputs_.push_back(name_port);
@@ -41,7 +31,7 @@ string  tb_body(string port_info,vector<string> &inputs_,  vector<string> &outpu
       }
       else if (x["direction"] == "Output"){
          name_port = name_port;
-         port_name = port_name+"\twire ["+ to_string(x["range"]["msb"].asInt())+":"+to_string(x["range"]["lsb"].asInt())+"] "+ name_port+", "+name_port+"_net;\n";
+         port_name = port_name+"\twire ["+ to_string(x["range"]["msb"].get<int>())+":"+to_string(x["range"]["lsb"].get<int>())+"] "+ name_port+", "+name_port+"_net;\n";
          instance_ref = instance_ref + "\t\t."+name_port+"("+name_port+"),\n";
          instance_imp = instance_imp + "\t\t."+name_port+"("+name_port+"_net),\n";
          outputs_.push_back(name_port);
@@ -131,10 +121,8 @@ vector<string> print_rst_gen(std::ofstream& file, vector <string> inputs,string&
 
 //Parameter Initialization with 0
 string  ini_param(string port_info, vector<string> &clks_val, vector<string> &rst_val){
-   Json::Value ports;
-   ifstream port_inf(port_info, ifstream::binary);
-
-   port_inf >> ports;
+   ifstream port_file(port_info);
+   json ports = json::parse(port_file);
    int n=0;
    
    string nam_port;
@@ -147,10 +135,10 @@ string  ini_param(string port_info, vector<string> &clks_val, vector<string> &rs
 
    for (auto x: ports[0]["ports"]){
        n++;
-       nam_port = x["name"].asString();
+       nam_port = x["name"].get<string>();
         if (x["direction"] == "Input"){
             if(!(count(clks_val.begin(), clks_val.end(),nam_port)) && !(count(rst_val.begin(), rst_val.end(),nam_port))){
-                int inte = (x["range"]["msb"].asInt())+1;
+                int inte = (x["range"]["msb"].get<int>())+1;
                 ini_nam = "\tinitial begin \n ";
                 port_nam = port_nam + nam_port + "="+to_string(inte)+"'h0;\n\t\t";
                 comparator = "display_stimulus();\n\t\t";
@@ -171,10 +159,9 @@ string  ini_param(string port_info, vector<string> &clks_val, vector<string> &rs
 ////Random Parameter Initialization 
 string  ini_rand(string port_info, vector<string> &clks_val, vector<string> &rst_val){
 
-    Json::Value ports;
-    ifstream port_inf(port_info, ifstream::binary);
+    ifstream port_file(port_info);
+    json ports = json::parse(port_file);
 
-    port_inf >> ports;
     int n=0;
 
     string nam_port;
@@ -187,9 +174,9 @@ string  ini_rand(string port_info, vector<string> &clks_val, vector<string> &rst
   
     for (auto x: ports[0]["ports"]){
         n++;
-        nam_port = x["name"].asString();
+        nam_port = x["name"].get<string>();
         if (x["direction"] == "Input"){
-        // string inte = to_string((x["range"]["msb"].asInt())+1);
+        // string inte = to_string((x["range"]["msb"].get<int>())+1);
             if(!(count(clks_val.begin(), clks_val.end(),nam_port)) && !(count(rst_val.begin(), rst_val.end(),nam_port))){
                 ini_nam = "\tinitial begin \n\t\trepeat(20) begin \n\t#20 ";
                 ini_random = ini_random + nam_port + " = $random;\n\t\t\t";
@@ -252,15 +239,15 @@ void wite_tb(string& synth_dir,string& clock_ports,string& reset_port,string& re
     ifstream RTL, post_synth, port_info;
     ofstream tbgen;
     string port_inf = synth_dir+"/port_info.json";
-    port_info.open(synth_dir+"/port_info.json");
+    port_info.open(port_inf);
     tbgen.open(synth_dir+"/tb.sv", ios::out);
 
     module_head(tbgen,port_inf);
     vector<string> clks_val = print_clk_gen(tbgen,clock_ports);
     vector<string> rst_val = print_rst_gen(tbgen,_inputs_,reset_port,reset_value);
-    string rs_ini = ini_param("port_info.json",clks_val,rst_val);
+    string rs_ini = ini_param(port_inf,clks_val,rst_val);
     tbgen << rs_ini <<endl;
-    string rs_rand = ini_rand("port_info.json",clks_val,rst_val);
+    string rs_rand = ini_rand(port_inf,clks_val,rst_val);
     tbgen << rs_rand <<endl;
     display(tbgen, _inputs_);
     compare(tbgen, _outputs_);
@@ -274,13 +261,15 @@ void wite_tb(string& synth_dir,string& clock_ports,string& reset_port,string& re
 
 }
 
-int main(){
-    string sim_dir = "/nfs_scratch/scratch/FV/ayyaz/project_sim/test/clkmgr/";
-    string clock_ports="clk_i,clk_main_i,clk_fixed_i,clk_usb_48mhz_i"; // clocks are provided separated by commas
-    string reset_port= "rst_ni,rst_main_ni,rst_fixed_ni,rst_usb_48mhz_ni";
-    string reset_value= "0"; // active low/high
-    wite_tb(sim_dir,clock_ports,reset_port,reset_value);
+// int main(){
+//     string sim_dir = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/test/";
+//     string clock_ports="wb_clk_i"; // clocks are provided separated by commas
 
-    return 0;
-}
+//     string reset_port= "arst_i,wb_rst_i";
+//     string reset_value= "0,0"; // active low/high
+//     cout<<"Befor generating testbench for synth_rs"<<endl;
+//     wite_tb(sim_dir,clock_ports,reset_port,reset_value);
+
+//     return 0;
+// }
  

@@ -13,8 +13,8 @@
 #include <fstream>
 #include <regex>
 #include <thread>
-#include "fv/src/synth_formal.h"
-#include "fv/src/report_fv.h"
+#include "synth_validation/synth_formal/src/synth_formal.h"
+#include "synth_validation/synth_formal/src/report_fv.h"
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
@@ -245,10 +245,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        A Pre-verified netlist which can be used as reference design in formal verification run, this option can be used with -fv\n");
         log("        Specify the path for preverified post synthesis netlist from Raptor\n");
         log("\n");
-        log("    -sim_clock_ports <clk1,clk2,clk3,...>\n");
+        log("    -sim_clock_ports <clk1,clk2,clk3,...clkn>\n");
         log("        Specify the clock ports separated by comma and -sim_clock_ports is called with fv_sim\n");
         log("\n");
-        log("    -sim_reset_ports <rst1,rst2,rst3,...>\n");
+        log("    -sim_reset_ports <rst1,rst2,rst3,...rstn>\n");
         log("        Specify the reset ports separated by comma and -sim_reset_ports is called with fv_sim\n");
         log("\n");
         log("    -sim_reset_state <1,0>\n");
@@ -545,7 +545,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     "Please provide '-de' option to enable DE.");
         }
 
-        if (fv && !(fv_tool == "onespin" || fv_tool == "formality" || fv_tool == "both")) {
+        if (fv == "formal" && !(fv_tool == "onespin" || fv_tool == "formality" || fv_tool == "both")) {
             log_cmd_error("This version of synth_rs required formal verification tool.\n"
                     "Please provide '-fv_tool <tool>' option to enable FV.\n");
         }
@@ -914,7 +914,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
                     }
 
-                    if (cec || fv)
+                    if (cec || fv == "formal")
                         run("write_verilog -noattr -nohex after_bram_map.v");
                 break;
             }
@@ -971,6 +971,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         fvarg->ref_net = &golden_netlist;
         fvarg->fv_timeout = &fv_timout_limit;
         fvarg->fv_tool = &fv_tool;
+        fvarg->fv = &fv;
         if (!(stage1.empty()))
             stages.push_back(stage1);
         stages.push_back(stage2);
@@ -1108,7 +1109,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("rs-pack-dsp-regs");
                         run("rs_dsp_io_regs");
 
-                        if (cec || fv)
+                        if (cec || fv == "formal")
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
 
                         break;
@@ -1117,7 +1118,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         break;
                     }
                 }
-                if (fv){
+                if (fv == "formal"){
                     struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
                     fv_param(fvarg, "RTL", "after_dsp_map5");
                     pthread_t fv_t; 
@@ -1155,7 +1156,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (!nobram){
             mapBrams();
-            if (fv){
+            if (fv == "formal"){
                 struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
                 if (nodsp && !nobram)
                     fv_param(fvarg, "RTL", "after_bram_map");
@@ -1236,10 +1237,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("opt_expr -full");
             }
 
-            if (cec||fv)
+            if (cec||fv == "formal")
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
 
-            if (fv){
+            if (fv == "formal"){
                 struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
                 if (nodsp && nobram)
                     fv_param(fvarg, "RTL", "after_opt-fast-full");
@@ -1299,9 +1300,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                 simplify();
 
-                if (cec || fv)
+                if (cec || fv == "formal")
                     run("write_verilog -noattr -nohex after_simplify.v");
-                if (fv){
+                if (fv == "formal"){
                     struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
                     fv_param(fvarg, "", "after_simplify");
                     pthread_t fv_t; 
@@ -1435,15 +1436,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
         }
         
-        if (fv){
+        if (fv == "formal" || fv == "simulation"){
             run("write_verilog -noattr -nohex post_synthesis.v");
-        }
-
-        if (fv){
             struct fv_args *fvarg =(struct fv_args*)malloc(sizeof(struct fv_args));
-            fv_param(fvarg, "", "post_synthesis");
+            if (fv == "simulation"){
+                fv_param(fvarg, "RTL", "post_synthesis");
+            }
+            else {
+                fv_param(fvarg, "", "post_synthesis");
+            }
             pthread_t fv_t; 
             FVTs.push_back(fv_t);
+            cout<<"Launch FV simulation thread"<<endl;
             std::this_thread::sleep_for(std::chrono::seconds(2));
             if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
                 std::cout<<"Error creating thread"<<std::endl;
@@ -1451,9 +1455,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         for (auto fvt: FVTs){
-            pthread_join(fvt,NULL);
+                pthread_join(fvt,NULL);
         }
-        gen_report(fv_results);
+        // gen_report(fv_results);
+        
     }
 
 } SynthRapidSiliconPass;
