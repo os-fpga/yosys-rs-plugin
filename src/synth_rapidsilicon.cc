@@ -223,9 +223,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - late\n");
         log("        By default 'early' is used.\n");
         log("\n");
-        log("    -fv\n");
-        log("        Run logic equivalence check to verify the functionality of post synthesis netlist\n");
-        log("        By default fv is not called with synthesis\n");
+        log("    -fv <formal,simulation>\n");
+        log("        Supported values:\n");
+        log("        - formal : Run logic equivalence check to verify the functionality of post synthesis netlist\n");
+        log("                   By default fv is not called with synthesis\n");
+        log("        - simulation : Generates a general testbench to verify the functionality of post synthesis netlist (from raptor) w.r.t RTL, and\n");
+        log("                   By default fv is not called with synthesis\n");
         log("\n");
         log("    -fv_tool <tool_name>\n");
         log("        Supported values:\n");
@@ -241,6 +244,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -golden_netlist <post_synthesis_netlist_path>\n");
         log("        A Pre-verified netlist which can be used as reference design in formal verification run, this option can be used with -fv\n");
         log("        Specify the path for preverified post synthesis netlist from Raptor\n");
+        log("\n");
+        log("    -sim_clock_ports <clk1,clk2,clk3,...>\n");
+        log("        Specify the clock ports separated by comma and -sim_clock_ports is called with fv_sim\n");
+        log("\n");
+        log("    -sim_reset_ports <rst1,rst2,rst3,...>\n");
+        log("        Specify the reset ports separated by comma and -sim_reset_ports is called with fv_sim\n");
+        log("\n");
+        log("    -sim_reset_state <1,0>\n");
+        log("        Specify the reset is either active high/low for the RTL, incase of active high reset provide 1 and incase of active low reset provide 0 \n");
+        log("        -sim_reset_active is called with functional_sim\n");
+        log("\n");
         log("\n");
         log("\n");
     }
@@ -265,7 +279,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool keep_tribuf;
     bool nolibmap;
     int de_max_threads;
-    bool fv;
+    string fv;
     string fv_tool;
     string golden_netlist;
     int fv_timout_limit;
@@ -274,6 +288,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
     std::string dir_name;
+    string sim_clock_ports;
+    string sim_reset_ports;
+    string sim_reset_state;
 
     void clear_flags() override
     {
@@ -300,10 +317,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
-        fv = false;
+        fv = "";
         fv_timout_limit = 4;
         fv_tool="";
         golden_netlist="";
+        sim_clock_ports="";
+        sim_reset_ports="";
+        sim_reset_state="";
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -420,8 +440,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 clke_strategy_str = args[++argidx];
                 continue;
             }
-            if (args[argidx] == "-fv") {
-                fv = true;
+            if (args[argidx] == "-fv" && argidx + 1 < args.size()) {
+                fv = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-fv_tool" && argidx + 1 < args.size()) {
@@ -436,7 +456,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 golden_netlist = args[++argidx];
                 continue;
             }
-
+            if (args[argidx] == "-sim_clock_ports" && argidx + 1 < args.size()) {
+                sim_clock_ports = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-sim_reset_ports" && argidx + 1 < args.size()) {
+                sim_reset_ports = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-sim_reset_state" && argidx + 1 < args.size()) {
+                sim_reset_state = args[++argidx];
+                continue;
+            }
             break;
         }
         extra_args(args, argidx, design);
