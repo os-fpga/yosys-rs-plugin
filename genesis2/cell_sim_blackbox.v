@@ -1,7 +1,5 @@
 //
 // Copyright (C) 2022 RapidSilicon
-//Tuesday, November 15, 2022
-`timescale  1 ps / 1 ps
 // genesis2 DFFs and LATChes
 //
 //------------------------------------------------------------------------------
