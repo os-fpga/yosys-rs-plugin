@@ -1452,12 +1452,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (pthread_create(&FVTs.back(),NULL, run_fv,(void *)fvarg)!=0){
                 std::cout<<"Error creating thread"<<std::endl;
             };
+            for (auto fvt: FVTs){
+                pthread_join(fvt,NULL);
+            }
+            if (fv == "formal")
+                gen_report(fv_results);
         }
 
-        for (auto fvt: FVTs){
-                pthread_join(fvt,NULL);
-        }
-        // gen_report(fv_results);
+        
         
     }
 
