@@ -76,13 +76,13 @@ struct RsBramSplitPass : public Pass {
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPortsNew_0 = {
       std::make_pair("PORT_A_ADDR", "A1ADDR"), std::make_pair("PORT_A_RD_DATA", "A1DATA"), std::make_pair("PORT_A_RD_EN", "A1EN"),     std::make_pair("PORT_B_ADDR", "B1ADDR"),
       std::make_pair("PORT_B_WR_DATA", "B1DATA"), std::make_pair("PORT_B_WR_EN", "B1EN"),     std::make_pair("PORT_C_ADDR", "C1ADDR"), std::make_pair("PORT_C_RD_DATA", "C1DATA"),
-      std::make_pair("PORT_C_RD_EN", "C1EN"),     std::make_pair("PORT_A_CLK", "CLK1"),     std::make_pair("PORT_B_CLK", "CLK2"),     std::make_pair("PORT_D_ADDR", "D1ADDR"),
+      std::make_pair("PORT_C_RD_EN", "C1EN"),     std::make_pair("PORT_A_CLK", "CLK1"),     std::make_pair("PORT_C_CLK", "CLK2"),     std::make_pair("PORT_D_ADDR", "D1ADDR"),
       std::make_pair("PORT_D_WR_DATA", "D1DATA"), std::make_pair("PORT_D_WR_EN", "D1EN")};
     // TDP BRAM 1x18 data ports for subcell #2 and how to map them to ports of the target TDP BRAM 2x18 cell for new mapping
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPortsNew_1 = {
       std::make_pair("PORT_A_ADDR", "E1ADDR"), std::make_pair("PORT_A_RD_DATA", "E1DATA"), std::make_pair("PORT_A_RD_EN", "E1EN"),     std::make_pair("PORT_B_ADDR", "F1ADDR"),
       std::make_pair("PORT_B_WR_DATA", "F1DATA"), std::make_pair("PORT_B_WR_EN", "F1EN"),     std::make_pair("PORT_C_ADDR", "G1ADDR"), std::make_pair("PORT_C_RD_DATA", "G1DATA"),
-      std::make_pair("PORT_C_RD_EN", "G1EN"),     std::make_pair("PORT_C_CLK", "CLK3"),     std::make_pair("PORT_D_CLK", "CLK4"),     std::make_pair("PORT_D_ADDR", "H1ADDR"),
+      std::make_pair("PORT_C_RD_EN", "G1EN"),     std::make_pair("PORT_A_CLK", "CLK3"),     std::make_pair("PORT_C_CLK", "CLK4"),     std::make_pair("PORT_D_ADDR", "H1ADDR"),
       std::make_pair("PORT_D_WR_DATA", "H1DATA"), std::make_pair("PORT_D_WR_EN", "H1EN")};
     // Source BRAM TDP cell type (1x18K)
     const std::string m_Bram1x18TDPType = "$__RS_FACTOR_BRAM18_TDP";
