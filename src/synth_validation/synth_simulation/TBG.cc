@@ -92,7 +92,7 @@ vector<string> print_clk_gen(std::ofstream& clock_gen,string& clock_ports){
 }
 
 // Reset Initialization
-vector<string> print_rst_gen(std::ofstream& file, vector <string> inputs,string& reset_ports,string& reset_value){
+vector<string> print_rst_gen(std::ofstream& file,string& reset_ports,string& reset_value){
 
     string delim=",";
     vector<string> resets;
@@ -110,9 +110,9 @@ vector<string> print_rst_gen(std::ofstream& file, vector <string> inputs,string&
         }
        else {
         if (reset_value=="1")
-        file << "\n\n\tinitial begin\n\t\t" + rst + "= 1'b1; \n\t\t#20 " + rst + " = 1'b0; \n\tend\n\n" <<endl;
+        file << "\n\n\tinitial begin\n\t\t" + rst + "= 1'b1; \n\t\t#20 " + rst + " = 1'b0;\n\t\tdisplay_stimulus();\n\t\tcompare(); \n\tend\n\n" <<endl;
         else if (reset_value=="0")
-        file << "\n\n\tinitial begin\n\t\t" + rst + "= 1'b0; \n\t\t#20 " + rst + " = 1'b1; \n\tend\n\n" <<endl;
+        file << "\n\n\tinitial begin\n\t\t" + rst + "= 1'b0; \n\t\t#20 " + rst + " = 1'b1;\n\t\tdisplay_stimulus();\n\t\tcompare(); \n\tend\n\n" <<endl;
         }
     }
     return resets;
@@ -139,8 +139,8 @@ string  ini_param(string port_info, vector<string> &clks_val, vector<string> &rs
         if (x["direction"] == "Input"){
             if(!(count(clks_val.begin(), clks_val.end(),nam_port)) && !(count(rst_val.begin(), rst_val.end(),nam_port))){
                 int inte = (x["range"]["msb"].get<int>())+1;
-                ini_nam = "\tinitial begin \n ";
-                port_nam = port_nam + nam_port + "="+to_string(inte)+"'h0;\n\t\t";
+                ini_nam = "\n\tinitial begin \n ";
+                port_nam = port_nam + nam_port + "="+to_string(inte)+"'d0;\n\t\t";
                 comparator = "display_stimulus();\n\t\t";
                 display_stim = "compare();\n";
                 end_nam = "\n\tend\n";
@@ -209,7 +209,7 @@ void compare(std::ofstream &compare_task, vector <string> _output_ports_){
 
 void display(std::ofstream &display_stimulus, vector <string> _input_ports_){
     display_stimulus << "\ttask display_stimulus();\n\t\t";
-    string disp_port = "$display($time, \"Test stimulus is: ";
+    string disp_port = "$display($time, \" Test stimulus is: ";
     string inp_port = "";
     for (auto port:_input_ports_){
         disp_port = disp_port + port + " = %0d" + " ";
@@ -232,23 +232,55 @@ void ending_module(std::ofstream &module_end)
   
 
 }
+void print_finish(std::ofstream& clock_gen,string& clock_ports){
+    string delim=",";
+    vector<string> clocks;
+    size_t pos;
+    while ((pos = clock_ports.find(",")) != std::string::npos)
+    {
+        clocks.push_back(clock_ports.substr(0, pos));
+        clock_ports.erase(0, pos + delim.length());
+        
+    }
+    clocks.push_back(clock_ports);
+    
+    for (auto &element:clocks){
+    if (element=="null"){
+        clock_gen << "\tinitial begin \n\t\t#1000 $finish; \n\tend" <<endl;
+        break;
+    }
+    else
+    {
+        clock_gen << "\tinitial begin \n\t\trepeat(500) @(posedge "+clocks.at(0)+"); $finish; \n\tend" <<endl;
+    }
+    }
 
+}
+void write_tb_cpp(string& synth_dir){
 
-void wite_tb(string& synth_dir,string& clock_ports,string& reset_port,string& reset_value){
+    ofstream tbcpp;
+    tbcpp.open(synth_dir+"/sim_dir/tb.cpp", ios::out);
+    tbcpp<<"#include  \""+synth_dir+"/obj_dir/Vtb.h\"\nint sc_main(int argc, char** argv){\n\tVerilated::commandArgs(argc,argv);\n\tVerilated::traceEverOn(true);";
+    tbcpp<<"\n\tVtb* top;\n\ttop = new Vtb(\"top\");\n\t\twhile (!Verilated::gotFinish())  {sc_start(1, SC_NS);}\n\treturn 0;\n}"<<endl; 
+    tbcpp.close();
+}
+
+void write_tb(string& synth_dir,string& clock_ports,string& reset_port,string& reset_value){
 
     ifstream RTL, post_synth, port_info;
     ofstream tbgen;
     string port_inf = synth_dir+"/port_info.json";
     port_info.open(port_inf);
-    tbgen.open(synth_dir+"/tb.sv", ios::out);
-
+    tbgen.open(synth_dir+"/sim_dir/tb.v", ios::out);
+    
     module_head(tbgen,port_inf);
     vector<string> clks_val = print_clk_gen(tbgen,clock_ports);
-    vector<string> rst_val = print_rst_gen(tbgen,_inputs_,reset_port,reset_value);
+    vector<string> rst_val = print_rst_gen(tbgen,reset_port,reset_value);
     string rs_ini = ini_param(port_inf,clks_val,rst_val);
     tbgen << rs_ini <<endl;
     string rs_rand = ini_rand(port_inf,clks_val,rst_val);
     tbgen << rs_rand <<endl;
+    print_finish(tbgen,clock_ports);
     display(tbgen, _inputs_);
     compare(tbgen, _outputs_);
     dump(tbgen);
@@ -258,18 +290,5 @@ void wite_tb(string& synth_dir,string& clock_ports,string& reset_port,string& re
     // post_synth.close();
     port_info.close();
     tbgen.close();
-
+    write_tb_cpp(synth_dir);
 }
-
-// int main(){
-//     string sim_dir = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/test/";
-//     string clock_ports="wb_clk_i"; // clocks are provided separated by commas
-
-//     string reset_port= "arst_i,wb_rst_i";
-//     string reset_value= "0,0"; // active low/high
-//     cout<<"Befor generating testbench for synth_rs"<<endl;
-//     wite_tb(sim_dir,clock_ports,reset_port,reset_value);
-
-//     return 0;
-// }
- 
