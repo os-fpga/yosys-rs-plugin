@@ -616,10 +616,16 @@ void *run_fv(void* flow) {
 
     fs::path ys_script=synth_dir_+"yosys.ys";
     struct hdl_args hdlarg;
-
+    string rtl_files;
+    string cells_sim;
     hdlarg.stage=*fvargs->stage1;
     hdlarg.stage2=*fvargs->stage2;
-    if (*fvargs->stage1=="RTL")get_rtl(ys_script,hdlarg.golden);
+    if (*fvargs->stage1=="RTL"){
+        get_rtl(ys_script,hdlarg.golden);
+        for (auto files: hdlarg.golden) rtl_files+=" -v "+files; //getting RTL files for verilator
+        cells_sim =" -v "+shared_dir+"rapidsilicon/sim_models.v"; // getting simulation models for varilator
+        cout<<"simulation model directory:"<<cells_sim<<endl;
+    }
     else{
         hdlarg.golden.push_back(synth_dir_+*fvargs->stage1+".v");
         hdlarg.golden.push_back(shared_dir+"rapidsilicon/sim_models.v");
@@ -628,7 +634,8 @@ void *run_fv(void* flow) {
     hdlarg.revised.push_back(shared_dir+"rapidsilicon/sim_models.v");
     
     // hdlarg.tool == *fvargs->fv_tool;
-    // for (auto file: hdlarg.golden)cout<<"File Golden: "<<file<<endl;
+    cout<<"rtl_files :"<<rtl_files<<endl;
+    // cout<<"simulation model file : "<<shared_dir+"rapidsilicon/sim_models.v"<<endl;
     // for (auto file: hdlarg.revised)cout<<"File Revised: "<<file<<endl;
     istringstream ss(*fvargs->top_module);
     string word{};
@@ -639,7 +646,7 @@ void *run_fv(void* flow) {
     hdlarg.top = top_mod;
 
     // cout << "FV TOOL = "<<hdlarg.tool<<endl;
-    // cout<<"Top Module: "<<hdlarg.top<<endl;
+     cout<<"Top Module: "<<top_mod<<endl;
     // cout<<"Stage1: "<<*fvargs->stage1<<endl<<"Stage2: "<<*fvargs->stage2<<endl;
     // cout<<"Synthesis Directory: "<<synth_dir_<<endl;
     // cout<<"Shared Directory: "<<shared_dir<<endl;
@@ -653,15 +660,16 @@ void *run_fv(void* flow) {
         string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,"stage"+to_string(verif_stage),synth_dir_);
     }
     else if (*fvargs->fv == "simulation"){
-        string sim_dir = "/nfs_scratch/scratch/FV/awais/Synthesis_FV_Poject/test/";
-        string clock_ports="wb_clk_i"; // clocks are provided separated by commas
-
-        string reset_port= "arst_i,wb_rst_i";
-        string reset_value= "0,0"; // active low/high
-        cout<<"Befor generating testbench for synth_rs"<<endl;
-        wite_tb(sim_dir,clock_ports,reset_port,reset_value);
-        // cout<<"Generating testbench for synth_rs"<<endl;
-    }
+        
+        cout<<"Before generating testbench for synth_rs"<<endl;
+        string directory_name("sim_dir");
+        fs::remove_all(directory_name)?cout << "deleted sim_dir directory - " << directory_name << endl:cout << "delete_directory() failed" << endl;
+        fs::create_directory(directory_name)?cout << "created sim_dir directory - " << directory_name << endl:cout << "create_directory() failed" << endl;
+        fs::copy(synth_dir_+"/post_synthesis.v",synth_dir_+"sim_dir/post_synthesis.v");
+        write_tb(synth_dir_,*fvargs->sim_clock_ports,*fvargs->sim_reset_ports,*fvargs->sim_reset_state);//writing testbench
+        cout<<"Generating testbench for synth_rs"<<endl;
+        launching_varilator(rtl_files,cells_sim,synth_dir_,top_mod); //launching verilator
+        }
     pthread_exit(NULL);
     return NULL;
 }

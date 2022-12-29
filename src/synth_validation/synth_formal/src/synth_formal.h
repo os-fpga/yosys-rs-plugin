@@ -32,6 +32,9 @@ struct fv_args{
     int *fv_timeout;
     std::string *top_module;
     std::string *shared_dir_path;
+    std::string  *sim_clock_ports;
+    std::string  *sim_reset_ports;
+    std::string  *sim_reset_state;
 };
 
 // void process_stage(struct fv_args *stage_arg);
