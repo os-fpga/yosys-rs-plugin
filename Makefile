@@ -80,7 +80,8 @@ SOURCES = src/rs-dsp.cc \
 
 fv_srcs = src/synth_validation/synth_formal/src/synth_formal.cc \
 		  src/synth_validation/synth_formal/src/test_report.cc \
-		  src/synth_validation/synth_simulation/TBG.cc
+		  src/synth_validation/synth_simulation/TBG.cc \
+		  src/synth_validation/synth_simulation/run_verilator.cc
 
 fv_deps = src/synth_validation/synth_formal/src//synth_formal.h \
 		  src/synth_validation/synth_formal/src/report_fv.h \
