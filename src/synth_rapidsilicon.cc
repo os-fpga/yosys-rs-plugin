@@ -549,6 +549,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             log_cmd_error("This version of synth_rs required formal verification tool.\n"
                     "Please provide '-fv_tool <tool>' option to enable FV.\n");
         }
+        if (fv == "simulation" && (sim_clock_ports.empty() || sim_reset_ports.empty() || sim_reset_state.empty())) {
+            log_cmd_error("This version of synth_rs required sim_clock_ports, sim_reset_ports, sim_reset_state.\n"
+                    "Please provide <sim_clock_ports>, <-sim_reset_state>, sim_reset_state.\n"
+                     "If clock and reset are not available provide <null> value for these flags.\n");
+        }
 
 
         log_header(design, "Executing synth_rs pass: v%d.%d.%d\n", 
@@ -972,6 +977,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         fvarg->fv_timeout = &fv_timout_limit;
         fvarg->fv_tool = &fv_tool;
         fvarg->fv = &fv;
+        fvarg->sim_clock_ports=&sim_clock_ports;
+        fvarg->sim_reset_ports=&sim_reset_ports;
+        fvarg->sim_reset_state=&sim_reset_state;
+        
         if (!(stage1.empty()))
             stages.push_back(stage1);
         stages.push_back(stage2);
