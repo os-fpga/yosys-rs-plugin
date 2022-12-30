@@ -560,8 +560,8 @@ module RS_TDP36K (
         .upae(UPAE1_i)
     );
     TDP18K_FIFO #(
-        .UPAF_i(UPAF1_i[10:0]),
-        .UPAE_i(UPAE1_i[10:0]),
+        .UPAF_i(UPAF1_i[0:10]),
+        .UPAE_i(UPAE1_i[0:10]),
         .SYNC_FIFO_i(SYNC_FIFO1_i),
         .POWERDN_i(POWERDN1_i),
         .SLEEP_i(SLEEP1_i),
