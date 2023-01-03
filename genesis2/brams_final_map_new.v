@@ -1,5 +1,8 @@
 // Copyright (C) 2022 RapidSilicon
 //
+// In Genesis2, parameters MODE_BITS vectors have been reversed
+// in order to match big endian behavior used by the fabric
+// primitives DSP/BRAM (CASTORIP-121)
 
 `define MODE_36 3'b110	// 36 or 32-bit
 `define MODE_18 3'b010	// 18 or 16-bit

@@ -1,5 +1,8 @@
 // Copyright (C) 2022 RapidSilicon
 //11/11/2022
+// In Genesis2, parameters MODE_BITS vectors have been reversed
+// in order to match big endian behavior used by the fabric
+// primitives DSP/BRAM (CASTORIP-121)
 
 module TDP_BRAM18 (
     (* clkbuf_sink *)
