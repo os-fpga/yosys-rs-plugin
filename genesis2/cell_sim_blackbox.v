@@ -1,7 +1,5 @@
 //
 // Copyright (C) 2022 RapidSilicon
-//Tuesday, November 15, 2022
-`timescale  1 ps / 1 ps
 // genesis2 DFFs and LATChes
 //
 //------------------------------------------------------------------------------
@@ -742,4 +740,14 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
     input [CFG_ENABLE_B-1:0] WR_EN;
 
   
+endmodule
+
+(* blackbox *)
+module \$lut (A, Y);
+parameter WIDTH = 0;
+parameter LUT = 0;
+
+input [WIDTH-1:0] A;
+output Y;
+
 endmodule
