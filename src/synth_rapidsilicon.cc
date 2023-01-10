@@ -651,6 +651,28 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void simplify() 
     {
+        if (tech != Technologies::GENERIC) {
+#ifdef DEV_BUILD
+            run("stat");
+#endif
+            switch (tech) {
+                case Technologies::GENESIS: {
+                    if (sdffr) {run("dfflegalize -cell $_SDFF_???_ 0 t:$_SDFFCE_*");}
+                        break;
+                    }
+                    case Technologies::GENESIS_2: {
+                        run("dfflegalize -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0 t:$_SDFFCE_*");
+                        break;
+                    }
+                    case Technologies::GENERIC: {
+                        break;
+                    }
+                }
+#ifdef DEV_BUILD
+            run("stat");
+#endif
+        }
+
         // Do not extract DFFE before simplify : it may have been done earlier
         //
         run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10);
