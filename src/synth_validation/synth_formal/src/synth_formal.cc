@@ -305,10 +305,11 @@ void tool_settings(std::ofstream& fv_script){
 
 }
 
-void get_rtl(fs::path ys_script, vector<string> &rtl_files){
+string get_rtl(fs::path ys_script, vector<string> &rtl_files){
    if (fs::exists(ys_script)){
       ifstream inp;
       string line;
+      string verific_mode;
       smatch match;
       char comp = '\\';
       bool eseq =false;
@@ -323,6 +324,7 @@ void get_rtl(fs::path ys_script, vector<string> &rtl_files){
                   regex_search(line, match, _rstr);
                   if(match[1].str().length()>0){
                     cout<<"Verific Mode "<<mode<<endl;
+                    verific_mode=mode;
                      istringstream ss(line);
                      string word{};
                      regex str2("("+mode+"?)");
@@ -354,6 +356,7 @@ void get_rtl(fs::path ys_script, vector<string> &rtl_files){
          }
       }
      inp.close();
+    return verific_mode;
    }
 }
 
@@ -617,12 +620,19 @@ void *run_fv(void* flow) {
     fs::path ys_script=synth_dir_+"yosys.ys";
     struct hdl_args hdlarg;
     string rtl_files;
+    vector<string> hdl_files;
     string cells_sim;
     hdlarg.stage=*fvargs->stage1;
     hdlarg.stage2=*fvargs->stage2;
     if (*fvargs->stage1=="RTL"){
-        get_rtl(ys_script,hdlarg.golden);
-        for (auto files: hdlarg.golden) rtl_files+=" -v "+files; //getting RTL files for verilator
+        string verific_mode=get_rtl(ys_script,hdlarg.golden);
+        for (auto files: hdlarg.golden) {
+            if (regex_match (files, regex(".*.vh")) || regex_match (files, regex(".*.svh"))) hdl_files.push_back(files);
+            
+            if (verific_mode=="-sv") rtl_files+=" -sv "+files; //getting RTL files for verilator
+            else
+                rtl_files+=" -v "+files;
+        }
         cells_sim =" -v "+shared_dir+"rapidsilicon/sim_models.v"; // getting simulation models for varilator
         cout<<"simulation model directory:"<<cells_sim<<endl;
     }
@@ -634,9 +644,8 @@ void *run_fv(void* flow) {
     hdlarg.revised.push_back(shared_dir+"rapidsilicon/sim_models.v");
     
     // hdlarg.tool == *fvargs->fv_tool;
-    cout<<"rtl_files :"<<rtl_files<<endl;
-    // cout<<"simulation model file : "<<shared_dir+"rapidsilicon/sim_models.v"<<endl;
-    // for (auto file: hdlarg.revised)cout<<"File Revised: "<<file<<endl;
+    //cout<<"rtl_files :"<<rtl_files<<endl;
+
     istringstream ss(*fvargs->top_module);
     string word{};
     string top_mod{};
@@ -647,9 +656,7 @@ void *run_fv(void* flow) {
 
     // cout << "FV TOOL = "<<hdlarg.tool<<endl;
      cout<<"Top Module: "<<top_mod<<endl;
-    // cout<<"Stage1: "<<*fvargs->stage1<<endl<<"Stage2: "<<*fvargs->stage2<<endl;
-    // cout<<"Synthesis Directory: "<<synth_dir_<<endl;
-    // cout<<"Shared Directory: "<<shared_dir<<endl;
+
     fv_results_tp = make_tuple(*fvargs->stage1,*fvargs->stage2,"N/A","N/A",synth_dir_,top_mod,0);
     verif_stage++;
     // fv_results_tp.clear();
@@ -666,7 +673,7 @@ void *run_fv(void* flow) {
         fs::remove_all(directory_name)?cout << "deleted sim_dir directory - " << directory_name << endl:cout << "delete_directory() failed" << endl;
         fs::create_directory(directory_name)?cout << "created sim_dir directory - " << directory_name << endl:cout << "create_directory() failed" << endl;
         fs::copy(synth_dir_+"/post_synthesis.v",synth_dir_+"sim_dir/post_synthesis.v");
-        write_tb(synth_dir_,*fvargs->sim_clock_ports,*fvargs->sim_reset_ports,*fvargs->sim_reset_state);//writing testbench
+        write_tb(synth_dir_,*fvargs->sim_clock_ports,*fvargs->sim_reset_ports,*fvargs->sim_reset_state,hdl_files);//writing testbench
         cout<<"Generating testbench for synth_rs"<<endl;
         launching_varilator(rtl_files,cells_sim,synth_dir_,top_mod); //launching verilator
         }
