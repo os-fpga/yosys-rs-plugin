@@ -34,7 +34,14 @@ using namespace std;
  	}	
  }
  }
-
+ void read_whole_file (std::ifstream& file,std::ofstream& sim_model)
+ {
+ std::string line;
+ while (getline(file,line))
+ 	{
+ 		sim_model <<line<<endl;
+ }
+ }
 int main()
 {
 fs::path cwd_dir = fs::current_path();
@@ -43,11 +50,13 @@ std::cout<<"This is our current directory in RS: "<<synth_dir<<std::endl;
 std::ifstream file1;
 std::ifstream file2;
 std::ifstream file3;
+std::ifstream file4;
 std::ofstream sim_model; 
 // 
-file2.open (synth_dir+"/genesis/cells_sim.v");
 file1.open (synth_dir+"../yosys/techlibs/common/simlib.v");
+file2.open (synth_dir+"/genesis/cells_sim.v");
 file3.open (synth_dir+"../yosys/techlibs/common/simcells.v");
+file4.open (synth_dir+"/genesis2/cells_sim.v");
 if( remove( (synth_dir+"sim_models.v").c_str() ) != 0 )
     std::cout<<"Error deleting file"<<endl;
 sim_model.open (synth_dir+"sim_models.v",ios::app);
@@ -72,9 +81,11 @@ writing (file2,sim_model,"module latchsre (", "endmodule");
 writing (file2,sim_model,"module latchnsre (", "endmodule");
 writing (file2,sim_model,"module sh_dff(", "endmodule");
 writing (file2,sim_model,"module adder_carry(", "endmodule");
+read_whole_file (file4,sim_model);
 file1.close();
 file2.close();
 file3.close();
+file4.close();
 sim_model.close();
 return 0;	
 }
