@@ -39,7 +39,7 @@ void update_netlist_name(string post_synth_net_dir,string &top_module);
 
 void launching_varilator(string & rtl_files,string &cells_sim,string post_synth_net_dir,string &top_module);
 
-void write_tb(string& synth_dir,string& clock_ports,string& reset_port,string& reset_value);
+void write_tb(string& synth_dir,string& clock_ports,string& reset_port,string& reset_value,vector<string> hdl_files);
 
 // int main();
  
