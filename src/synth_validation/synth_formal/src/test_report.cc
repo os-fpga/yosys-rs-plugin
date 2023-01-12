@@ -79,7 +79,6 @@ if (yosys_log_file.fail())
 // 	return;
 // }
 std::vector<std::string> list_lines;
-int stat_line,statis;
 string line;
 bool write=false;
 fv_synth.open (_synth_dir_+"/fv_synth.log",ios::app);
