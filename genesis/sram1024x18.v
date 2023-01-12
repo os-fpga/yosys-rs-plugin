@@ -93,7 +93,7 @@ module sram1024x18 (
 		end
 		if (lcen_b == 0) begin
 			rdata_b = ram[laddr_b];
-			lcen_b = 1;
+			//lcen_b = 1;
 		end
 		else
 			rdata_b = rdata_b;
@@ -122,7 +122,7 @@ module sram1024x18 (
 		end
 		if (lcen_a == 0) begin
 			rdata_a = ram[laddr_a];
-			lcen_a = 1;
+			//lcen_a = 1;
 		end
 		else
 			rdata_a = rdata_a;
