@@ -46,7 +46,7 @@ string  tb_body(string port_info,vector<string> &inputs_,  vector<string> &outpu
 }
 
 //Module head 
-void module_head(std::ofstream &module, string& port_inf)
+void module_head(std::ofstream &module, string& port_inf,vector<string> hdl_files)
 {
     module << "//_____________  _________      ___________    ___________   __      __ \n";
     module << "//     ||        ||       \\    /               ||            ||\\     || \n";
@@ -57,7 +57,9 @@ void module_head(std::ofstream &module, string& port_inf)
     module << "//     ||        ||_______/    \\__________/    ||__________  ||     \\|| \n\n\n";
  
     string rs_tb_body;
-
+    for (auto files: hdl_files) {
+            module << "`include \""+files+"\""<<endl;
+        }
     rs_tb_body = tb_body(port_inf,_inputs_,_outputs_);
     module << rs_tb_body<<endl;
 
@@ -118,41 +120,40 @@ vector<string> print_rst_gen(std::ofstream& file,string& reset_ports,string& res
     return resets;
 }
 
+// Parameter Initialization with 0
+string ini_param(string port_info, vector<string> &clks_val, vector<string> &rst_val)
+{
+    ifstream port_file(port_info);
+    json ports = json::parse(port_file);
+    int n = 0;
 
-//Parameter Initialization with 0
-string  ini_param(string port_info, vector<string> &clks_val, vector<string> &rst_val){
-   ifstream port_file(port_info);
-   json ports = json::parse(port_file);
-   int n=0;
-   
-   string nam_port;
-   string initial_param = "";
-   string port_nam ;
-   string ini_nam;
-   string end_nam; 
-   string comparator;
-   string display_stim;
+    string nam_port;
+    string initial_param = "";
+    string port_nam;
+    string ini_nam;
+    string end_nam;
+    string comparator;
+    string display_stim;
 
-   for (auto x: ports[0]["ports"]){
-       n++;
-       nam_port = x["name"].get<string>();
-        if (x["direction"] == "Input"){
-            if(!(count(clks_val.begin(), clks_val.end(),nam_port)) && !(count(rst_val.begin(), rst_val.end(),nam_port))){
-                int inte = (x["range"]["msb"].get<int>())+1;
-                ini_nam = "\n\tinitial begin \n ";
-                port_nam = port_nam + nam_port + "="+to_string(inte)+"'d0;\n\t\t";
-                comparator = "display_stimulus();\n\t\t";
-                display_stim = "compare();\n";
-                end_nam = "\n\tend\n";
-
-            }
+    for (auto x : ports[0]["ports"])
+    {
+        n++;
+        nam_port = x["name"].get<string>();
+        if (x["direction"] == "Input")
+        {
+        if (!(count(clks_val.begin(), clks_val.end(), nam_port)) && !(count(rst_val.begin(), rst_val.end(), nam_port)))
+        {
+        int inte = (x["range"]["msb"].get<int>()) + 1;
+        ini_nam = "\n\tinitial begin \n ";
+        port_nam = port_nam + nam_port + "=" + to_string(inte) + "'d0;\n\t\t";
+        comparator = "display_stimulus();\n\t\t";
+        display_stim = "compare();\n";
+        end_nam = "\n\tend\n";
         }
-    
-     } 
+        }
+    }
 
-  return  initial_param =  ini_nam +  "\t\t" + port_nam + comparator + display_stim + end_nam + "\n";
-
-  
+    return initial_param = ini_nam + "\t\t" + port_nam + comparator + display_stim + end_nam + "\n";
 }
 //
 //
@@ -265,15 +266,15 @@ void write_tb_cpp(string& synth_dir){
     tbcpp.close();
 }
 
-void write_tb(string& synth_dir,string& clock_ports,string& reset_port,string& reset_value){
+void write_tb(string& synth_dir,string& clock_ports,string& reset_port,string& reset_value,vector<string> hdl_files){
 
     ifstream RTL, post_synth, port_info;
     ofstream tbgen;
     string port_inf = synth_dir+"/port_info.json";
     port_info.open(port_inf);
     tbgen.open(synth_dir+"/sim_dir/tb.v", ios::out);
-    
-    module_head(tbgen,port_inf);
+
+    module_head(tbgen,port_inf,hdl_files);
     vector<string> clks_val = print_clk_gen(tbgen,clock_ports);
     vector<string> rst_val = print_rst_gen(tbgen,reset_port,reset_value);
     string rs_ini = ini_param(port_inf,clks_val,rst_val);
