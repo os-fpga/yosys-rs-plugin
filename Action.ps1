@@ -2,9 +2,13 @@ Write-Output "	yosys_rs_plugin start  "
 
 mkdir -Force pmgen
 
-$OldPath = $env:PATH
-$env:PATH = "c:\cygwin64\bin"
-wget -nc -O pmgen.py https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py
+$OldPATH = $PATH
+$env:PATH = (Test-Path -Path "C:\cygwin64\bin") ? "C:\cygwin64\bin\" : "C:\cygwin\bin\"
+$env:PATH -split ";"
+$Cygwin = $env:PATH + "bash.exe"
+$arg = "-c"
+
+& $Cygwin $arg "get -nc -O pmgen.py https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py"
 $env:PATH = $OldPath
 
 Write-Output " Running python3..."
