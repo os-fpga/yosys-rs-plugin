@@ -968,12 +968,12 @@ module dsp_t1_sim_cfg_ports # (
 
     // Output mux
     assign z_o = (output_select_i == 3'h0) ?   z0 :
-                 (output_select_i == 3'h1) ?   z2 :
+                 (output_select_i == 3'h4) ?   z2 :
                  (output_select_i == 3'h2) ?   z2 :
-                 (output_select_i == 3'h3) ?   z2 :
-                 (output_select_i == 3'h4) ?   z1 :
+                 (output_select_i == 3'h6) ?   z2 :
+                 (output_select_i == 3'h1) ?   z1 :
                  (output_select_i == 3'h5) ?   z1 :
-                 (output_select_i == 3'h6) ?   z1 :
+                 (output_select_i == 3'h3) ?   z1 :
                            z1;  // if output_select_i == 3'h7
 
     // B input delayed passthrough
