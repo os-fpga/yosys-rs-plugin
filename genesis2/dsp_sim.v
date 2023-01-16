@@ -773,15 +773,15 @@ module dsp_t1_sim_cfg_ports # (
     input  wire               s_reset,
 
     input  wire               saturate_enable_i,
-    input  wire [2:0]         output_select_i,
+    input  wire [0:2]         output_select_i,
     input  wire               round_i,
     input  wire [5:0]         shift_right_i,
     input  wire               subtract_i,
     input  wire               register_inputs_i,
-    input  wire [NBITS_A-1:0] coef_0_i,
-    input  wire [NBITS_A-1:0] coef_1_i,
-    input  wire [NBITS_A-1:0] coef_2_i,
-    input  wire [NBITS_A-1:0] coef_3_i
+    input  wire [0:NBITS_A-1] coef_0_i,
+    input  wire [0:NBITS_A-1] coef_1_i,
+    input  wire [0:NBITS_A-1] coef_2_i,
+    input  wire [0:NBITS_A-1] coef_3_i
 );
 
 // FIXME: The version of Icarus Verilog from Conda seems not to recognize the
@@ -963,7 +963,7 @@ module dsp_t1_sim_cfg_ports # (
         if (s_reset)
             z1 <= 0;
         else begin
-            z1 <= (output_select_i == 3'b100) ? z0 : z2;
+            z1 <= (output_select_i == 3'b001) ? z0 : z2;
         end
 
     // Output mux
