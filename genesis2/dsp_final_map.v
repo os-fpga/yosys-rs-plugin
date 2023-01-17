@@ -1,5 +1,8 @@
 //Copyright (C) 2022 RapidSilicon
 //
+// In Genesis2, parameters MODE_BITS vectors have been reversed
+// in order to match big endian behavior used by the fabric
+// primitives DSP/BRAM (CASTORIP-121)
 
 module dsp_t1_20x18x64_cfg_ports (
     input  [19:0] a_i,
@@ -22,20 +25,21 @@ module dsp_t1_20x18x64_cfg_ports (
     input         subtract_i
 );
 
-    parameter [19:0] COEFF_0 = 20'd0;
-    parameter [19:0] COEFF_1 = 20'd0;
-    parameter [19:0] COEFF_2 = 20'd0;
-    parameter [19:0] COEFF_3 = 20'd0;
-    parameter [2:0] OUTPUT_SELECT = 3'b000;
+
+    parameter [0:19] COEFF_0 = 20'd0;
+    parameter [0:19] COEFF_1 = 20'd0;
+    parameter [0:19] COEFF_2 = 20'd0;
+    parameter [0:19] COEFF_3 = 20'd0;
+    parameter [0:2] OUTPUT_SELECT = 3'b000;
     parameter REGISTER_INPUTS = 1'b0;
 
     RS_DSP # (
-        .MODE_BITS          ({REGISTER_INPUTS,
-                              OUTPUT_SELECT,
-                              COEFF_3,
-                              COEFF_2,
+        .MODE_BITS          ({COEFF_0,
                               COEFF_1,
-                              COEFF_0})
+                              COEFF_2,
+                              COEFF_3,
+                              OUTPUT_SELECT,
+                              REGISTER_INPUTS})
     ) _TECHMAP_REPLACE_ (
         .a                  (a_i),
         .b                  (b_i),

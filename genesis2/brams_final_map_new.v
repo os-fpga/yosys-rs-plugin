@@ -1,11 +1,14 @@
 // Copyright (C) 2022 RapidSilicon
 //
+// In Genesis2, parameters MODE_BITS vectors have been reversed
+// in order to match big endian behavior used by the fabric
+// primitives DSP/BRAM (CASTORIP-121)
 
-`define MODE_36 3'b011	// 36 or 32-bit
+`define MODE_36 3'b110	// 36 or 32-bit
 `define MODE_18 3'b010	// 18 or 16-bit
-`define MODE_9  3'b001	// 9 or 8-bit
-`define MODE_4  3'b100	// 4-bit
-`define MODE_2  3'b110	// 32-bit
+`define MODE_9  3'b100	// 9 or 8-bit
+`define MODE_4  3'b001	// 4-bit
+`define MODE_2  3'b011	// 32-bit
 `define MODE_1  3'b101	// 32-bit
 
 module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN);
@@ -94,44 +97,44 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	case (CFG_DBITS)
 		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 	endcase
@@ -296,44 +299,44 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	case (CFG_DBITS)
 		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 	endcase

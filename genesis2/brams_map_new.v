@@ -1,11 +1,14 @@
 // Copyright (C) 2022 RapidSilicon
 //
+// In Genesis2, parameters MODE_BITS vectors have been reversed
+// in order to match big endian behavior used by the fabric
+// primitives DSP/BRAM (CASTORIP-121)
 
-`define MODE_36 3'b011	// 36 or 32-bit
+`define MODE_36 3'b110	// 36 or 32-bit
 `define MODE_18 3'b010	// 18 or 16-bit
-`define MODE_9  3'b001	// 9 or 8-bit
-`define MODE_4  3'b100	// 4-bit
-`define MODE_2  3'b110	// 32-bit
+`define MODE_9  3'b100	// 9 or 8-bit
+`define MODE_4  3'b001	// 4-bit
+`define MODE_2  3'b011	// 32-bit
 `define MODE_1  3'b101	// 32-bit
 
 module \$__RS_FACTOR_BRAM36_TDP (...);
@@ -91,51 +94,51 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 
 	case (WIDTH)
 		1: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		2: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		4: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		8, 9: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		16, 18: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		32, 36: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 		default: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 	endcase
 
@@ -312,13 +315,6 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
     parameter PORT_A_RD_INIT_VALUE = 1;
 
 	parameter [36863:0] INIT = 36864'bx;
-
-	localparam MODE_36  = 3'b111;	// 36 or 32-bit
-	localparam MODE_18  = 3'b110;	// 18 or 16-bit
-	localparam MODE_9   = 3'b101;	// 9 or 8-bit
-	localparam MODE_4   = 3'b100;	// 4-bit
-	localparam MODE_2   = 3'b010;	// 32-bit
-	localparam MODE_1   = 3'b001;	// 32-bit
 	
     localparam ABITS = 15;
 
@@ -357,49 +353,51 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 
 	case (WIDTH)
 		1: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		2: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		4: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
+
 		8, 9: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 
 		16, 18: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
+
 		32, 36: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 		default: begin
-            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b0,
-                11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-                12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
-            };
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+			};
 		end
 	endcase
 
