@@ -2,7 +2,7 @@ Write-Output "	yosys_rs_plugin start  "
 
 mkdir -Force pmgen
 
-$OldPATH = $PATH
+$OldPATH = $env:PATH
 $env:PATH = (Test-Path -Path "C:\cygwin64\bin") ? "C:\cygwin64\bin\" : "C:\cygwin\bin\"
 $env:PATH -split ";"
 $Cygwin = $env:PATH + "bash.exe"
