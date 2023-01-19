@@ -38,7 +38,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
     widths  1 2 4 9 18 global;
 	cost 129;
 	init any;
-	port sr "C" {
+	port sr "A" {
         clock posedge "C1";
         rden;
         rdinit any;
@@ -47,7 +47,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
         clock posedge "C1";
         wrtrans all new;
     }
-	port sr "A" {
+	port sr "C" {
         clock posedge "C2";
         rden;
         rdinit any;
@@ -64,7 +64,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
     widths  1 2 4 9 18 36 global;
 	cost 257;
 	init any;
-	port sr "C" {
+	port sr "A" {
         clock posedge "C1";
         rden;
         rdinit any;
@@ -73,7 +73,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
         clock posedge "C1";
         wrtrans all new;
     }
-	port sr "A" {
+	port sr "C" {
         clock posedge "C2";
         rden;
         rdinit any;

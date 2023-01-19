@@ -43,6 +43,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
 #define BRAM_MAP_NEW_FILE brams_map_new.v
+#define BRAM_MAP_SWAP_NEW_FILE brams_map_swap_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
@@ -794,6 +795,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         std::string bramTxt;
         std::string bramAsyncTxt;
         std::string bramMapFile;
+        std::string bramSwapMapFile;
         std::string bramFinalMapFile;
         switch (tech) {
             case Technologies::GENESIS: {
@@ -818,6 +820,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 } else {
                     bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB);
                     bramMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_NEW_FILE);
+                    bramSwapMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_MAP_SWAP_NEW_FILE);
                     bramFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, BRAM_FINAL_MAP_NEW_FILE);
                 }
                 break;
@@ -845,6 +848,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
                         run("rs_bram_split -new_mapping");
                         run("stat");
+                        run("techmap -autoproc -map" + bramSwapMapFile + " a:dff_merge");
                         run("techmap -autoproc -map" + bramMapFile);
                         run("stat");
                         run("techmap -map" + bramFinalMapFile);
