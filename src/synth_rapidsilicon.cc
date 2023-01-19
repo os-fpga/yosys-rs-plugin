@@ -40,6 +40,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
 #define BRAM_LIB brams_new.txt
+#define BRAM_LIB_SWAP brams_new_swap.txt
 #define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
 #define BRAM_MAP_NEW_FILE brams_map_new.v
@@ -792,6 +793,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void mapBrams() {
         std::string bramTxt;
+        std::string bramTxtSwap = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB_SWAP);
         std::string bramAsyncTxt;
         std::string bramMapFile;
         std::string bramFinalMapFile;
@@ -841,14 +843,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     }
                     else {
                         run("stat");
+                        run("stat a:dff_merge");
+                        run("memory_libmap -lib" + bramTxtSwap + " a:dff_merge");
                         run("memory_libmap -lib" + bramTxt);
                         run("stat");
+                        run("stat a:dff_merge");
                         run("rs_bram_split -new_mapping");
                         run("stat");
+                        run("stat a:dff_merge");
                         run("techmap -autoproc -map" + bramMapFile);
                         run("stat");
+                        run("stat a:dff_merge");
                         run("techmap -map" + bramFinalMapFile);
                         run("stat");
+                        run("stat a:dff_merge");
                     }
 
                     if (cec)
