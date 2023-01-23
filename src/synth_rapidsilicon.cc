@@ -47,6 +47,9 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+#define BRAM_WIDTH_36 36
+#define BRAM_WIDTH_18 18
+#define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
 // 0 - initial version 
@@ -827,16 +830,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 int width = cell->getParam(RTLIL::escape_id("WIDTH")).as_int(); 
                 if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
                         cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        width == 36) {
-                    for (int i = 0; i < 2048; ++i) {
+                        width == BRAM_WIDTH_36) {
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                         if (i % 2 == 0) {
-                            for (int j = 0; j <18; ++j) {
-                                init_value1.push_back(tmp_init.bits[i*18 + j]);
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j) {
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
                             }
                         }
                         else {
-                            for (int j = 0; j < 18; ++j) {
-                                init_value2.push_back(tmp_init.bits[i*18 + j]);
+                            for (int j = 0; j < BRAM_WIDTH_18; ++j) {
+                                init_value2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
                             }
                         }
                     }
