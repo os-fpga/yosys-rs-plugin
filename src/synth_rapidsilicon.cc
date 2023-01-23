@@ -814,6 +814,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
+    /* Lia: When data width is greater than 18 bits reading is performed from 
+     * two 18K RAMs, so we need to split Init bits to 2x18 bit pairs, first half
+     * will go to the first 18K RAM and the second half to the second 18k RAM.
+     */
+    void correctBramInitValues() {
+        for (auto &module : _design->selected_modules()) {
+            for (auto &cell : module->selected_cells()) {
+                std::vector<RTLIL::State> init_value1;
+                std::vector<RTLIL::State> init_value2;
+                RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));;
+                int width = cell->getParam(RTLIL::escape_id("WIDTH")).as_int(); 
+                if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
+                        cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                        width == 36) {
+                    for (int i = 0; i < 2048; ++i) {
+                        if (i % 2 == 0) {
+                            for (int j = 0; j <18; ++j) {
+                                init_value1.push_back(tmp_init.bits[i*18 + j]);
+                            }
+                        }
+                        else {
+                            for (int j = 0; j < 18; ++j) {
+                                init_value2.push_back(tmp_init.bits[i*18 + j]);
+                            }
+                        }
+                    }
+                }
+                init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+                cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+            }
+        }
+    }
+
     void mapBrams() {
         std::string bramTxt;
         std::string bramTxtSwap = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB_SWAP);
@@ -874,6 +907,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          */
                         run("memory_libmap -lib" + bramTxtSwap + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt);
+                        correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
                         run("techmap -map" + bramFinalMapFile);
