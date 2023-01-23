@@ -839,10 +839,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                 init_value2.push_back(tmp_init.bits[i*18 + j]);
                             }
                         }
-                    }
-                }
-                init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
-                cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+					}
+					init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+					cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+				}
             }
         }
     }
