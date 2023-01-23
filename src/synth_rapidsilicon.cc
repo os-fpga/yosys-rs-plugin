@@ -824,13 +824,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void correctBramInitValues() {
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
-                std::vector<RTLIL::State> init_value1;
-                std::vector<RTLIL::State> init_value2;
-                RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));;
-                int width = cell->getParam(RTLIL::escape_id("WIDTH")).as_int(); 
                 if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
                         cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        width == BRAM_WIDTH_36) {
+                        cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_36) {
+                	RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                	std::vector<RTLIL::State> init_value1;
+                	std::vector<RTLIL::State> init_value2;
                     for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                         if (i % 2 == 0) {
                             for (int j = 0; j <BRAM_WIDTH_18; ++j) {
