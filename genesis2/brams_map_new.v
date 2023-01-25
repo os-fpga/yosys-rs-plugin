@@ -15,11 +15,11 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	parameter INIT = 0;
 	parameter WIDTH = 1;
 	
-	parameter PORT_B_WR_EN_WIDTH = 1;
+	parameter PORT_B_WR_BE_WIDTH = 1;
 	parameter PORT_A_RD_INIT_VALUE = 0;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
-	parameter PORT_D_WR_EN_WIDTH = 1;
+	parameter PORT_D_WR_BE_WIDTH = 1;
 	parameter PORT_C_RD_INIT_VALUE = 0;
 	parameter PORT_C_RD_SRST_VALUE = 1;
 
@@ -37,7 +37,8 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	input 				PORT_B_CLK;
 	input [ABITS-1:0] 		PORT_B_ADDR;
 	input [WIDTH-1:0] 		PORT_B_WR_DATA;
-	input [PORT_B_WR_EN_WIDTH-1:0]	PORT_B_WR_EN;
+	input 				PORT_B_WR_EN;
+	input [PORT_B_WR_BE_WIDTH-1:0]	PORT_B_WR_BE;
 
 	input 				PORT_C_CLK;
 	input [ABITS-1:0] 		PORT_C_ADDR;
@@ -47,18 +48,19 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	input 				PORT_D_CLK;
 	input [ABITS-1:0] 		PORT_D_ADDR;
 	input [WIDTH-1:0] 		PORT_D_WR_DATA;
-	input [PORT_B_WR_EN_WIDTH-1:0]	PORT_D_WR_EN;
+	input 				PORT_D_WR_EN;
+	input [PORT_B_WR_BE_WIDTH-1:0]	PORT_D_WR_BE;
 
 
 	wire FLUSH1;
 	wire FLUSH2;
 	wire SPLIT;
 
-	wire [CFG_ENABLE-1:PORT_B_WR_EN_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_B_WR_EN_WIDTH{1'b0}};
-	wire [CFG_ENABLE-1:PORT_D_WR_EN_WIDTH] D1EN_CMPL = {CFG_ENABLE-PORT_D_WR_EN_WIDTH{1'b0}};
+	wire [CFG_ENABLE-1:PORT_B_WR_BE_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_B_WR_BE_WIDTH{1'b0}};
+	wire [CFG_ENABLE-1:PORT_D_WR_BE_WIDTH] D1EN_CMPL = {CFG_ENABLE-PORT_D_WR_BE_WIDTH{1'b0}};
 
-	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_EN};
-	wire [CFG_ENABLE-1:0] D1EN = {D1EN_CMPL, PORT_D_WR_EN};
+	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_BE};
+	wire [CFG_ENABLE-1:0] D1EN = {D1EN_CMPL, PORT_D_WR_BE};
 
 	wire [35:WIDTH] B1DATA_CMPL;
 	wire [35:WIDTH] D1DATA_CMPL;
@@ -162,8 +164,8 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 		.REN_A2(PORT_A_RD_EN),
 		.WEN_A1(PORT_B_WR_EN),
 		.WEN_A2(PORT_B_WR_EN),
-		.BE_A1({B1EN[1],B1EN[0]}),
-		.BE_A2({B1EN[3],B1EN[2]}),
+		.BE_A1(B1EN[1:0]),
+		.BE_A2(B1EN[3:2]),
 
 		.WDATA_B1(D1DATA_TOTAL[17:0]),
 		.WDATA_B2(D1DATA_TOTAL[35:18]),
@@ -177,8 +179,8 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 		.REN_B2(PORT_C_RD_EN),
 		.WEN_B1(PORT_D_WR_EN),
 		.WEN_B2(PORT_D_WR_EN),
-		.BE_B1({D1EN[1],D1EN[0]}),
-		.BE_B2({D1EN[3],D1EN[2]}),
+		.BE_B1(D1EN[1:0]),
+		.BE_B2(D1EN[3:2]),
 
 		.FLUSH1(FLUSH1),
 		.FLUSH2(FLUSH2)
@@ -191,11 +193,11 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter INIT = 0;
 	parameter WIDTH = 1;
 	
-	parameter PORT_B_WR_EN_WIDTH = 1;
+	parameter PORT_B_WR_BE_WIDTH = 1;
 	parameter PORT_A_RD_INIT_VALUE = 0;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
-	parameter PORT_D_WR_EN_WIDTH = 1;
+	parameter PORT_D_WR_BE_WIDTH = 1;
 	parameter PORT_C_RD_INIT_VALUE = 0;
 	parameter PORT_C_RD_SRST_VALUE = 1;
 
@@ -214,7 +216,8 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	input 				PORT_B_CLK;
 	input [ABITS-1:0] 		PORT_B_ADDR;
 	input [WIDTH-1:0] 		PORT_B_WR_DATA;
-	input [PORT_B_WR_EN_WIDTH-1:0]	PORT_B_WR_EN;
+	input 				PORT_B_WR_EN;
+	input [PORT_B_WR_BE_WIDTH-1:0]	PORT_B_WR_BE;
 	
     input 				PORT_C_CLK;
 	input [ABITS-1:0] 		PORT_C_ADDR;
@@ -224,12 +227,13 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	input 				PORT_D_CLK;
 	input [ABITS-1:0] 		PORT_D_ADDR;
 	input [WIDTH-1:0] 		PORT_D_WR_DATA;
-	input [PORT_D_WR_EN_WIDTH-1:0]	PORT_D_WR_EN;
+	input 				PORT_D_WR_EN;
+	input [PORT_D_WR_BE_WIDTH-1:0]	PORT_D_WR_BE;
 
 	BRAM2x18_TDP #(
 		.CFG_DBITS(WIDTH),
-		.CFG_ENABLE_B(PORT_B_WR_EN_WIDTH),
-		.CFG_ENABLE_D(PORT_D_WR_EN_WIDTH),
+		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
+		.CFG_ENABLE_D(PORT_D_WR_BE_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
 		.INIT0(INIT)
@@ -311,12 +315,14 @@ endmodule
 
 module \$__RS_FACTOR_BRAM36_SDP (...);
 	parameter WIDTH = 1;
-	parameter PORT_B_WR_EN_WIDTH = 4;
+	//parameter PORT_B_WR_EN_WIDTH = 4;
+	parameter PORT_B_WR_BE_WIDTH = 4;
     parameter PORT_A_RD_INIT_VALUE = 1;
 
 	parameter [36863:0] INIT = 36864'bx;
 	
     localparam ABITS = 15;
+	localparam CFG_ENABLE = 4;
 
 	input PORT_A_CLK;
 	input PORT_B_CLK;
@@ -327,7 +333,9 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 
 	input [ABITS-1:0] PORT_B_ADDR;
 	input [WIDTH-1:0] PORT_B_WR_DATA;
-	input [PORT_B_WR_EN_WIDTH-1:0] PORT_B_WR_EN;
+	//input [PORT_B_WR_EN_WIDTH-1:0] PORT_B_WR_EN;
+	input PORT_B_WR_EN;
+	input [PORT_B_WR_BE_WIDTH-1:0] PORT_B_WR_BE;
 
 	wire [35:0] DOBDO;
 	wire [35:WIDTH] A1DATA_CMPL;
@@ -337,6 +345,9 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 
 	wire FLUSH1;
 	wire FLUSH2;
+
+	wire [CFG_ENABLE-1:PORT_B_WR_BE_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_B_WR_BE_WIDTH{1'b0}};
+	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_BE};
 
 	// Assign read/write data - handle special case for 9bit mode
 	// parity bit for 9bit mode is placed in R/W port on bit #16
@@ -419,8 +430,8 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 		.REN_A2(PORT_A_RD_EN),
 		.WEN_A1(1'b0),
 		.WEN_A2(1'b0),
-		.BE_A1({PORT_A_RD_EN, PORT_A_RD_EN}),
-		.BE_A2({PORT_A_RD_EN, PORT_A_RD_EN}),
+		.BE_A1(2'b0),
+		.BE_A2(2'b0),
 
 		.WDATA_B1(B1DATA_TOTAL[17:0]),
 		.WDATA_B2(B1DATA_TOTAL[35:18]),
@@ -432,10 +443,10 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 		.CLK_B2(PORT_B_CLK),
 		.REN_B1(1'b0),
 		.REN_B2(1'b0),
-		.WEN_B1(PORT_B_WR_EN[0]),
-		.WEN_B2(PORT_B_WR_EN[0]),
-		.BE_B1(PORT_B_WR_EN[1:0]),
-		.BE_B2(PORT_B_WR_EN[3:2]),
+		.WEN_B1(PORT_B_WR_EN),
+		.WEN_B2(PORT_B_WR_EN),
+		.BE_B1(B1EN[1:0]),
+		.BE_B2(B1EN[3:2]),
 
 		.FLUSH1(FLUSH1),
 		.FLUSH2(FLUSH2)
