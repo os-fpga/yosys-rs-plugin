@@ -248,13 +248,13 @@ struct RsBramSplitPass : public Pass {
                 if (m_newMapping) {
                     // Setting manual parameters
                     if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
-                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("PORT_D_WR_EN_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("PORT_D_WR_EN_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_BE_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_0->getParam(RTLIL::escape_id("PORT_D_WR_BE_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_F"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_BE_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_H"), bram_1->getParam(RTLIL::escape_id("PORT_D_WR_BE_WIDTH")));
                     } else {
-                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_EN_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_B"), bram_0->getParam(RTLIL::escape_id("PORT_B_WR_BE_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("PORT_B_WR_BE_WIDTH")));
                     }
                 } else {
                     // Setting manual parameters
