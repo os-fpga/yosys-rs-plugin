@@ -244,6 +244,7 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 		.B1ADDR(PORT_B_ADDR),
 		.B1DATA(PORT_B_WR_DATA),
 		.B1EN(PORT_B_WR_EN),
+		.B1BE(PORT_B_WR_BE),
 		.CLK1(PORT_A_CLK),
 
 		.C1ADDR(PORT_C_ADDR),
@@ -252,6 +253,7 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 		.D1ADDR(PORT_D_ADDR),
 		.D1DATA(PORT_D_WR_DATA),
 		.D1EN(PORT_D_WR_EN),
+		.D1BE(PORT_D_WR_BE),
 		.CLK2(PORT_C_CLK),
 
 		.E1ADDR(),
@@ -274,7 +276,7 @@ endmodule
 
 module \$__RS_FACTOR_BRAM18_SDP (...);
 	parameter WIDTH = 1; 
-    parameter PORT_B_WR_EN_WIDTH = 4;
+    parameter PORT_B_WR_BE_WIDTH = 4;
     parameter PORT_A_RD_INIT_VALUE = 1;
 
     parameter [18431:0] INIT = 18432'bx;
@@ -292,11 +294,12 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 
 	input [ABITS-1:0] PORT_B_ADDR;
 	input [WIDTH-1:0] PORT_B_WR_DATA;
-	input [PORT_B_WR_EN_WIDTH-1:0] PORT_B_WR_EN;
+	input PORT_B_WR_EN;
+	input [PORT_B_WR_BE_WIDTH-1:0] PORT_B_WR_BE;
 
 	BRAM2x18_SDP #(
 		.CFG_DBITS(WIDTH),
-		.CFG_ENABLE_B(PORT_B_WR_EN_WIDTH),
+		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
 		.INIT0(INIT)
@@ -309,13 +312,13 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 		.B1ADDR(PORT_B_ADDR),
 		.B1DATA(PORT_B_WR_DATA),
 		.B1EN(PORT_B_WR_EN),
+		.B1BE(PORT_B_WR_BE),
 		.CLK2(PORT_B_CLK)
 	);
 endmodule
 
 module \$__RS_FACTOR_BRAM36_SDP (...);
 	parameter WIDTH = 1;
-	//parameter PORT_B_WR_EN_WIDTH = 4;
 	parameter PORT_B_WR_BE_WIDTH = 4;
     parameter PORT_A_RD_INIT_VALUE = 1;
 
@@ -333,7 +336,6 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 
 	input [ABITS-1:0] PORT_B_ADDR;
 	input [WIDTH-1:0] PORT_B_WR_DATA;
-	//input [PORT_B_WR_EN_WIDTH-1:0] PORT_B_WR_EN;
 	input PORT_B_WR_EN;
 	input [PORT_B_WR_BE_WIDTH-1:0] PORT_B_WR_BE;
 
