@@ -43,12 +43,16 @@ PRIVATE_NAMESPACE_BEGIN
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
 #define BRAM_LIB brams_new.txt
+#define BRAM_LIB_SWAP brams_new_swap.txt
 #define BRAM_ASYNC_TXT brams_async.txt
 #define BRAM_MAP_FILE brams_map.v
 #define BRAM_MAP_NEW_FILE brams_map_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+#define BRAM_WIDTH_36 36
+#define BRAM_WIDTH_18 18
+#define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
 // 0 - initial version 
@@ -57,7 +61,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 104
+#define VERSION_PATCH 110
 
 enum Strategy {
     AREA,
@@ -654,6 +658,28 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void simplify() 
     {
+        if (tech != Technologies::GENERIC) {
+#ifdef DEV_BUILD
+            run("stat");
+#endif
+            switch (tech) {
+                case Technologies::GENESIS: {
+                    if (sdffr) {run("dfflegalize -cell $_SDFF_???_ 0 t:$_SDFFCE_*");}
+                        break;
+                    }
+                    case Technologies::GENESIS_2: {
+                        run("dfflegalize -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0 t:$_SDFFCE_*");
+                        break;
+                    }
+                    case Technologies::GENERIC: {
+                        break;
+                    }
+                }
+#ifdef DEV_BUILD
+            run("stat");
+#endif
+        }
+
         // Do not extract DFFE before simplify : it may have been done earlier
         //
         run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10);
@@ -771,8 +797,64 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
+    void identifyMemsWithSwappedReadPorts() {
+        for (auto module : _design->selected_modules()) {
+            auto memCells = Mem::get_selected_memories(module);
+            for (auto mem : memCells) {
+                if (!mem.get_bool_attribute(RTLIL::escape_id("dff_merge")))
+                    continue;
+                std::set<SigSpec> clocks;
+                for (int i = 0; i < GetSize(mem.wr_ports); i++) {
+                    auto &wport = mem.wr_ports[i];
+                    clocks.insert(wport.clk);
+                }
+                for (int i = 0; i < GetSize(mem.rd_ports); i++) {
+                    auto &rport = mem.rd_ports[i];
+                    clocks.insert(rport.clk);
+                }
+                if (1 == clocks.size()) {
+                    mem.cell->set_bool_attribute(RTLIL::escape_id("read_swapped"));
+                    log_debug("Swapped port memory identfied!");
+                }
+            }
+        }
+    }
+
+    /* Lia: When data width is greater than 18 bits reading is performed from 
+     * two 18K RAMs, so we need to split Init bits to 2x18 bit pairs, first half
+     * will go to the first 18K RAM and the second half to the second 18k RAM.
+     */
+    void correctBramInitValues() {
+        for (auto &module : _design->selected_modules()) {
+            for (auto &cell : module->selected_cells()) {
+                if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
+                        cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                        cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_36) {
+                	RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                	std::vector<RTLIL::State> init_value1;
+                	std::vector<RTLIL::State> init_value2;
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                        if (i % 2 == 0) {
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j) {
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            }
+                        }
+                        else {
+                            for (int j = 0; j < BRAM_WIDTH_18; ++j) {
+                                init_value2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            }
+                        }
+                    }
+                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                }
+            }
+        }
+    }
+
     void mapBrams() {
         std::string bramTxt;
+        std::string bramTxtSwap = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB_SWAP);
         std::string bramAsyncTxt;
         std::string bramMapFile;
         std::string bramFinalMapFile;
@@ -810,7 +892,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         switch (tech) {
             case Technologies::GENESIS:
             case Technologies::GENESIS_2: {
-                    run("rs_bram_asymmetric");
+                    /* Aram: Disabled as it's not supported
+                     *run("rs_bram_asymmetric");
+                     */
                     if (nolibmap) {
                         run("memory_bram -rules" + bramTxt);
                         if (areMemCellsLeft()) {
@@ -821,15 +905,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("techmap -map" + bramFinalMapFile);
                     }
                     else {
-                        run("stat");
+                        /* Aram: Yosys swaps read ports for the single clock TDP
+                         * memories when the address is registered. The first call
+                         * to memory_libmap is for these memeories. We counter swap
+                         * port mappings to get correct connections for the read ports.
+                         */
+                        run("memory_libmap -lib" + bramTxtSwap + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt);
-                        run("stat");
+                        correctBramInitValues();
                         run("rs_bram_split -new_mapping");
-                        run("stat");
                         run("techmap -autoproc -map" + bramMapFile);
-                        run("stat");
                         run("techmap -map" + bramFinalMapFile);
-                        run("stat");
                     }
 
                     if (cec)
@@ -1047,6 +1133,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!nobram){
+            identifyMemsWithSwappedReadPorts();
             mapBrams();
         }
 
