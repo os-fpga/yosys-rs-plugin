@@ -303,7 +303,7 @@ module RS_TDP36K (
     end
 
     
-    
+    localparam MODE_36 = 3'b110;
     assign sreset = RESET_n_i;
     assign flush1 = ~FLUSH1;
     assign flush2 = ~FLUSH2;
@@ -321,7 +321,7 @@ module RS_TDP36K (
     assign ram_ren_a2 = (SPLIT_i ? REN_A2 : (FMODE1_i ? 0 : (RMODE_A1_i == MODE_36 ? REN_A1 : REN_A1 & ADDR_A1[4]) ));
     assign ram_ren_b1 = (SPLIT_i ? REN_B1 : (FMODE1_i ? ren_o : REN_B1));
     assign ram_ren_b2 = (SPLIT_i ? REN_B2 : (FMODE1_i ? ren_o : REN_B1));
-    localparam MODE_36 = 3'b110;
+   
     assign ram_wen_a1 = (SPLIT_i ? WEN_A1 : (FMODE1_i ? ~FULL3 & WEN_A1 : (WMODE_A1_i == MODE_36 ? WEN_A1 : WEN_A1 & ~ADDR_A1[4])));
     assign ram_wen_a2 = (SPLIT_i ? WEN_A2 : (FMODE1_i ? ~FULL3 & WEN_A1 : (WMODE_A1_i == MODE_36 ? WEN_A1 : WEN_A1 & ADDR_A1[4])));
     assign ram_wen_b1 = (SPLIT_i ? WEN_B1 : (WMODE_B1_i == MODE_36 ? WEN_B1 : WEN_B1 & ~ADDR_B1[4]));
