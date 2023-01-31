@@ -298,12 +298,12 @@ module RS_TDP36K (
    //Avinash - Delay for initial global reset 
     initial begin
       RESET_n_i = 1'b0;
-     #10000
+     #1   //laddr_a1 & laddr_b1 registers are taking that much delay then get reset
       RESET_n_i = 1'b1;
     end
 
     
-    
+    localparam MODE_36 = 3'b110;
     assign sreset = RESET_n_i;
     assign flush1 = ~FLUSH1;
     assign flush2 = ~FLUSH2;
@@ -317,11 +317,11 @@ module RS_TDP36K (
     assign sclk_a2 = smux_clk_a2;
     assign sclk_b1 = smux_clk_b1;
     assign sclk_b2 = smux_clk_b2;
-    assign ram_ren_a1 = (SPLIT_i ? REN_A1 : (FMODE1_i ? 0 : REN_A1));
-    assign ram_ren_a2 = (SPLIT_i ? REN_A2 : (FMODE1_i ? 0 : REN_A1));
+    assign ram_ren_a1 = (SPLIT_i ? REN_A1 : (FMODE1_i ? 0 : (RMODE_A1_i == MODE_36 ? REN_A1 : REN_A1 & ~ADDR_A1[4]) ));
+    assign ram_ren_a2 = (SPLIT_i ? REN_A2 : (FMODE1_i ? 0 : (RMODE_A1_i == MODE_36 ? REN_A1 : REN_A1 & ADDR_A1[4]) ));
     assign ram_ren_b1 = (SPLIT_i ? REN_B1 : (FMODE1_i ? ren_o : REN_B1));
     assign ram_ren_b2 = (SPLIT_i ? REN_B2 : (FMODE1_i ? ren_o : REN_B1));
-    localparam MODE_36 = 3'b110;
+   
     assign ram_wen_a1 = (SPLIT_i ? WEN_A1 : (FMODE1_i ? ~FULL3 & WEN_A1 : (WMODE_A1_i == MODE_36 ? WEN_A1 : WEN_A1 & ~ADDR_A1[4])));
     assign ram_wen_a2 = (SPLIT_i ? WEN_A2 : (FMODE1_i ? ~FULL3 & WEN_A1 : (WMODE_A1_i == MODE_36 ? WEN_A1 : WEN_A1 & ADDR_A1[4])));
     assign ram_wen_b1 = (SPLIT_i ? WEN_B1 : (WMODE_B1_i == MODE_36 ? WEN_B1 : WEN_B1 & ~ADDR_B1[4]));
@@ -533,12 +533,12 @@ module RS_TDP36K (
         if (sreset == 0)
             laddr_a1 <= 1'sb0;
         else
-            laddr_a1 <= ADDR_A1;
+            laddr_a1 <= REN_A1?ADDR_A1:laddr_a1;
     always @(posedge sclk_b1 or negedge sreset)
         if (sreset == 0)
             laddr_b1 <= 1'sb0;
         else
-            laddr_b1 <= ADDR_B1;
+            laddr_b1 <= REN_B1?ADDR_B1:laddr_b1;
     assign fifo_wmode = ((WMODE_A1_i == MODE_36) ? 2'b00 : ((WMODE_A1_i == MODE_18) ? 2'b01 : ((WMODE_A1_i == MODE_9) ? 2'b10 : 2'b00)));
     assign fifo_rmode = ((RMODE_B1_i == MODE_36) ? 2'b00 : ((RMODE_B1_i == MODE_18) ? 2'b01 : ((RMODE_B1_i == MODE_9) ? 2'b10 : 2'b00)));
     fifo_ctl #(

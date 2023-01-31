@@ -119,14 +119,18 @@ module TDP18K_FIFO (
 	assign ram_wen_a = FMODE_i ? ~FULL_o & WEN_A_i : WEN_A_i;
 	assign ram_ren_a = FMODE_i ? 0 : REN_A_i;
 	assign ram_wen_b = FMODE_i ? 1'b0 : WEN_B_i;
-	assign cen_b = ram_ren_b | ram_wen_b;
-	assign cen_a = ram_ren_a | ram_wen_a;
+	assign cen_b = ram_ren_b;
+	assign cen_a = ram_ren_a;
 	assign ram_waddr_b = real_fmode ? {ff_raddr[0], 3'b000} : ADDR_B_i[3:0];
 	assign ram_waddr_a = real_fmode ? {ff_waddr[0], 3'b000} : ADDR_A_i[3:0];
 	assign ram_addr_b = real_fmode ? {ff_raddr[10:0], 3'h0} : {ADDR_B_i[13:4], addr_b_d[3:0]};
 	assign ram_addr_a = real_fmode ? {ff_waddr[10:0], 3'h0} : {ADDR_A_i[13:4], addr_a_d[3:0]};
-	always @(posedge CLK_A_i) addr_a_d[3:0] <= ADDR_A_i[3:0];
-	always @(posedge CLK_B_i) addr_b_d[3:0] <= ADDR_B_i[3:0];
+	wire ADDR_A_i_new,ADDR_B_i_new;
+	assign ADDR_A_i_new=REN_A_i?ADDR_A_i[3]: addr_a_d[3]; //
+    assign ADDR_B_i_new=REN_B_i?ADDR_B_i[3]: addr_b_d[3]; //
+    
+	always @(posedge CLK_A_i) addr_a_d[3:0] <= {ADDR_A_i_new,ADDR_A_i[2:0]}; // 
+	always @(posedge CLK_B_i) addr_b_d[3:0] <= {ADDR_B_i_new,ADDR_B_i[2:0]}; // 
 	assign cen_a_n = ~cen_a;
 	assign ram_wen_a_n = ~ram_wen_a;
 	assign cen_b_n = ~cen_b;
