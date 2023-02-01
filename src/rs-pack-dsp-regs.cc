@@ -9,7 +9,11 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83
+// Bits are accessed from right to left, but in GENESIS_2
+// MODE_BITS are stored in Big Endian order, so we have to
+// use reverse of the bit indecies for the access:
+// actual bit idx = 83 --> access idx = 0
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 0
 #define MODE_BITS_REGISTER_INPUTS_ID 92
 
 struct RsPackDspRegsWorker
