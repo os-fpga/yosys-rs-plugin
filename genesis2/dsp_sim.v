@@ -809,6 +809,7 @@ module dsp_t1_sim_cfg_ports # (
     reg         r_rnd;
     reg [NBITS_ACC-1:0] acc;
 
+`ifndef VCS_MODE
     initial begin
         r_a          <= 0;
         r_b          <= 0;
@@ -824,6 +825,7 @@ module dsp_t1_sim_cfg_ports # (
         r_sat        <= 0;
         r_rnd        <= 0;
     end
+`endif
 
     always @(posedge clock_i or posedge s_reset) begin
         if (s_reset) begin
@@ -918,8 +920,10 @@ module dsp_t1_sim_cfg_ports # (
 
     wire [NBITS_ACC-1:0] add_o = add_a + add_b;
 
+`ifndef VCS_MODE
     // Accumulator
     initial acc <= 0;
+`endif
 
     always @(posedge clock_i or posedge s_reset)
         if (s_reset) acc <= 'h0;
