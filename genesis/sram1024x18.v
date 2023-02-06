@@ -70,7 +70,7 @@ module sram1024x18 (
 		lwen_b <= wen_b;
 	end
 	always @(*) begin
-		if ((lwen_b == 0) && (lcen_b == 0)) begin
+		if (lwen_b == 0) begin
 			ram[laddr_b][0] = (lwmsk_b[0] ? ram[laddr_b][0] : lwdata_b[0]);
 			ram[laddr_b][1] = (lwmsk_b[1] ? ram[laddr_b][1] : lwdata_b[1]);
 			ram[laddr_b][2] = (lwmsk_b[2] ? ram[laddr_b][2] : lwdata_b[2]);
@@ -99,7 +99,7 @@ module sram1024x18 (
 			rdata_b = rdata_b;
 	end
 	always @(*) begin
-		if ((lwen_a == 0) && (lcen_a == 0)) begin
+		if (lwen_a == 0) begin
 			ram[laddr_a][0] = (lwmsk_a[0] ? ram[laddr_a][0] : lwdata_a[0]);
 			ram[laddr_a][1] = (lwmsk_a[1] ? ram[laddr_a][1] : lwdata_a[1]);
 			ram[laddr_a][2] = (lwmsk_a[2] ? ram[laddr_a][2] : lwdata_a[2]);
