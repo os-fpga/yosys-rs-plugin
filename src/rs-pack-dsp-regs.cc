@@ -9,7 +9,11 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83
+// Bits are accessed from right to left, but in GENESIS_2
+// MODE_BITS are stored in Big Endian order, so we have to
+// use reverse of the bit indecies for the access:
+// actual bit idx = 83 --> access idx = 0
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 0
 #define MODE_BITS_REGISTER_INPUTS_ID 92
 
 struct RsPackDspRegsWorker
@@ -54,6 +58,8 @@ struct RsPackDspRegsWorker
         std::vector <RTLIL::Cell*> DSP_driven_only_by_DFF;
         RTLIL::SigSpec DFF_clk;
         RTLIL::SigSpec DFF_rst;
+        bool DFF_hasArst = false;
+        bool DFF_hasSrst = false;
 
         // Getting each DSP from all DSPs of our MODULE
         for (auto &it_dsp : DSP_used_cells) {
@@ -125,15 +131,20 @@ struct RsPackDspRegsWorker
                 FfData ff(&m_initvals, it_dff);
 
                 // Lambda function for action when having connection between DSP and DFF
-                auto check_dff = [&DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
+                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
                     log_debug("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
-                    if (ff.has_ce || ff.has_sr || ff.has_aload) {
+                    if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk) {
                         ignore_dsp = true;
                         return;
                     }
                     if (for_first_dff) {
                         // Getting selected DFF RESET and CLOCK SigSepc
-                        DFF_rst = ff.sig_arst;
+                        DFF_hasArst = ff.has_arst;
+                        DFF_hasSrst = ff.has_srst;
+                        if (DFF_hasArst)
+                            DFF_rst = ff.sig_arst;
+                        if (DFF_hasSrst)
+                            DFF_rst = ff.sig_srst;
                         DFF_clk = ff.sig_clk;
                         // if DSP port is driven from DFF make it true
                         port_from_dff = true;
@@ -142,12 +153,26 @@ struct RsPackDspRegsWorker
                         // pick next dff
                         next_dff = true;
                     } else {
-                        if (ff.sig_arst == m_sigmap(DFF_rst) && ff.sig_clk == m_sigmap(DFF_clk)) {
-                            port_from_dff = true;
-                            next_dff = true;
-                        } else {
+                        if (DFF_hasArst != ff.has_arst ||
+                            DFF_hasSrst != ff.has_srst ||
+                            ff.sig_clk != m_sigmap(DFF_clk)) {
                             ignore_dsp = true;
+                            return;
                         }
+                        if (DFF_hasArst) {
+                            if (ff.sig_arst != m_sigmap(DFF_rst)) {
+                                ignore_dsp = true;
+                                return;
+                            }
+                        }
+                        if (DFF_hasSrst) {
+                            if (ff.sig_srst != m_sigmap(DFF_rst)) {
+                                ignore_dsp = true;
+                                return;
+                            }
+                        }
+                        port_from_dff = true;
+                        next_dff = true;
                     }
                 };
 
@@ -218,7 +243,12 @@ struct RsPackDspRegsWorker
                             new_sigspec_for_a.append(ff.sig_d[use_index_for_dff]);
                             // get selected DFF clock and reset for this DSP
                             DFF_clk = ff.sig_clk;
-                            DFF_rst = ff.sig_arst;
+                            DFF_hasArst = ff.has_arst;
+                            DFF_hasSrst = ff.has_srst;
+                            if (DFF_hasArst)
+                                DFF_rst = ff.sig_arst;
+                            if (DFF_hasSrst)
+                                DFF_rst = ff.sig_srst;
                         }
                         // incrementing index;
                         use_index_for_dff++;
@@ -242,7 +272,12 @@ struct RsPackDspRegsWorker
                             new_sigspec_for_b.append(ff.sig_d[use_index_for_dff]);
                             // get selected DFF clock and reset for this DSP
                             DFF_clk = ff.sig_clk;
-                            DFF_rst = ff.sig_arst;
+                            DFF_hasArst = ff.has_arst;
+                            DFF_hasSrst = ff.has_srst;
+                            if (DFF_hasArst)
+                                DFF_rst = ff.sig_arst;
+                            if (DFF_hasSrst)
+                                DFF_rst = ff.sig_srst;
                         }
                         // incrementing index;
                         use_index_for_dff++;
@@ -273,10 +308,12 @@ struct RsPackDspRegsWorker
             // Getting DSP clock port to connect it with DFF clock port
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
             // Getting DSP reset port to connect it with DFF reset port
-            if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP"))
-                DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
-            else
-                DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+            if (DFF_hasArst || DFF_hasSrst) {
+                if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP"))
+                    DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
+                else
+                    DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+            }
 
             run_opt_clean = true;
         }
