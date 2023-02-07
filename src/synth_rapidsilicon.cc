@@ -384,7 +384,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 continue;
             }
             if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
-                max_bram = max_bram < stoi(args[++argidx]) ? stoi(args[argidx]): max_bram;
+                max_bram = max_bram >= stoi(args[++argidx]) ? stoi(args[argidx]): max_bram;
                 continue;
             }
             if (args[argidx] == "-de") {
@@ -927,9 +927,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * to memory_libmap is for these memeories. We counter swap
                          * port mappings to get correct connections for the read ports.
                          */
-                        run("memory_libmap -lib" + bramTxtSwap + " a:read_swapped");
+                        run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
 						run("stat");
-                        run("memory_libmap -lib" + bramTxt);
+                        run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
 						run("stat");
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
@@ -1104,8 +1104,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 								}
 							}
 						}
-						std::cout << "VALID MAPPING FOUND " << counter << std::endl;
-						std::cout << "MAX DSP VALUE IS " << max_dsp << std::endl;
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis2);
 
                         processDsp(cec);
