@@ -263,8 +263,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool keep_tribuf;
     bool nolibmap;
     int de_max_threads;
-	int max_bram;
-	int max_dsp;
+    int max_bram;
+    int max_dsp;
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
