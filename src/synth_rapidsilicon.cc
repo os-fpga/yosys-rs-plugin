@@ -49,6 +49,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
+#define MAX_BRAM 150
+#define MAX_DSP 150
 #define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -185,6 +187,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
         log("\n");
+        log("    -max_dsp\n");
+        log("        Specifies the maximum number of the infered DSP cells.\n");
+        log("\n");
 #ifdef DEV_BUILD
         log("    -use_dsp_cfg_params\n");
         log("        By default use DSP blocks with configuration bits available at module ports.\n");
@@ -194,6 +199,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -no_bram\n");
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
+        log("\n");
+        log("    -max_bram\n");
+        log("        Specifies the maximum number of the infered BRAM cells.\n");
         log("\n");
         log("    -no_simplify\n");
         log("        By default call simplify.\n");
@@ -245,6 +253,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool keep_tribuf;
     bool nolibmap;
     int de_max_threads;
+	int max_bram;
+	int max_dsp;
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
@@ -264,6 +274,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         cec = false;
         fast = false;
         nobram = false;
+		max_bram = MAX_BRAM;
+		max_dsp = MAX_DSP;
         nodsp = false;
         nosimplify = false;
         keep_tribuf = false;
@@ -357,6 +369,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 nodsp = true;
                 continue;
             }
+            if (args[argidx] == "-max_dsp" && argidx + 1 < args.size()) {
+                max_dsp = max_dsp >= stoi(args[++argidx]) ? stoi(args[argidx]) : max_dsp ;
+                continue;
+            }
 #ifdef DEV_BUILD
             if (args[argidx] == "-use_dsp_cfg_params") {
                 use_dsp_cfg_params = " -use_dsp_cfg_params";
@@ -365,6 +381,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
             if (args[argidx] == "-no_bram") {
                 nobram = true;
+                continue;
+            }
+            if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
+                max_bram = max_bram < stoi(args[++argidx]) ? stoi(args[argidx]): max_bram;
                 continue;
             }
             if (args[argidx] == "-de") {
@@ -753,7 +773,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
                                 " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
                                 "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                "-D DSP_NAME=%s",
+                                "-D DSP_NAME=%s a:valid_map",
                                 rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
                     run("stat");
 
@@ -777,7 +797,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run(stringf("techmap -map +/mul2dsp.v "
                                     "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
                                     "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                    "-D DSP_NAME=%s",
+                                    "-D DSP_NAME=%s a:valid_map",
                                     rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
                         if (cec)
@@ -908,7 +928,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * port mappings to get correct connections for the read ports.
                          */
                         run("memory_libmap -lib" + bramTxtSwap + " a:read_swapped");
+						run("stat");
                         run("memory_libmap -lib" + bramTxt);
+						run("stat");
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
@@ -1071,14 +1093,27 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("wreduce t:$mul");
+						int counter = 0;
+						for(auto& modules : _design->selected_modules()){
+							for(auto& cells : modules->selected_cells()){
+								if(cells->type == RTLIL::escape_id("$mul")){
+									if(counter < max_dsp){
+										cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
+										++counter;
+									}
+								}
+							}
+						}
+						std::cout << "VALID MAPPING FOUND " << counter << std::endl;
+						std::cout << "MAX DSP VALUE IS " << max_dsp << std::endl;
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis2);
 
                         processDsp(cec);
 
                         if (use_dsp_cfg_params.empty())
-                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0 a:valid_map");
                         else
-                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1");
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1 a:valid_map");
                             
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
