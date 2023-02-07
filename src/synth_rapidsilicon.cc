@@ -1118,9 +1118,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         for(auto& modules : _design->selected_modules()){
                             for(auto& cells : modules->selected_cells()){
                                 if(cells->type == RTLIL::escape_id("$mul")){
-                                    if(counter < max_dsp){
+                                    if(DSP_LIMIT_COUNTER < max_dsp){
                                         cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
-                                        ++counter;
+                                        ++DSP_LIMIT_COUNTER;
                                     }
                                 }
                             }
