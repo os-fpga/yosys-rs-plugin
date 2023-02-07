@@ -49,8 +49,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
-#define MAX_BRAM 150
-#define MAX_DSP 150
+#define MAX_BRAM_GEN 100
+#define MAX_DSP_GEN 100
+#define MAX_BRAM_GEN2 150
+#define MAX_DSP_GEN2 150
 #define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -61,6 +63,8 @@ PRIVATE_NAMESPACE_BEGIN
 // 4 - bram inference
 #define VERSION_MINOR 4
 #define VERSION_PATCH 113
+
+int DSP_LIMIT_COUNTER;
 
 enum Strategy {
     AREA,
@@ -187,8 +191,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
         log("\n");
-        log("    -max_dsp\n");
-        log("        Specifies the maximum number of the infered DSP cells.\n");
+        log("    -max_dsp <num>\n");
+        log("        Specify the maximum number of DSP to add\n");
+        log("        to the design during synthesis. Specify a value >= 1, which should not\n");
+        log("        exceed the available DSP count on the target device. \n");
+        log("        By default synthesis tool will not exceed the available DSP limit of the device. \n");
         log("\n");
 #ifdef DEV_BUILD
         log("    -use_dsp_cfg_params\n");
@@ -200,8 +207,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
-        log("    -max_bram\n");
-        log("        Specifies the maximum number of the infered BRAM cells.\n");
+        log("    -max_bram <num>\n");
+        log("        Specify the maximum number of Block RAM to add\n");
+        log("        to the design during synthesis. Specify a value >= 1, which should not\n");
+        log("        exceed the available BRAM count on the target device. \n");
+        log("        By default synthesis tool will not exceed the available Block RAM limit of the device. \n");
         log("\n");
         log("    -no_simplify\n");
         log("        By default call simplify.\n");
@@ -274,8 +284,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         cec = false;
         fast = false;
         nobram = false;
-		max_bram = MAX_BRAM;
-		max_dsp = MAX_DSP;
+        max_bram = 0;
+        max_dsp = 0;
+        DSP_LIMIT_COUNTER = 0;
         nodsp = false;
         nosimplify = false;
         keep_tribuf = false;
@@ -370,7 +381,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 continue;
             }
             if (args[argidx] == "-max_dsp" && argidx + 1 < args.size()) {
-                max_dsp = max_dsp >= stoi(args[++argidx]) ? stoi(args[argidx]) : max_dsp ;
+                max_dsp = stoi(args[++argidx]);
                 continue;
             }
 #ifdef DEV_BUILD
@@ -384,7 +395,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 continue;
             }
             if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
-                max_bram = max_bram >= stoi(args[++argidx]) ? stoi(args[argidx]): max_bram;
+                max_bram = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-de") {
@@ -421,10 +432,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (tech_str == "generic")
             tech = Technologies::GENERIC;
-        else if (tech_str == "genesis")
+        else if (tech_str == "genesis"){
             tech = Technologies::GENESIS;
+            if (max_bram > MAX_BRAM_GEN || max_bram < 1)
+                log_cmd_error("Invalid value of the -max_bram flag is specified.\n");
+            if (max_dsp > MAX_DSP_GEN || max_dsp < 1)
+                log_cmd_error("Invalid value of the -max_dsp flag is specified.\n");
+        }
         else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
+            if (max_bram > MAX_BRAM_GEN2 || max_bram < 1)
+                log_cmd_error("Invalid value of the -max_bram flag is specified.\n");
+            if (max_dsp > MAX_DSP_GEN2 || max_dsp < 1)
+                log_cmd_error("Invalid value of the -max_dsp flag is specified.\n");
             sdffr = true;
             nosdff_str = "";
             // no_cfp_params mode for Genesis2
@@ -928,9 +948,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * port mappings to get correct connections for the read ports.
                          */
                         run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
-						run("stat");
                         run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
-						run("stat");
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
@@ -1093,20 +1111,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("wreduce t:$mul");
-						int counter = 0;
-						for(auto& modules : _design->selected_modules()){
-							for(auto& cells : modules->selected_cells()){
-								if(cells->type == RTLIL::escape_id("$mul")){
-									if(counter < max_dsp){
-										cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
-										++counter;
-									}
-								}
-							}
-						}
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis2);
 
                         processDsp(cec);
+						
+                        for(auto& modules : _design->selected_modules()){
+                            for(auto& cells : modules->selected_cells()){
+                                if(cells->type == RTLIL::escape_id("$mul")){
+                                    if(counter < max_dsp){
+                                        cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
+                                        ++counter;
+                                    }
+                                }
+                            }
+                        }
 
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0 a:valid_map");
