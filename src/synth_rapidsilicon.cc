@@ -49,10 +49,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
-#define MAX_BRAM_GEN 100
-#define MAX_DSP_GEN 100
+#define MAX_BRAM_GEN 31
+#define MAX_DSP_GEN 312
 #define MAX_BRAM_GEN2 150
-#define MAX_DSP_GEN2 150
+#define MAX_DSP_GEN2 154
 #define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
