@@ -12,5 +12,5 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis -top top -goal area -de
 yosys cd top
 stat
-select -assert-count 8 t:sh_dff
+select -assert-count 0 t:sh_dff
 design -reset
