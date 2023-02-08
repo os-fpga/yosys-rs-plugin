@@ -440,10 +440,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             tech = Technologies::GENERIC;
         else if (tech_str == "genesis"){
             tech = Technologies::GENESIS;
-			if(max_bram == -1)
-				max_bram = MAX_BRAM_GEN;
-			if(max_dsp == -1)
-				max_dsp = MAX_DSP_GEN;
+            if(max_bram == -1)
+                max_bram = MAX_BRAM_GEN;
+            if(max_dsp == -1)
+                max_dsp = MAX_DSP_GEN;
             if (max_bram > MAX_BRAM_GEN || max_bram < 1)
                 log_cmd_error("Invalid value of the -max_bram flag is specified. Please specify the value in the range 1-%d.\n", MAX_BRAM_GEN);
             if (max_dsp > MAX_DSP_GEN || max_dsp < 1)
@@ -451,10 +451,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
-			if(max_bram == -1)
-				max_bram = MAX_BRAM_GEN2;
-			if(max_dsp == -1)
-				max_dsp = MAX_DSP_GEN2;
+            if(max_bram == -1)
+                max_bram = MAX_BRAM_GEN2;
+            if(max_dsp == -1)
+                max_dsp = MAX_DSP_GEN2;
             if (max_bram > MAX_BRAM_GEN2 || max_bram < 1)
                 log_cmd_error("Invalid value of the -max_bram flag is specified. Please specify the value in the range 1-%d.\n", MAX_BRAM_GEN2);
             if (max_dsp > MAX_DSP_GEN2 || max_dsp < 1)
