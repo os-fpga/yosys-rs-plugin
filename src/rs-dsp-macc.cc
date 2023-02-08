@@ -5,15 +5,16 @@
 #include "kernel/sigtools.h"
 #include "kernel/yosys.h"
 
+extern int DSP_COUNTER;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
 #include "../pmgen/rs-dsp-macc.h"
 
 // ============================================================================
-
 bool use_dsp_cfg_params;
 bool is_genesis2;
+int max_dsp;
 
 static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
 {
@@ -66,7 +67,11 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     if (st.ff->getParam(ID(CLK_POLARITY)).as_int() != 1) {
         return;
     }
-
+	
+    if (DSP_COUNTER > max_dsp) {
+    	return;
+    }
+    ++DSP_COUNTER;
     // Get port widths
     size_t a_width = GetSize(st.mul->getPort(ID(A)));
     size_t b_width = GetSize(st.mul->getPort(ID(B)));
@@ -272,6 +277,8 @@ struct RSDspMacc : public Pass {
         log("    -genesis2\n");
         log("        By default use Genesis technology DSP blocks.\n");
         log("        Specifying this forces usage of Genesis2 technology DSP blocks.\n");
+        log("    -max_dsp\n");
+        log("        Specifyies the maximum number of inferred DSP blocks.\n");
         log("\n");
     }
 
@@ -291,6 +298,10 @@ struct RSDspMacc : public Pass {
                 is_genesis2 = true;
                 // dsp_cfg_params is not supported in Genesis2
                 use_dsp_cfg_params = false;
+                continue;
+            }
+            if (a_Args[argidx] == "-max_dsp"  && argidx + 1 < a_Args.size()) {
+                max_dsp = std::stoi(a_Args[++argidx]);
                 continue;
             }
 

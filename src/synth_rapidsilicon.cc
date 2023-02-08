@@ -64,7 +64,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define VERSION_MINOR 4
 #define VERSION_PATCH 113
 
-int DSP_LIMIT_COUNTER;
+int DSP_COUNTER;
 
 enum Strategy {
     AREA,
@@ -286,7 +286,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nobram = false;
         max_bram = 0;
         max_dsp = 0;
-        DSP_LIMIT_COUNTER = 0;
+        DSP_COUNTER = 0;
         nodsp = false;
         nosimplify = false;
         keep_tribuf = false;
@@ -435,16 +435,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (tech_str == "genesis"){
             tech = Technologies::GENESIS;
             if (max_bram > MAX_BRAM_GEN || max_bram < 1)
-                log_cmd_error("Invalid value of the -max_bram flag is specified.\n");
+                log_cmd_error("Invalid value of the -max_bram flag is specified. Please specify the value in the range 1-%d.\n", MAX_BRAM_GEN);
             if (max_dsp > MAX_DSP_GEN || max_dsp < 1)
-                log_cmd_error("Invalid value of the -max_dsp flag is specified.\n");
+                log_cmd_error("Invalid value of the -max_dsp flag is specified. Please specify the value in the range 1-%d.\n", MAX_DSP_GEN);
         }
         else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
             if (max_bram > MAX_BRAM_GEN2 || max_bram < 1)
-                log_cmd_error("Invalid value of the -max_bram flag is specified.\n");
+                log_cmd_error("Invalid value of the -max_bram flag is specified. Please specify the value in the range 1-%d.\n", MAX_BRAM_GEN2);
             if (max_dsp > MAX_DSP_GEN2 || max_dsp < 1)
-                log_cmd_error("Invalid value of the -max_dsp flag is specified.\n");
+                log_cmd_error("Invalid value of the -max_dsp flag is specified. Please specify the value in the range 1-%d.\n", MAX_DSP_GEN2);
             sdffr = true;
             nosdff_str = "";
             // no_cfp_params mode for Genesis2
@@ -1111,25 +1111,25 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("wreduce t:$mul");
-                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis2);
+                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis2 + " -max_dsp " + std::to_string(max_dsp));
 
-                        processDsp(cec);
-						
                         for(auto& modules : _design->selected_modules()){
                             for(auto& cells : modules->selected_cells()){
                                 if(cells->type == RTLIL::escape_id("$mul")){
-                                    if(DSP_LIMIT_COUNTER < max_dsp){
+                                    if(DSP_COUNTER < max_dsp){
                                         cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
-                                        ++DSP_LIMIT_COUNTER;
                                     }
+                                    ++DSP_COUNTER;
                                 }
                             }
                         }
 
+                        processDsp(cec);
+
                         if (use_dsp_cfg_params.empty())
-                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0 a:valid_map");
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
                         else
-                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1 a:valid_map");
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1");
                             
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
