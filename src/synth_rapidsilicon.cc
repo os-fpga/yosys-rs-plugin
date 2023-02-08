@@ -695,7 +695,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         for (int n=1; n <= maxLoop; n++) { 
 
-            run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
+            run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
 
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
