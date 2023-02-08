@@ -278,7 +278,7 @@ struct RSDspMacc : public Pass {
         log("        By default use Genesis technology DSP blocks.\n");
         log("        Specifying this forces usage of Genesis2 technology DSP blocks.\n");
         log("    -max_dsp\n");
-        log("        Specifyies the maximum number of inferred DSP blocks.\n");
+        log("        Specifies the maximum number of inferred DSP blocks.\n");
         log("\n");
     }
 
