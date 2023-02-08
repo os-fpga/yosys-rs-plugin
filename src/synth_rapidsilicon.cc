@@ -58,7 +58,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 112
+#define VERSION_PATCH 113
 
 enum Strategy {
     AREA,
@@ -695,7 +695,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         for (int n=1; n <= maxLoop; n++) { 
 
-            run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
+            run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
+                                       // Use "-keepff" to preserve DFF output wire name
 
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
