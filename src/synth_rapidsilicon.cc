@@ -53,6 +53,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_WIDTH_4 4
 #define BRAM_WIDTH_2 2
 #define BRAM_WIDTH_1 1
+#define BRAM_first_byte_parity_bit 8
+#define BRAM_second_byte_parity_bit 17
 #define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -850,8 +852,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
             /// For 9/4/2/1 bit modes
-            else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP") ||
-                        cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP")) && 
+            else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
                         ((cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_9) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_4) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
@@ -863,12 +867,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                       
                         for (int j = 0; j <BRAM_WIDTH_18; ++j)
                             init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                        for (int k = 0; k <8; k++)
+                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
                             init_value1.push_back(init_temp[k]);
-                        for (int m = 9; m <17; m++) 
+                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
                             init_value1.push_back(init_temp[m]);
-                        init_value1.push_back(init_temp[8]);//placed at location [16]
-                        init_value1.push_back(init_temp[17]);
+                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
+                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
                         init_temp.clear();
                     }
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
