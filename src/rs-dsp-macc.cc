@@ -67,8 +67,7 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     if (st.ff->getParam(ID(CLK_POLARITY)).as_int() != 1) {
         return;
     }
-	
-    if (DSP_COUNTER > max_dsp) {
+    if (max_dsp != -1 && DSP_COUNTER > max_dsp) {
     	return;
     }
     ++DSP_COUNTER;

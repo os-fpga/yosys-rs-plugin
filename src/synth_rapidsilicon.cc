@@ -56,10 +56,6 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_WIDTH_1 1
 #define BRAM_first_byte_parity_bit 8
 #define BRAM_second_byte_parity_bit 17
-#define MAX_BRAM_GEN 31
-#define MAX_DSP_GEN 312
-#define MAX_BRAM_GEN2 150
-#define MAX_DSP_GEN2 154
 #define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -197,11 +193,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
         log("\n");
+        log("    -max_device_dsp <num>\n");
+        log("        Specify the number of available DSP resources for the target device.\n");
+        log("\n");
         log("    -max_dsp <num>\n");
         log("        Specify the maximum number of DSP to add\n");
         log("        to the design during synthesis. Specify a value >= 1, which should not\n");
         log("        exceed the available DSP count on the target device. \n");
-        log("        By default synthesis tool will not exceed the available DSP limit of the device. \n");
+        log("        The flag should be used with -max_device_dsp. \n");
+        log("        By default synthesis tool will not limit DSP count. \n");
         log("\n");
 #ifdef DEV_BUILD
         log("    -use_dsp_cfg_params\n");
@@ -213,11 +213,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -max_device_bram <num>\n");
+        log("        Specify the number of available Block RAM resources for the targe device.\n");
+        log("\n");
         log("    -max_bram <num>\n");
         log("        Specify the maximum number of Block RAM to add\n");
         log("        to the design during synthesis. Specify a value >= 1, which should not\n");
         log("        exceed the available BRAM count on the target device. \n");
-        log("        By default synthesis tool will not exceed the available Block RAM limit of the device. \n");
+        log("        The flag should be used with -max_device_bram. \n");
+        log("        By default synthesis tool will not limit Block RAM count. \n");
         log("\n");
         log("    -no_simplify\n");
         log("        By default call simplify.\n");
@@ -320,7 +324,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string carry_str;
         string clke_strategy_str;
         clear_flags();
-
+        int max_device_bram = -1;
+        int max_device_dsp = -1;
         _design = design;
 
         size_t argidx;
@@ -390,6 +395,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 max_dsp = stoi(args[++argidx]);
                 continue;
             }
+            if (args[argidx] == "-max_device_dsp" && argidx + 1 < args.size()) {
+                max_device_dsp = stoi(args[++argidx]);
+                continue;
+            }
 #ifdef DEV_BUILD
             if (args[argidx] == "-use_dsp_cfg_params") {
                 use_dsp_cfg_params = " -use_dsp_cfg_params";
@@ -402,6 +411,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
                 max_bram = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_bram" && argidx + 1 < args.size()) {
+                max_device_bram = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-de") {
@@ -433,6 +446,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         extra_args(args, argidx, design);
 
+        if (max_device_bram == -1 && max_bram != -1) {
+                log_cmd_error("Invalid use of max_bram flag. Please see help.\n");
+        } else if (max_bram > max_device_bram){
+                log_cmd_error("Invalid value of max_bram is specified. The available BRAMs are %d.\n", max_device_bram);
+        } else if (max_bram == -1){
+            max_bram = max_device_bram;
+        }
+        if (max_device_dsp == -1 && max_dsp != -1) {
+                log_cmd_error("Invalid use of max_dsp flag. Please see help.\n");
+        } else if (max_dsp > max_device_dsp){
+                log_cmd_error("Invalid value of max_dsp is specified. The available DSPs are %d.\n", max_device_dsp);
+        } else if (max_dsp == -1){
+            max_dsp = max_device_dsp; 
+        }
         if (!design->full_selection())
             log_cmd_error("This command only operates on fully selected designs!\n");
 
@@ -440,25 +467,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             tech = Technologies::GENERIC;
         else if (tech_str == "genesis"){
             tech = Technologies::GENESIS;
-            if(max_bram == -1)
-                max_bram = MAX_BRAM_GEN;
-            if(max_dsp == -1)
-                max_dsp = MAX_DSP_GEN;
-            if (max_bram > MAX_BRAM_GEN || max_bram < 1)
-                log_cmd_error("Invalid value of the -max_bram flag is specified. Please specify the value in the range 1-%d.\n", MAX_BRAM_GEN);
-            if (max_dsp > MAX_DSP_GEN || max_dsp < 1)
-                log_cmd_error("Invalid value of the -max_dsp flag is specified. Please specify the value in the range 1-%d.\n", MAX_DSP_GEN);
         }
         else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
-            if(max_bram == -1)
-                max_bram = MAX_BRAM_GEN2;
-            if(max_dsp == -1)
-                max_dsp = MAX_DSP_GEN2;
-            if (max_bram > MAX_BRAM_GEN2 || max_bram < 1)
-                log_cmd_error("Invalid value of the -max_bram flag is specified. Please specify the value in the range 1-%d.\n", MAX_BRAM_GEN2);
-            if (max_dsp > MAX_DSP_GEN2 || max_dsp < 1)
-                log_cmd_error("Invalid value of the -max_dsp flag is specified. Please specify the value in the range 1-%d.\n", MAX_DSP_GEN2);
             sdffr = true;
             nosdff_str = "";
             // no_cfp_params mode for Genesis2
@@ -805,11 +816,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
             case Technologies::GENESIS: 
             case Technologies::GENESIS_2: {
                 for (const auto &rule : dsp_rules_loop1) {
-                    run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
-                                " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                "-D DSP_NAME=%s a:valid_map",
-                                rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                    if (max_dsp != -1)
+                        run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
+                                    " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                    "-D DSP_NAME=%s a:valid_map",
+                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                    else
+                        run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
+                                    " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                    "-D DSP_NAME=%s",
+                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
                     run("stat");
 
                     if (cec)
@@ -829,11 +847,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         {10, 9, 4, 4, "$__RS_MUL10X9"},
                     };
                     for (const auto &rule : dsp_rules_loop2) {
-                        run(stringf("techmap -map +/mul2dsp.v "
-                                    "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                    "-D DSP_NAME=%s a:valid_map",
-                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                        if (max_dsp != -1)
+                            run(stringf("techmap -map +/mul2dsp.v "
+                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                        "-D DSP_NAME=%s a:valid_map",
+                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                        else
+                            run(stringf("techmap -map +/mul2dsp.v "
+                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                        "-D DSP_NAME=%s",
+                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
@@ -1153,17 +1178,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         run("wreduce t:$mul");
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis2 + " -max_dsp " + std::to_string(max_dsp));
-
-                        for(auto& modules : _design->selected_modules()){
-                            for(auto& cells : modules->selected_cells()){
-                                if(cells->type == RTLIL::escape_id("$mul")){
-                                    if(DSP_COUNTER < max_dsp){
-                                        cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
+                        if (max_dsp != -1)
+                            for(auto& modules : _design->selected_modules()){
+                                for(auto& cells : modules->selected_cells()){
+                                    if(cells->type == RTLIL::escape_id("$mul")){
+                                        if(DSP_COUNTER < max_dsp){
+                                            cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
+                                        }
+                                        ++DSP_COUNTER;
                                     }
-                                    ++DSP_COUNTER;
                                 }
                             }
-                        }
 
                         processDsp(cec);
 
