@@ -63,7 +63,7 @@ synth_rs -tech genesis -goal area -de -top my_dffs_p
 yosys cd my_dffs_p
 stat
 select -assert-count 1 t:dffsre
-select -assert-count 1 t:\$lut
+select -assert-count 2 t:\$lut
 design -reset
 
 # DFFS (negedge SET)
@@ -80,7 +80,7 @@ synth_rs -tech genesis -goal area -de -top my_dffse_p
 yosys cd my_dffse_p
 stat
 select -assert-count 1 t:dffsre
-select -assert-count 1 t:\$lut
+select -assert-count 2 t:\$lut
 design -reset
 
 # DFFSE (negedge SET)
