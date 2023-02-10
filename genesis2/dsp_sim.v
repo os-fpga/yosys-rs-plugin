@@ -93,7 +93,7 @@ module RS_DSP (
     );
 endmodule
 
-/*
+
 module RS_DSP_MULT (
     input  wire [19:0] a,
     input  wire [17:0] b,
@@ -750,7 +750,7 @@ module dsp_t1_20x18x64_cfg_ports (
     );
 endmodule
 
-*/
+
 module dsp_t1_sim_cfg_ports # (
     parameter NBITS_ACC  = 64,
     parameter NBITS_A    = 20,
@@ -773,15 +773,15 @@ module dsp_t1_sim_cfg_ports # (
     input  wire               s_reset,
 
     input  wire               saturate_enable_i,
-    input  wire [2:0]         output_select_i,
+    input  wire [0:2]         output_select_i,
     input  wire               round_i,
     input  wire [5:0]         shift_right_i,
     input  wire               subtract_i,
     input  wire               register_inputs_i,
-    input  wire [NBITS_A-1:0] coef_0_i,
-    input  wire [NBITS_A-1:0] coef_1_i,
-    input  wire [NBITS_A-1:0] coef_2_i,
-    input  wire [NBITS_A-1:0] coef_3_i
+    input  wire [0:NBITS_A-1] coef_0_i,
+    input  wire [0:NBITS_A-1] coef_1_i,
+    input  wire [0:NBITS_A-1] coef_2_i,
+    input  wire [0:NBITS_A-1] coef_3_i
 );
 
 // FIXME: The version of Icarus Verilog from Conda seems not to recognize the
@@ -877,7 +877,7 @@ module dsp_t1_sim_cfg_ports # (
             r_unsigned_b <= unsigned_b_i;
             r_feedback   <= feedback_i;
             r_shift_d1   <= shift_right_i;
-            r_shift_d2   <= shift_d1;
+            r_shift_d2   <= shift_d1;       // Fixed Extra Flop Logic
             r_subtract   <= subtract_i;
             r_load_acc   <= load_acc_i;
             r_sat_d1     <= saturate_enable_i;
@@ -974,17 +974,17 @@ module dsp_t1_sim_cfg_ports # (
         if (s_reset)
             z1 <= 0;
         else begin
-            z1 <= (output_select_i == 3'b100) ? z0 : z2; // FIXED OUTPUT_SELECT VALUE
+            z1 <= (output_select_i == 3'b001) ? z0 : z2;
         end
 
-    // Output mux 
-    assign z_o = (output_select_i == 3'h0) ?   z0 : // FIXED MUX SELECTION
-                 (output_select_i == 3'h4) ?   z1 :
-                 (output_select_i == 3'h5) ?   z1 :
-                 (output_select_i == 3'h6) ?   z1 :
-                 (output_select_i == 3'h1) ?   z2 :
+    // Output mux
+    assign z_o = (output_select_i == 3'h0) ?   z0 :
+                 (output_select_i == 3'h4) ?   z2 :
                  (output_select_i == 3'h2) ?   z2 :
-                 (output_select_i == 3'h3) ?   z2 :
+                 (output_select_i == 3'h6) ?   z2 :
+                 (output_select_i == 3'h1) ?   z1 :
+                 (output_select_i == 3'h5) ?   z1 :
+                 (output_select_i == 3'h3) ?   z1 :
                            z1;  // if output_select_i == 3'h7
 
     // B input delayed passthrough
