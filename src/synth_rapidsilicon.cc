@@ -1051,7 +1051,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * to memory_libmap is for these memeories. We counter swap
                          * port mappings to get correct connections for the read ports.
                          */
-                        run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
+						if (tech != Technologies::GENESIS)
+                        	run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
