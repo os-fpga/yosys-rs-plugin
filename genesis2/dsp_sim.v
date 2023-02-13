@@ -877,7 +877,7 @@ module dsp_t1_sim_cfg_ports # (
             r_unsigned_b <= unsigned_b_i;
             r_feedback   <= feedback_i;
             r_shift_d1   <= shift_right_i;
-            r_shift_d2   <= r_shift_d1;
+            r_shift_d2   <= shift_d1;       // Fixed Extra Flop Logic
             r_subtract   <= subtract_i;
             r_load_acc   <= load_acc_i;
             r_sat_d1     <= saturate_enable_i;
