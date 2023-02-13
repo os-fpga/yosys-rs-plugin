@@ -698,8 +698,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec) {
                 out << "write_blif " + out_blif_file + ";";
-		// cec command is not called, so as not to impact on runtime.
-	        // out << "cec " + in_blif_file + " " + out_blif_file;
+                // cec command is not called, so as not to impact on runtime.
+                // out << "cec " + in_blif_file + " " + out_blif_file;
             }
             out.close();
 
@@ -719,13 +719,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     // Perform a small loop of successive "abc -dff" calls.  
     // This "simplify" pass may have some big QoR impact on this list of designs:
-    // 	- wrapper_io_reg_max 
-    // 	- wrapper_io_reg_tc1 
-    // 	- wrapper_multi_enc_decx2x4
-    // 	- keymgr 
-    // 	- kmac 
-    // 	- alu4 
-    // 	- s38417
+    //     - wrapper_io_reg_max 
+    //     - wrapper_io_reg_tc1 
+    //     - wrapper_multi_enc_decx2x4
+    //     - keymgr 
+    //     - kmac 
+    //     - alu4 
+    //     - s38417
     //
     void simplify() 
     {
@@ -927,9 +927,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
                         cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
                         cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_36) {
-                	RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                	std::vector<RTLIL::State> init_value1;
-                	std::vector<RTLIL::State> init_value2;
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_value2;
                     for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                         if (i % 2 == 0) {
                             for (int j = 0; j <BRAM_WIDTH_18; ++j) {
@@ -945,8 +945,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
-            /// For 9/4/2/1 bit modes
-            else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
+                /// For 9/4/2/1 bit modes
+                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))||
                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))||
                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
@@ -954,11 +954,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_4) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
-                	 RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                	 std::vector<RTLIL::State> init_value1;
-                	 std::vector<RTLIL::State> init_temp; 
-                     for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
-                      
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_temp; 
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                         for (int j = 0; j <BRAM_WIDTH_18; ++j)
                             init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
                         for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
@@ -1051,8 +1050,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * to memory_libmap is for these memeories. We counter swap
                          * port mappings to get correct connections for the read ports.
                          */
-						if (tech != Technologies::GENESIS)
-                        	run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
+                        if (tech != Technologies::GENESIS)
+                            run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
@@ -1461,13 +1460,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         } else {
             // Perform a small loop of successive "abc -dff" calls.  
             // This simplify pass may have some big QoR impact on this list of designs:
-            // 	- wrapper_io_reg_max 
-            // 	- wrapper_io_reg_tc1 
-            // 	- wrapper_multi_enc_decx2x4
-            // 	- keymgr 
-            // 	- kmac 
-            // 	- alu4 
-            // 	- s38417
+            //     - wrapper_io_reg_max 
+            //     - wrapper_io_reg_tc1 
+            //     - wrapper_multi_enc_decx2x4
+            //     - keymgr 
+            //     - kmac 
+            //     - alu4 
+            //     - s38417
             //
             if (!nosimplify) {
                 if (cec)
