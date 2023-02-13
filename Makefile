@@ -20,6 +20,7 @@ EXTRA_FLAGS ?=
 COMMON			= common
 GENESIS			= genesis
 GENESIS2		= genesis2
+GENESIS3		= genesis3
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(COMMON)/simlib.v \
 				  $(GENESIS)/cells_sim.v \
@@ -66,7 +67,28 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS2)/TDP18K_FIFO.v \
 				  $(GENESIS2)/sram1024x18.v \
 				  $(GENESIS2)/ufifo_ctl.v \
-				  $(GENESIS2)/cell_sim_blackbox.v
+				  $(GENESIS2)/cell_sim_blackbox.v \
+				  $(GENESIS3)/cells_sim.v \
+				  $(GENESIS3)/cells_sim.vhd \
+				  $(GENESIS3)/dsp_sim.v \
+				  $(GENESIS3)/brams_sim.v \
+				  $(GENESIS3)/ffs_map.v \
+				  $(GENESIS3)/dsp_map.v \
+				  $(GENESIS3)/dsp_final_map.v \
+				  $(GENESIS3)/arith_map.v \
+				  $(GENESIS3)/all_arith_map.v \
+				  $(GENESIS3)/brams_map.v \
+				  $(GENESIS3)/brams_map_new.v \
+				  $(GENESIS3)/brams_final_map.v \
+				  $(GENESIS3)/brams_final_map_new.v \
+				  $(GENESIS3)/brams.txt \
+				  $(GENESIS3)/brams_new.txt \
+				  $(GENESIS3)/brams_new_swap.txt \
+				  $(GENESIS3)/brams_async.txt \
+				  $(GENESIS3)/TDP18K_FIFO.v \
+				  $(GENESIS3)/sram1024x18.v \
+				  $(GENESIS3)/ufifo_ctl.v \
+				  $(GENESIS3)/cell_sim_blackbox.v
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
