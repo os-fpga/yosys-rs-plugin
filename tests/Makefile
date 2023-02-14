@@ -120,6 +120,7 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 	rm -f $$(notdir $(1))_test$(3).tcl;
 endef
 
+all: tests_gen tests_gen2
 tests_gen: $(TESTS_GEN)
 tests_gen2: $(TESTS_GEN2)
 
@@ -135,5 +136,6 @@ clean_tests:
 	@find . -name "*.eqn" | xargs rm -rf
 	@find . -name "*post_synth.v" | xargs rm -rf
 
+valgrind: valgrind_gen valgrind_gen2
 valgrind_gen: $(VALGRIND_TESTS_GEN)
 valgrind_gen2: $(VALGRIND_TESTS_GEN2)
