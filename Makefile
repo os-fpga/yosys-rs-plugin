@@ -141,11 +141,17 @@ install_modules: $(VERILOG_MODULES)
 .PHONY: install
 install: install_plugin install_modules
 
-valgrind:
-	$(MAKE) -C tests valgrind YOSYS_PATH=$(YOSYS_PATH)
+valgrind_gen:
+	$(MAKE) -C tests valgrind_gen YOSYS_PATH=$(YOSYS_PATH)
 
-test:
-	$(MAKE) -C tests all YOSYS_PATH=$(YOSYS_PATH)
+valgrind_gen2:
+	$(MAKE) -C tests valgrind_gen2 YOSYS_PATH=$(YOSYS_PATH)
+
+test_gen:
+	$(MAKE) -C tests tests_gen YOSYS_PATH=$(YOSYS_PATH)
+
+test_gen2:
+	$(MAKE) -C tests tests_gen2 YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
 	rm -rf src/*.d src/*.o *.so pmgen*
