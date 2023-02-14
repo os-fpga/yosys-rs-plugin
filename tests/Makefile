@@ -1,60 +1,60 @@
 # Copyright (C) 2022 RapidSilicon..
 
 TESTS_GEN = dffs_gen\
-			latches_gen\
-			shreg_gen\
-			full_adder_gen\
-			dsp_macc_gen\
-			dsp_mult_gen\
-			dsp_simd_gen\
-			pack_dsp_regs_gen\
-			bram_tdp_new_gen\
-			bram_sdp_new_gen\
-			bram_sdp_split_new_gen\
-			bram_tdp_split_new_gen
-		#bram_asymmetric_wider_read\
-		#bram_asymmetric_wider_write
+            latches_gen\
+            shreg_gen\
+            full_adder_gen\
+            dsp_macc_gen\
+            dsp_mult_gen\
+            dsp_simd_gen\
+            pack_dsp_regs_gen\
+            bram_tdp_new_gen\
+            bram_sdp_new_gen\
+            bram_sdp_split_new_gen\
+            bram_tdp_split_new_gen
+        #bram_asymmetric_wider_read\
+        #bram_asymmetric_wider_write
 
 TESTS_GEN2 = dffs_gen2\
-			 latches_gen2\
-			 shreg_gen2\
-			 full_adder_gen2\
-			 dsp_macc_gen2\
-			 dsp_mult_gen2\
-			 dsp_simd_gen2\
-			 pack_dsp_regs_gen2\
-			 bram_tdp_new_gen2\
-			 bram_sdp_new_gen2\
-			 bram_sdp_split_new_gen2\
-			 bram_tdp_split_new_gen2
+             latches_gen2\
+             shreg_gen2\
+             full_adder_gen2\
+             dsp_macc_gen2\
+             dsp_mult_gen2\
+             dsp_simd_gen2\
+             pack_dsp_regs_gen2\
+             bram_tdp_new_gen2\
+             bram_sdp_new_gen2\
+             bram_sdp_split_new_gen2\
+             bram_tdp_split_new_gen2
 
 VALGRIND_TESTS_GEN = valgrind/dffs_gen\
-				     valgrind/latches_gen\
-				     valgrind/shreg_gen\
-				     valgrind/full_adder_gen\
-				     valgrind/dsp_macc_gen\
-				     valgrind/dsp_mult_gen\
-				     valgrind/dsp_simd_gen\
-				     valgrind/pack_dsp_regs_gen\
-				     valgrind/bram_tdp_new_gen\
-				     valgrind/bram_sdp_new_gen\
-				     valgrind/bram_sdp_split_new_gen\
-				     valgrind/bram_tdp_split_new_gen\
+                     valgrind/latches_gen\
+                     valgrind/shreg_gen\
+                     valgrind/full_adder_gen\
+                     valgrind/dsp_macc_gen\
+                     valgrind/dsp_mult_gen\
+                     valgrind/dsp_simd_gen\
+                     valgrind/pack_dsp_regs_gen\
+                     valgrind/bram_tdp_new_gen\
+                     valgrind/bram_sdp_new_gen\
+                     valgrind/bram_sdp_split_new_gen\
+                     valgrind/bram_tdp_split_new_gen\
 
 VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
-				 	  valgrind/latches_gen2\
-				 	  valgrind/shreg_gen2\
-				 	  valgrind/full_adder_gen2\
-				 	  valgrind/dsp_macc_gen2\
-				 	  valgrind/dsp_mult_gen2\
-				 	  valgrind/dsp_simd_gen2\
-				 	  valgrind/pack_dsp_regs_gen2\
-				 	  valgrind/bram_tdp_new_gen2\
-				 	  valgrind/bram_sdp_new_gen2\
-				 	  valgrind/bram_sdp_split_new_gen2\
-				 	  valgrind/bram_tdp_split_new_gen2\
-				 #valgrind/bram_asymmetric_wider_read\
-				 #valgrind/bram_asymmetric_wider_write
+                      valgrind/latches_gen2\
+                      valgrind/shreg_gen2\
+                      valgrind/full_adder_gen2\
+                      valgrind/dsp_macc_gen2\
+                      valgrind/dsp_mult_gen2\
+                      valgrind/dsp_simd_gen2\
+                      valgrind/pack_dsp_regs_gen2\
+                      valgrind/bram_tdp_new_gen2\
+                      valgrind/bram_sdp_new_gen2\
+                      valgrind/bram_sdp_split_new_gen2\
+                      valgrind/bram_tdp_split_new_gen2\
+                 #valgrind/bram_asymmetric_wider_read\
+                 #valgrind/bram_asymmetric_wider_write
 
 OPTION_1 = "--tool=memcheck"
 OPTION_2 = "--log-file=valgrind.log"
