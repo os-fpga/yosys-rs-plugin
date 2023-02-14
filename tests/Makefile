@@ -1,36 +1,58 @@
 # Copyright (C) 2022 RapidSilicon..
 
-TESTS = dffs\
-		latches\
-		shreg\
-		full_adder\
-		dsp_macc\
-		dsp_mult\
-		dsp_simd\
-		pack_dsp_regs\
-		bram_tdp\
-		bram_sdp\
-		bram_sdp_split\
-		bram_tdp_split\
-		bram_tdp_new\
-		bram_sdp_new\
-		bram_sdp_split_new\
-		bram_tdp_split_new
+TESTS_GEN = dffs_gen\
+			latches_gen\
+			shreg_gen\
+			full_adder_gen\
+			dsp_macc_gen\
+			dsp_mult_gen\
+			dsp_simd_gen\
+			pack_dsp_regs_gen\
+			bram_tdp_new_gen\
+			bram_sdp_new_gen\
+			bram_sdp_split_new_gen\
+			bram_tdp_split_new_gen
 		#bram_asymmetric_wider_read\
 		#bram_asymmetric_wider_write
 
-VALGRIND_TESTS = valgrind/dffs\
-				 valgrind/latches\
-				 valgrind/shreg\
-				 valgrind/full_adder\
-				 valgrind/dsp_macc\
-				 valgrind/dsp_mult\
-				 valgrind/dsp_simd\
-				 valgrind/pack_dsp_regs\
-				 valgrind/bram_tdp\
-				 valgrind/bram_sdp\
-				 valgrind/bram_sdp_split\
-				 valgrind/bram_tdp_split\
+TESTS_GEN2 = dffs_gen2\
+			 latches_gen2\
+			 shreg_gen2\
+			 full_adder_gen2\
+			 dsp_macc_gen2\
+			 dsp_mult_gen2\
+			 dsp_simd_gen2\
+			 pack_dsp_regs_gen2\
+			 bram_tdp_new_gen2\
+			 bram_sdp_new_gen2\
+			 bram_sdp_split_new_gen2\
+			 bram_tdp_split_new_gen2
+
+VALGRIND_TESTS_GEN = valgrind/dffs_gen\
+				     valgrind/latches_gen\
+				     valgrind/shreg_gen\
+				     valgrind/full_adder_gen\
+				     valgrind/dsp_macc_gen\
+				     valgrind/dsp_mult_gen\
+				     valgrind/dsp_simd_gen\
+				     valgrind/pack_dsp_regs_gen\
+				     valgrind/bram_tdp_new_gen\
+				     valgrind/bram_sdp_new_gen\
+				     valgrind/bram_sdp_split_new_gen\
+				     valgrind/bram_tdp_split_new_gen\
+
+VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
+				 	  valgrind/latches_gen2\
+				 	  valgrind/shreg_gen2\
+				 	  valgrind/full_adder_gen2\
+				 	  valgrind/dsp_macc_gen2\
+				 	  valgrind/dsp_mult_gen2\
+				 	  valgrind/dsp_simd_gen2\
+				 	  valgrind/pack_dsp_regs_gen2\
+				 	  valgrind/bram_tdp_new_gen2\
+				 	  valgrind/bram_sdp_new_gen2\
+				 	  valgrind/bram_sdp_split_new_gen2\
+				 	  valgrind/bram_tdp_split_new_gen2\
 				 #valgrind/bram_asymmetric_wider_read\
 				 #valgrind/bram_asymmetric_wider_write
 
@@ -98,7 +120,8 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 	rm -f $$(notdir $(1))_test$(3).tcl;
 endef
 
-all: $(TESTS)
+tests_gen: $(TESTS_GEN)
+tests_gen2: $(TESTS_GEN2)
 
 .PHONY: all clean $(TESTS)
 
@@ -112,4 +135,5 @@ clean_tests:
 	@find . -name "*.eqn" | xargs rm -rf
 	@find . -name "*post_synth.v" | xargs rm -rf
 
-valgrind: $(VALGRIND_TESTS)
+valgrind_gen: $(VALGRIND_TESTS_GEN)
+valgrind_gen2: $(VALGRIND_TESTS_GEN2)
