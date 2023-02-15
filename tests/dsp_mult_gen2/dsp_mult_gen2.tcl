@@ -5,7 +5,7 @@ proc check_equiv {top use_cfg_params} {
     hierarchy -top ${top}
 
     design -save preopt
-    
+
     if {${use_cfg_params} == 1} {
         synth_rs -tech genesis2 -goal area -de -top ${top} -use_dsp_cfg_params
     } else {
@@ -64,17 +64,14 @@ proc test_dsp_design {top expected_cell_suffix} {
 }
 
 yosys -import
-if { [info procs synth_rs] == {} } { plugin -i synth-rs}
+plugin -i synth-rs
 yosys -import  ;# ingest plugin commands
 
-read_verilog dsp_macc.v
+read_verilog dsp_mult_gen2.v
 design -save read
 
-test_dsp_design "macc_simple"               "_MULTACC"
-test_dsp_design "macc_simple_clr"           "_MULTACC"
-test_dsp_design "macc_simple_arst"          "_MULTACC"
-test_dsp_design "macc_simple_ena"           "_MULTACC"
-test_dsp_design "macc_simple_arst_clr_ena"  "_MULTACC"
-test_dsp_design "macc_simple_preacc"        "_MULTACC"
-test_dsp_design "macc_simple_preacc_clr"    "_MULTACC"
-
+test_dsp_design "mult_16x16"    "_MULT"
+test_dsp_design "mult_20x18"    "_MULT"
+test_dsp_design "mult_8x8"      "_MULT"
+test_dsp_design "mult_10x9"     "_MULT"
+test_dsp_design "mult_8x8_s"    "_MULT"

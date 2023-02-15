@@ -67,7 +67,7 @@ yosys -import
 plugin -i synth-rs
 yosys -import  ;# ingest plugin commands
 
-read_verilog dsp_mult.v
+read_verilog dsp_mult_gen.v
 design -save read
 
 test_dsp_design "mult_16x16"    "_MULT"
