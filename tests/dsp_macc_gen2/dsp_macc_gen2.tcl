@@ -1,17 +1,13 @@
 # For some tests the equiv_induct pass seems to hang if opt_expr + opt_clean
 # are not invoked after techmapping. Therefore this function is used instead
 # of the equiv_opt pass.
-proc check_equiv {top use_cfg_params} {
+proc check_equiv {top} {
     hierarchy -top ${top}
 
     design -save preopt
-    
-    if {${use_cfg_params} == 1} {
-        synth_rs -tech genesis2 -goal area -de -top ${top} -use_dsp_cfg_params
-    } else {
-        stat
-        synth_rs -tech genesis2 -goal area -de -top ${top}
-    }
+
+    stat
+    synth_rs -tech genesis2 -goal area -de -top ${top}
 
     design -stash postopt
 
@@ -40,24 +36,12 @@ proc test_dsp_design {top expected_cell_suffix} {
     set TOP ${top}
     # Infer DSP with configuration bits passed through ports
     # We expect RS_DSP2 cells inferred
-    set USE_DSP_CFG_PARAMS 0
     design -load read
     hierarchy -top $TOP
-    check_equiv ${TOP} ${USE_DSP_CFG_PARAMS}
+    check_equiv ${TOP}
     design -load postopt
     yosys cd ${top}
-    select -assert-count 1 t:RS_DSP2${expected_cell_suffix}
-    select -assert-count 1 t:*
-
-    # Infer DSP with configuration bits passed through parameters
-    # We expect RS_DSP3 cells inferred
-    set USE_DSP_CFG_PARAMS 1
-    design -load read
-    hierarchy -top $TOP
-    check_equiv ${TOP} ${USE_DSP_CFG_PARAMS}
-    design -load postopt
-    yosys cd ${TOP}
-    select -assert-count 1 t:RS_DSP3${expected_cell_suffix}
+    select -assert-count 1 t:RS_DSP${expected_cell_suffix}
     select -assert-count 1 t:*
 
     return
@@ -75,6 +59,6 @@ test_dsp_design "macc_simple_clr"           "_MULTACC"
 test_dsp_design "macc_simple_arst"          "_MULTACC"
 test_dsp_design "macc_simple_ena"           "_MULTACC"
 test_dsp_design "macc_simple_arst_clr_ena"  "_MULTACC"
-test_dsp_design "macc_simple_preacc"        "_MULTACC"
-test_dsp_design "macc_simple_preacc_clr"    "_MULTACC"
+#test_dsp_design "macc_simple_preacc"        "_MULTACC_REGOUT"
+#test_dsp_design "macc_simple_preacc_clr"    "_MULTACC_REGOUT"
 

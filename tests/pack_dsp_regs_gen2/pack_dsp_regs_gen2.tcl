@@ -2,12 +2,8 @@
 # are not invoked after techmapping. Therefore this function is used instead
 # of the equiv_opt pass.
 
-proc check_equiv {top use_cfg_params technology} {
-    if {${use_cfg_params} == 1} {
-        synth_rs -tech ${technology} -goal area -de -top ${top} -use_dsp_cfg_params
-    } else {
-        synth_rs -tech ${technology} -goal area -de -top ${top}
-    }
+proc check_equiv {top technology} {
+    synth_rs -tech ${technology} -goal area -de -top ${top}
     return
 }
 
@@ -20,9 +16,8 @@ proc test_dsp_design {top dff_count expected_cell_suffix} {
     # Infer Genesis2 DSP
     # We expect RS_DSP_MULT_REGIN cells inferred
     yosys read -vlog2k pack_dsp_regs_gen2.v
-    set USE_DSP_CFG_PARAMS 0
     set TECHNOLOGY genesis2
-    check_equiv ${TOP} ${USE_DSP_CFG_PARAMS} ${TECHNOLOGY}
+    check_equiv ${TOP} ${TECHNOLOGY}
     select -assert-count 1 t:RS_DSP${expected_cell_suffix}
     select -assert-count ${dff_count} t:dffr
     design -reset
