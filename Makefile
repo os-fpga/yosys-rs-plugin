@@ -144,13 +144,13 @@ install: install_plugin install_modules
 valgrind_gen:
 	$(MAKE) -C tests valgrind_gen YOSYS_PATH=$(YOSYS_PATH)
 
-valgrind_gen2:
+valgrind:
 	$(MAKE) -C tests valgrind_gen2 YOSYS_PATH=$(YOSYS_PATH)
 
 test_gen:
 	$(MAKE) -C tests tests_gen YOSYS_PATH=$(YOSYS_PATH)
 
-test_gen2:
+test:
 	$(MAKE) -C tests tests_gen2 YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
