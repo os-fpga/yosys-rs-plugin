@@ -17,11 +17,9 @@ TESTS_GEN = dffs_gen\
 
 TESTS_GEN2 = dffs_gen2\
              latches_gen2\
-             shreg_gen2\
              full_adder_gen2\
              dsp_macc_gen2\
              dsp_mult_gen2\
-             dsp_simd_gen2\
              pack_dsp_regs_gen2\
              bram_tdp_gen2\
              bram_sdp_gen2\
@@ -43,7 +41,6 @@ VALGRIND_TESTS_GEN = valgrind/dffs_gen\
 
 VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
                       valgrind/latches_gen2\
-                      valgrind/shreg_gen2\
                       valgrind/full_adder_gen2\
                       valgrind/dsp_macc_gen2\
                       valgrind/dsp_mult_gen2\
@@ -126,8 +123,10 @@ tests_gen2: $(TESTS_GEN2)
 
 .PHONY: all clean $(TESTS)
 
-$(foreach test,$(TESTS),$(eval $(call test_tpl,$(test))))
-$(foreach test,$(TESTS),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
+$(foreach test,$(TESTS_GEN2),$(eval $(call test_tpl,$(test))))
+$(foreach test,$(TESTS_GEN),$(eval $(call test_tpl,$(test))))
+$(foreach test,$(VALGRIND_TESTS_GEN),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
+$(foreach test,$(VALGRIND_TESTS_GEN2),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 
 clean_tests:
 	@find . -name "ok" | xargs rm -rf

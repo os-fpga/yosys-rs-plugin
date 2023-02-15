@@ -13,8 +13,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_36x1024 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_36x1024_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -26,8 +25,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_32x1024 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_32x1024_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -39,8 +37,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_18x2048 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_18x2048_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -52,8 +49,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_16x2048 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_16x2048_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -65,8 +61,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_9x4096 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_9x4096_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -78,8 +73,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_8x4096 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_8x4096_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -91,8 +85,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_4x8192 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_4x8192_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -104,8 +97,7 @@ synth_rs -tech genesis2 -top BRAM_SDP_2x16384 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_2x16384_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 select -clear
 design -reset
@@ -117,7 +109,6 @@ synth_rs -tech genesis2 -top BRAM_SDP_1x32768 -goal area -de
 opt_expr -undriven
 opt_clean
 stat
-write_verilog sim/bram_sdp_1x32768_post_synth.v
-select -assert-count 1 t:TDP36K
+select -assert-count 1 t:RS_TDP36K
 
 design -reset
