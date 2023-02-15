@@ -4,7 +4,7 @@ yosys -import
 plugin -i synth-rs
 yosys -import;
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 
 select BRAM_TDP_36x1024
 select *
@@ -18,7 +18,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_32x1024
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_32x1024
@@ -31,7 +31,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_18x2048
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_18x2048
@@ -44,7 +44,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_16x2048
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_16x2048
@@ -57,7 +57,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_9x4096
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_9x4096
@@ -70,7 +70,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_8x4096
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_8x4096
@@ -83,7 +83,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_4x8192
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_4x8192
@@ -96,7 +96,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_2x16384
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_2x16384
@@ -109,7 +109,7 @@ select -assert-count 1 t:TDP36K
 select -clear
 design -reset
 
-yosys read -sv bram_tdp_new.v
+yosys read -sv bram_tdp_gen2.v
 select BRAM_TDP_1x32768
 select *
 synth_rs -tech genesis2 -goal area -de -top BRAM_TDP_1x32768

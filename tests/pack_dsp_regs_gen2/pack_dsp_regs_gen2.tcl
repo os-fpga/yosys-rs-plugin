@@ -15,24 +15,16 @@ proc test_dsp_design {top dff_count expected_cell_suffix} {
 
     set TOP ${top}
     logger -debug
-    # Infer DSP with configuration bits passed through ports
-    # We expect RS_DSP2_MULT_REGIN cells inferred
-    yosys read -vlog2k pack_dsp_regs.v
-    set USE_DSP_CFG_PARAMS 0
-    set TECHNOLOGY genesis
-    check_equiv ${TOP} ${USE_DSP_CFG_PARAMS} ${TECHNOLOGY}
-    select -assert-count 1 t:RS_DSP2${expected_cell_suffix}
-    select -assert-count ${dff_count} t:dffsre
     design -reset
 
-    # Infer DSP with configuration bits passed through parameters
-    # We expect RS_DSP3_MULT_REGIN cells inferred
-    yosys read -vlog2k pack_dsp_regs.v
-    set USE_DSP_CFG_PARAMS 1
-    set TECHNOLOGY genesis
+    # Infer Genesis2 DSP
+    # We expect RS_DSP_MULT_REGIN cells inferred
+    yosys read -vlog2k pack_dsp_regs_gen2.v
+    set USE_DSP_CFG_PARAMS 0
+    set TECHNOLOGY genesis2
     check_equiv ${TOP} ${USE_DSP_CFG_PARAMS} ${TECHNOLOGY}
-    select -assert-count 1 t:RS_DSP3${expected_cell_suffix}
-    select -assert-count ${dff_count} t:dffsre
+    select -assert-count 1 t:RS_DSP${expected_cell_suffix}
+    select -assert-count ${dff_count} t:dffr
     design -reset
     return
 }

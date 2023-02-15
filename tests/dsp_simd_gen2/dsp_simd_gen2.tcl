@@ -7,10 +7,10 @@ proc check_equiv {top use_cfg_params} {
     design -save preopt
 
     if {${use_cfg_params} == 1} {
-        synth_rs -tech genesis -goal area -de -top ${top} -use_dsp_cfg_params
+        synth_rs -tech genesis2 -goal area -de -top ${top} -use_dsp_cfg_params
     } else {
         stat
-        synth_rs -tech genesis -goal area -de -top ${top}
+        synth_rs -tech genesis2 -goal area -de -top ${top}
     }
 
     design -stash postopt
@@ -18,8 +18,8 @@ proc check_equiv {top use_cfg_params} {
     design -copy-from preopt  -as gold A:top
     design -copy-from postopt -as gate A:top
 
-    techmap -wb -autoproc -map +/rapidsilicon/genesis/cells_sim.v
-    techmap -wb -autoproc -map +/rapidsilicon/genesis/dsp_sim.v
+    techmap -wb -autoproc -map +/rapidsilicon/genesis2/cells_sim.v
+    techmap -wb -autoproc -map +/rapidsilicon/genesis2/dsp_sim.v
     yosys proc
     opt_expr
     opt_clean
@@ -103,7 +103,7 @@ yosys -import
 plugin -i synth-rs
 yosys -import  ;# ingest plugin commands
 
-read_verilog dsp_simd.v
+read_verilog dsp_simd_gen2.v
 design -save read
 
 test_dsp_cfg_ports      "simd_mult_explicit_ports"      ""      1

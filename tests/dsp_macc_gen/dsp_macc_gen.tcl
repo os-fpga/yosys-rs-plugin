@@ -67,7 +67,7 @@ yosys -import
 if { [info procs synth_rs] == {} } { plugin -i synth-rs}
 yosys -import  ;# ingest plugin commands
 
-read_verilog dsp_macc.v
+read_verilog dsp_macc_gen.v
 design -save read
 
 test_dsp_design "macc_simple"               "_MULTACC"

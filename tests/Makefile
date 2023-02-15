@@ -8,10 +8,10 @@ TESTS_GEN = dffs_gen\
             dsp_mult_gen\
             dsp_simd_gen\
             pack_dsp_regs_gen\
-            bram_tdp_new_gen\
-            bram_sdp_new_gen\
-            bram_sdp_split_new_gen\
-            bram_tdp_split_new_gen
+            bram_tdp_gen\
+            bram_sdp_gen\
+            bram_sdp_split_gen\
+            bram_tdp_split_gen
         #bram_asymmetric_wider_read\
         #bram_asymmetric_wider_write
 
@@ -23,10 +23,10 @@ TESTS_GEN2 = dffs_gen2\
              dsp_mult_gen2\
              dsp_simd_gen2\
              pack_dsp_regs_gen2\
-             bram_tdp_new_gen2\
-             bram_sdp_new_gen2\
-             bram_sdp_split_new_gen2\
-             bram_tdp_split_new_gen2
+             bram_tdp_gen2\
+             bram_sdp_gen2\
+             bram_sdp_split_gen2\
+             bram_tdp_split_gen2
 
 VALGRIND_TESTS_GEN = valgrind/dffs_gen\
                      valgrind/latches_gen\
@@ -36,10 +36,10 @@ VALGRIND_TESTS_GEN = valgrind/dffs_gen\
                      valgrind/dsp_mult_gen\
                      valgrind/dsp_simd_gen\
                      valgrind/pack_dsp_regs_gen\
-                     valgrind/bram_tdp_new_gen\
-                     valgrind/bram_sdp_new_gen\
-                     valgrind/bram_sdp_split_new_gen\
-                     valgrind/bram_tdp_split_new_gen\
+                     valgrind/bram_tdp_gen\
+                     valgrind/bram_sdp_gen\
+                     valgrind/bram_sdp_split_gen\
+                     valgrind/bram_tdp_split_gen\
 
 VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
                       valgrind/latches_gen2\
@@ -49,10 +49,10 @@ VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
                       valgrind/dsp_mult_gen2\
                       valgrind/dsp_simd_gen2\
                       valgrind/pack_dsp_regs_gen2\
-                      valgrind/bram_tdp_new_gen2\
-                      valgrind/bram_sdp_new_gen2\
-                      valgrind/bram_sdp_split_new_gen2\
-                      valgrind/bram_tdp_split_new_gen2\
+                      valgrind/bram_tdp_gen2\
+                      valgrind/bram_sdp_gen2\
+                      valgrind/bram_sdp_split_gen2\
+                      valgrind/bram_tdp_split_gen2\
                  #valgrind/bram_asymmetric_wider_read\
                  #valgrind/bram_asymmetric_wider_write
 

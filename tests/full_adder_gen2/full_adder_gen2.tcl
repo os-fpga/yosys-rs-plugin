@@ -6,7 +6,7 @@ yosys -import  ;# ingest plugin commands
 
 # Equivalence check for adder synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top full_adder
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry all
@@ -20,7 +20,7 @@ design -reset
 
 # Equivalence check for subtractor synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top subtractor
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry all
@@ -33,7 +33,7 @@ design -reset
 
 # Equivalence check for comparator synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top comparator
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry all
@@ -46,7 +46,7 @@ design -reset
 
 # Equivalence check for adder synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top full_adder
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry auto
@@ -61,7 +61,7 @@ design -reset
 
 # Equivalence check for subtractor synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top subtractor
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry auto
@@ -75,7 +75,7 @@ design -reset
 
 # Equivalence check for comparator synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top comparator
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry auto
@@ -89,7 +89,7 @@ design -reset
 
 # Equivalence check for adder synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top full_adder
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry no
@@ -103,7 +103,7 @@ design -reset
 
 # Equivalence check for subtractor synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top subtractor
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry no
@@ -116,7 +116,7 @@ design -reset
 
 # Equivalence check for comparator synthesis for qlf-k6n10
 yosys read -define WIDTH=4
-yosys read -sv full_adder.v
+yosys read -sv full_adder_gen2.v
 hierarchy -check -top comparator
 yosys proc
 equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genesis2 -goal area -de -carry no
