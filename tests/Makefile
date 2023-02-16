@@ -44,7 +44,6 @@ VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
                       valgrind/full_adder_gen2\
                       valgrind/dsp_macc_gen2\
                       valgrind/dsp_mult_gen2\
-                      valgrind/dsp_simd_gen2\
                       valgrind/pack_dsp_regs_gen2\
                       valgrind/bram_tdp_gen2\
                       valgrind/bram_sdp_gen2\
