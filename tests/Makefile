@@ -37,7 +37,7 @@ VALGRIND_TESTS_GEN = valgrind/dffs_gen\
                      valgrind/bram_tdp_gen\
                      valgrind/bram_sdp_gen\
                      valgrind/bram_sdp_split_gen\
-                     valgrind/bram_tdp_split_gen\
+                     valgrind/bram_tdp_split_gen
 
 VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
                       valgrind/latches_gen2\
@@ -48,7 +48,7 @@ VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
                       valgrind/bram_tdp_gen2\
                       valgrind/bram_sdp_gen2\
                       valgrind/bram_sdp_split_gen2\
-                      valgrind/bram_tdp_split_gen2\
+                      valgrind/bram_tdp_split_gen2
                  #valgrind/bram_asymmetric_wider_read\
                  #valgrind/bram_asymmetric_wider_write
 
@@ -120,12 +120,12 @@ all: tests_gen tests_gen2
 tests_gen: $(TESTS_GEN)
 tests_gen2: $(TESTS_GEN2)
 
-.PHONY: all clean $(TESTS)
+.PHONY: all clean $(TESTS_GEN) $(TEST_GEN2)
 
 $(foreach test,$(TESTS_GEN2),$(eval $(call test_tpl,$(test))))
 $(foreach test,$(TESTS_GEN),$(eval $(call test_tpl,$(test))))
-$(foreach test,$(VALGRIND_TESTS_GEN),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
-$(foreach test,$(VALGRIND_TESTS_GEN2),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
+$(foreach test,$(TESTS_GEN2),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
+$(foreach test,$(TESTS_GEN),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 
 clean_tests:
 	@find . -name "ok" | xargs rm -rf
@@ -134,6 +134,6 @@ clean_tests:
 	@find . -name "*.eqn" | xargs rm -rf
 	@find . -name "*post_synth.v" | xargs rm -rf
 
-valgrind: valgrind_gen valgrind_gen2
+all_valgrind: valgrind_gen valgrind_gen2
 valgrind_gen: $(VALGRIND_TESTS_GEN)
 valgrind_gen2: $(VALGRIND_TESTS_GEN2)
