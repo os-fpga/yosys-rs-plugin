@@ -116,7 +116,7 @@ module TDP18K_FIFO (
 	assign smux_clk_b = CLK_B_i;
 	assign real_fmode = FMODE_i;
 	assign ram_ren_b = real_fmode ? ren_o : REN_B_i;
-	assign ram_wen_a = WEN_A_i;
+	assign ram_wen_a = FMODE_i ? ~FULL_o & WEN_A_i : WEN_A_i;
 	assign ram_ren_a = FMODE_i ? 0 : REN_A_i;
 	assign ram_wen_b = FMODE_i ? 1'b0 : WEN_B_i;
 	assign cen_b = ram_ren_b;
