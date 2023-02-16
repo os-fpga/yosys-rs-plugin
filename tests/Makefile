@@ -1,38 +1,56 @@
 # Copyright (C) 2022 RapidSilicon..
 
-TESTS = dffs\
-		latches\
-		shreg\
-		full_adder\
-		dsp_macc\
-		dsp_mult\
-		dsp_simd\
-		pack_dsp_regs\
-		bram_tdp\
-		bram_sdp\
-		bram_sdp_split\
-		bram_tdp_split\
-		bram_tdp_new\
-		bram_sdp_new\
-		bram_sdp_split_new\
-		bram_tdp_split_new
-		#bram_asymmetric_wider_read\
-		#bram_asymmetric_wider_write
+TESTS_GEN = dffs_gen\
+            latches_gen\
+            shreg_gen\
+            full_adder_gen\
+            dsp_macc_gen\
+            dsp_mult_gen\
+            dsp_simd_gen\
+            pack_dsp_regs_gen\
+            bram_tdp_gen\
+            bram_sdp_gen\
+            bram_sdp_split_gen\
+            bram_tdp_split_gen
+        #bram_asymmetric_wider_read\
+        #bram_asymmetric_wider_write
 
-VALGRIND_TESTS = valgrind/dffs\
-				 valgrind/latches\
-				 valgrind/shreg\
-				 valgrind/full_adder\
-				 valgrind/dsp_macc\
-				 valgrind/dsp_mult\
-				 valgrind/dsp_simd\
-				 valgrind/pack_dsp_regs\
-				 valgrind/bram_tdp\
-				 valgrind/bram_sdp\
-				 valgrind/bram_sdp_split\
-				 valgrind/bram_tdp_split\
-				 #valgrind/bram_asymmetric_wider_read\
-				 #valgrind/bram_asymmetric_wider_write
+TESTS_GEN2 = dffs_gen2\
+             latches_gen2\
+             full_adder_gen2\
+             dsp_macc_gen2\
+             dsp_mult_gen2\
+             pack_dsp_regs_gen2\
+             bram_tdp_gen2\
+             bram_sdp_gen2\
+             bram_sdp_split_gen2\
+             bram_tdp_split_gen2
+
+VALGRIND_TESTS_GEN = valgrind/dffs_gen\
+                     valgrind/latches_gen\
+                     valgrind/shreg_gen\
+                     valgrind/full_adder_gen\
+                     valgrind/dsp_macc_gen\
+                     valgrind/dsp_mult_gen\
+                     valgrind/dsp_simd_gen\
+                     valgrind/pack_dsp_regs_gen\
+                     valgrind/bram_tdp_gen\
+                     valgrind/bram_sdp_gen\
+                     valgrind/bram_sdp_split_gen\
+                     valgrind/bram_tdp_split_gen\
+
+VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
+                      valgrind/latches_gen2\
+                      valgrind/full_adder_gen2\
+                      valgrind/dsp_macc_gen2\
+                      valgrind/dsp_mult_gen2\
+                      valgrind/pack_dsp_regs_gen2\
+                      valgrind/bram_tdp_gen2\
+                      valgrind/bram_sdp_gen2\
+                      valgrind/bram_sdp_split_gen2\
+                      valgrind/bram_tdp_split_gen2\
+                 #valgrind/bram_asymmetric_wider_read\
+                 #valgrind/bram_asymmetric_wider_write
 
 OPTION_1 = "--tool=memcheck"
 OPTION_2 = "--log-file=valgrind.log"
@@ -98,12 +116,16 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 	rm -f $$(notdir $(1))_test$(3).tcl;
 endef
 
-all: $(TESTS)
+all: tests_gen tests_gen2
+tests_gen: $(TESTS_GEN)
+tests_gen2: $(TESTS_GEN2)
 
 .PHONY: all clean $(TESTS)
 
-$(foreach test,$(TESTS),$(eval $(call test_tpl,$(test))))
-$(foreach test,$(TESTS),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
+$(foreach test,$(TESTS_GEN2),$(eval $(call test_tpl,$(test))))
+$(foreach test,$(TESTS_GEN),$(eval $(call test_tpl,$(test))))
+$(foreach test,$(VALGRIND_TESTS_GEN),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
+$(foreach test,$(VALGRIND_TESTS_GEN2),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 
 clean_tests:
 	@find . -name "ok" | xargs rm -rf
@@ -112,4 +134,6 @@ clean_tests:
 	@find . -name "*.eqn" | xargs rm -rf
 	@find . -name "*post_synth.v" | xargs rm -rf
 
-valgrind: $(VALGRIND_TESTS)
+valgrind: valgrind_gen valgrind_gen2
+valgrind_gen: $(VALGRIND_TESTS_GEN)
+valgrind_gen2: $(VALGRIND_TESTS_GEN2)
