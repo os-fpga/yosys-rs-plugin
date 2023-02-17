@@ -66,7 +66,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 128
+#define VERSION_PATCH 129
 
 
 enum Strategy {
@@ -809,20 +809,24 @@ struct SynthRapidSiliconPass : public ScriptPass {
             The idea is that if there is a perfect fit we want to assign the smallest DSP to the RTL operator.
         */
         std::vector<DspParams> dsp_rules_loop1;
+        std::string dsp_map_file;
         switch (tech) {
             case Technologies::GENESIS: {
                 dsp_rules_loop1.push_back({10, 9, 4, 4, "$__RS_MUL10X9"});
                 dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp_check_maxwidth.v";
                 break;
             }
             // Genesis2 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_2: {
                 dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp.v";
                 break;
             }
             // Genesis3 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_3: {
                 dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp.v";
                 break;
             }
             case Technologies::GENERIC: {
@@ -834,18 +838,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
             case Technologies::GENESIS_3: 
             case Technologies::GENESIS_2: {
                 for (const auto &rule : dsp_rules_loop1) {
-                    if (max_dsp != -1)
-                        run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
-                                    " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                    "-D DSP_NAME=%s a:valid_map",
-                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
-                    else
-                        run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
-                                    " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                    "-D DSP_NAME=%s",
-                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                    run(stringf("techmap -map %s "
+                                " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                "-D DSP_NAME=%s %s",
+                                dsp_map_file.c_str(), rule.a_maxwidth, 
+                                rule.b_maxwidth, rule.a_minwidth, 
+                                rule.b_minwidth, rule.type.c_str(), max_dsp != -1 ? "a:valid_map" : ""));
                     run("stat");
 
                     if (cec)
