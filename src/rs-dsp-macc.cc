@@ -5,15 +5,17 @@
 #include "kernel/sigtools.h"
 #include "kernel/yosys.h"
 
+extern int DSP_COUNTER;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
 #include "../pmgen/rs-dsp-macc.h"
 
 // ============================================================================
-
 bool use_dsp_cfg_params;
 bool is_genesis2;
+bool is_genesis3;
+int max_dsp;
 
 static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
 {
@@ -66,7 +68,10 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     if (st.ff->getParam(ID(CLK_POLARITY)).as_int() != 1) {
         return;
     }
-
+    if (max_dsp != -1 && DSP_COUNTER > max_dsp) {
+    	return;
+    }
+    ++DSP_COUNTER;
     // Get port widths
     size_t a_width = GetSize(st.mul->getPort(ID(A)));
     size_t b_width = GetSize(st.mul->getPort(ID(B)));
@@ -93,7 +98,7 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     if (min_width <= 2 && max_width <= 2 && z_width <= 4) {
         // Too narrow
         return;
-    } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && !is_genesis2) {
+    } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && !is_genesis2 && !is_genesis3) {
         cell_size_name = "_10x9x32";
         tgt_a_width = 10;
         tgt_b_width = 9;
@@ -234,10 +239,10 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
         cell->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
         cell->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
         cell->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
-        if (is_genesis2) {
+        if (is_genesis2 || is_genesis3) {
             cell->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
-            // 3 - output post acc; 1 - output pre acc
-            cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
+            // 4 - output post acc; 5 - output pre acc
+            cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(4, 3) : RTLIL::Const(5, 3));
         } else {
             cell->setPort(RTLIL::escape_id("register_inputs_i"), RTLIL::SigSpec(RTLIL::S0));
             // 3 - output post acc; 1 - output pre acc
@@ -272,6 +277,8 @@ struct RSDspMacc : public Pass {
         log("    -genesis2\n");
         log("        By default use Genesis technology DSP blocks.\n");
         log("        Specifying this forces usage of Genesis2 technology DSP blocks.\n");
+        log("    -max_dsp\n");
+        log("        Specifies the maximum number of inferred DSP blocks.\n");
         log("\n");
     }
 
@@ -291,6 +298,16 @@ struct RSDspMacc : public Pass {
                 is_genesis2 = true;
                 // dsp_cfg_params is not supported in Genesis2
                 use_dsp_cfg_params = false;
+                continue;
+            }
+            if (a_Args[argidx] == "-genesis3") {
+                is_genesis3 = true;
+                // dsp_cfg_params is not supported in Genesis2
+                use_dsp_cfg_params = false;
+                continue;
+            }
+            if (a_Args[argidx] == "-max_dsp"  && argidx + 1 < a_Args.size()) {
+                max_dsp = std::stoi(a_Args[++argidx]);
                 continue;
             }
 

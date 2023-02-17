@@ -8,8 +8,12 @@ PRIVATE_NAMESPACE_BEGIN
 #define MODE_BITS_OUTPUT_SELECT_START_ID 81
 #define MODE_BITS_OUTPUT_SELECT_WIDTH 3
 
-#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83 
-#define MODE_BITS_GENESIS2_OUTPUT_SELECT_START_ID 80
+// Bits are accessed from right to left, but in GENESIS_2 
+// MODE_BITS are stored in Big Endian order, so we have to 
+// use reverse of the bit indecies for the access:
+// actual bit idx = 83 --> access idx = 0
+#define MODE_BITS_GENESIS2_ACCESS_REGISTER_INPUTS_ID 0 
+#define MODE_BITS_GENESIS2_ACCESS_OUTPUT_SELECT_END_ID 1
 #define MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH 3
 
 // ============================================================================
@@ -115,11 +119,11 @@ struct rsDspIORegs : public Pass {
                     // Read MODE_BITS at correct indexes
                     auto mode_bits = &dsp->getParam(RTLIL::escape_id("MODE_BITS"));
                     RTLIL::Const register_inputs;
-                    register_inputs = mode_bits->bits.at(MODE_BITS_GENESIS2_REGISTER_INPUTS_ID);
+                    register_inputs = mode_bits->bits.at(MODE_BITS_GENESIS2_ACCESS_REGISTER_INPUTS_ID);
                     reg_in_i = register_inputs.as_int();
 
                     RTLIL::Const output_select;
-                    output_select = mode_bits->extract(MODE_BITS_GENESIS2_OUTPUT_SELECT_START_ID, MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH);
+                    output_select = mode_bits->extract(MODE_BITS_GENESIS2_ACCESS_OUTPUT_SELECT_END_ID, MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH);
                     out_sel_i = output_select.as_int();
                 } else {
                     // Read dedicated configuration ports
@@ -155,31 +159,53 @@ struct rsDspIORegs : public Pass {
                 new_type += "_MULT";
 
                 if (have_macc) {
-                    switch (out_sel_i) {
-                    case 1:
-                    case 2:
-                    case 3:
-                    case 5:
-                    case 7:
-                        del_clk = false;
-                        new_type += "ACC";
-                        break;
-                    default:
-                        break;
+                    if (is_genesis2) {
+                        switch (out_sel_i) {
+                        case 4:
+                        case 5:
+                            del_clk = false;
+                            new_type += "ACC";
+                            break;
+                        default:
+                            break;
+                        }
+                    } else {
+                        switch (out_sel_i) {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 5:
+                        case 7:
+                            del_clk = false;
+                            new_type += "ACC";
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 } else {
-                    switch (out_sel_i) {
-                    case 1:
-                    case 2:
-                    case 3:
-                    case 5:
-                    case 7:
-                        if (is_genesis2)
+                    if (is_genesis2) {
+                        switch (out_sel_i) {
+                        case 2:
+                        case 3:
                             del_clk = false;
-                        new_type += "ADD";
-                        break;
-                    default:
-                        break;
+                            new_type += "ADD";
+                            break;
+                        default:
+                            break;
+                        }
+                    } else {
+                        switch (out_sel_i) {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 5:
+                        case 7:
+                            new_type += "ADD";
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 }
 
@@ -188,9 +214,22 @@ struct rsDspIORegs : public Pass {
                     new_type += "_REGIN";
                 }
 
-                if (out_sel_i > 3) {
-                    del_clk = false;
-                    new_type += "_REGOUT";
+                if (is_genesis2) {
+                    switch (out_sel_i) {
+                    case 1:
+                    case 3:
+                    case 5:
+                        del_clk = false;
+                        new_type += "_REGOUT";
+                        break;
+                    default:
+                        break;
+                    }
+                } else {
+                    if (out_sel_i > 3) {
+                        del_clk = false;
+                        new_type += "_REGOUT";
+                    }
                 }
 
                 // Set new type name
@@ -205,27 +244,47 @@ struct rsDspIORegs : public Pass {
 
                 }
 
-                switch (out_sel_i) {
-                case 0:
-                case 4:
-                case 6:
-                    ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
-                    // Mark for deleton additional configuration ports
-                    if (!use_dsp_cfg_params) {
+                if (is_genesis2) {
+                    switch (out_sel_i) {
+                    case 0:
+                    case 1:
+                        ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
                         ports2del.insert(ports2del.end(), ports2del_extension.begin(), ports2del_extension.end());
+                        break;
+                    case 2:
+                    case 3:
+                    case 4:
+                    case 5:
+                        if (have_macc) {
+                            ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
+                        } else {
+                            ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
+                        }
+                        break;
                     }
-                    break;
-                case 1:
-                case 2:
-                case 3:
-                case 5:
-                case 7:
-                    if (have_macc) {
-                        ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
-                    } else {
-                        ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
+                } else {
+                    switch (out_sel_i) {
+                    case 0:
+                    case 4:
+                    case 6:
+                        ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
+                        // Mark for deleton additional configuration ports
+                        if (!use_dsp_cfg_params) {
+                            ports2del.insert(ports2del.end(), ports2del_extension.begin(), ports2del_extension.end());
+                        }
+                        break;
+                    case 1:
+                    case 2:
+                    case 3:
+                    case 5:
+                    case 7:
+                        if (have_macc) {
+                            ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
+                        } else {
+                            ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
+                        }
+                        break;
                     }
-                    break;
                 }
 
                 for (auto portname : ports2del) {

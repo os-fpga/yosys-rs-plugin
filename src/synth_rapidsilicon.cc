@@ -17,6 +17,7 @@
 #include "License_manager.hpp"
 #endif
 
+int DSP_COUNTER;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
@@ -29,6 +30,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define GENESIS_DIR genesis
 #define GENESIS_2_DIR genesis2
+#define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
@@ -49,6 +51,12 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
+#define BRAM_WIDTH_9 9
+#define BRAM_WIDTH_4 4
+#define BRAM_WIDTH_2 2
+#define BRAM_WIDTH_1 1
+#define BRAM_first_byte_parity_bit 8
+#define BRAM_second_byte_parity_bit 17
 #define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
@@ -58,7 +66,8 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 110
+#define VERSION_PATCH 129
+
 
 enum Strategy {
     AREA,
@@ -75,7 +84,8 @@ enum EffortLevel {
 enum Technologies {
     GENERIC,   
     GENESIS,
-    GENESIS_2
+    GENESIS_2,
+    GENESIS_3
 };
 
 enum CarryMode {
@@ -114,6 +124,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - generic  : generic\n");
         log("        - genesis  : Gemini target architecture.\n");
         log("        - genesis2 : Gemini_2 target architecture.\n");
+        log("        - genesis3 : Gemini_3 target architecture.\n");
         log("        By default 'generic' technology is used.\n");
         log("\n");
         log("    -blif <file>\n");
@@ -185,6 +196,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use DSP blocks in output netlist.\n");
         log("        Do not use DSP blocks to implement multipliers and associated logic\n");
         log("\n");
+        log("    -max_device_dsp <num>\n");
+        log("        Specify the number of available DSP resources for the target device.\n");
+        log("\n");
+        log("    -max_dsp <num>\n");
+        log("        Specify the maximum number of DSP to add\n");
+        log("        to the design during synthesis. Specify a value >= 1, which should not\n");
+        log("        exceed the available DSP count on the target device. \n");
+        log("        The flag should be used with -max_device_dsp. \n");
+        log("        By default synthesis tool will not limit DSP count. \n");
+        log("\n");
 #ifdef DEV_BUILD
         log("    -use_dsp_cfg_params\n");
         log("        By default use DSP blocks with configuration bits available at module ports.\n");
@@ -194,6 +215,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -no_bram\n");
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
+        log("\n");
+        log("    -max_device_bram <num>\n");
+        log("        Specify the number of available Block RAM resources for the targe device.\n");
+        log("\n");
+        log("    -max_bram <num>\n");
+        log("        Specify the maximum number of Block RAM to add\n");
+        log("        to the design during synthesis. Specify a value >= 1, which should not\n");
+        log("        exceed the available BRAM count on the target device. \n");
+        log("        The flag should be used with -max_device_bram. \n");
+        log("        By default synthesis tool will not limit Block RAM count. \n");
         log("\n");
         log("    -no_simplify\n");
         log("        By default call simplify.\n");
@@ -245,6 +276,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool keep_tribuf;
     bool nolibmap;
     int de_max_threads;
+    int max_bram;
+    int max_dsp;
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
@@ -264,6 +297,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         cec = false;
         fast = false;
         nobram = false;
+        max_bram = -1;
+        max_dsp = -1;
+        DSP_COUNTER = 0;
         nodsp = false;
         nosimplify = false;
         keep_tribuf = false;
@@ -291,7 +327,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string carry_str;
         string clke_strategy_str;
         clear_flags();
-
+        int max_device_bram = -1;
+        int max_device_dsp = -1;
         _design = design;
 
         size_t argidx;
@@ -357,6 +394,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 nodsp = true;
                 continue;
             }
+            if (args[argidx] == "-max_dsp" && argidx + 1 < args.size()) {
+                max_dsp = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_dsp" && argidx + 1 < args.size()) {
+                max_device_dsp = stoi(args[++argidx]);
+                continue;
+            }
 #ifdef DEV_BUILD
             if (args[argidx] == "-use_dsp_cfg_params") {
                 use_dsp_cfg_params = " -use_dsp_cfg_params";
@@ -365,6 +410,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
             if (args[argidx] == "-no_bram") {
                 nobram = true;
+                continue;
+            }
+            if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
+                max_bram = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_bram" && argidx + 1 < args.size()) {
+                max_device_bram = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-de") {
@@ -396,18 +449,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         extra_args(args, argidx, design);
 
+        if (max_device_bram == -1 && max_bram != -1) {
+                log_cmd_error("Invalid use of max_bram flag. Please see help.\n");
+        } else if (max_bram > max_device_bram){
+                log_cmd_error("Invalid value of max_bram is specified. The available BRAMs are %d.\n", max_device_bram);
+        } else if (max_bram == -1){
+            max_bram = max_device_bram;
+        }
+        if (max_device_dsp == -1 && max_dsp != -1) {
+                log_cmd_error("Invalid use of max_dsp flag. Please see help.\n");
+        } else if (max_dsp > max_device_dsp){
+                log_cmd_error("Invalid value of max_dsp is specified. The available DSPs are %d.\n", max_device_dsp);
+        } else if (max_dsp == -1){
+            max_dsp = max_device_dsp; 
+        }
         if (!design->full_selection())
             log_cmd_error("This command only operates on fully selected designs!\n");
 
         if (tech_str == "generic")
             tech = Technologies::GENERIC;
-        else if (tech_str == "genesis")
+        else if (tech_str == "genesis"){
             tech = Technologies::GENESIS;
+        }
         else if (tech_str == "genesis2") {
             tech = Technologies::GENESIS_2;
             sdffr = true;
             nosdff_str = "";
             // no_cfp_params mode for Genesis2
+            use_dsp_cfg_params = "";
+        }
+        else if (tech_str == "genesis3") {
+            tech = Technologies::GENESIS_3;
+            // No synchronous set/reset for Genesis 3
+            // no_cfp_params mode for Genesis3
             use_dsp_cfg_params = "";
         }
         else if (tech_str != "")
@@ -624,8 +698,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (cec) {
                 out << "write_blif " + out_blif_file + ";";
-		// cec command is not called, so as not to impact on runtime.
-	        // out << "cec " + in_blif_file + " " + out_blif_file;
+                // cec command is not called, so as not to impact on runtime.
+                // out << "cec " + in_blif_file + " " + out_blif_file;
             }
             out.close();
 
@@ -645,13 +719,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     // Perform a small loop of successive "abc -dff" calls.  
     // This "simplify" pass may have some big QoR impact on this list of designs:
-    // 	- wrapper_io_reg_max 
-    // 	- wrapper_io_reg_tc1 
-    // 	- wrapper_multi_enc_decx2x4
-    // 	- keymgr 
-    // 	- kmac 
-    // 	- alu4 
-    // 	- s38417
+    //     - wrapper_io_reg_max 
+    //     - wrapper_io_reg_tc1 
+    //     - wrapper_multi_enc_decx2x4
+    //     - keymgr 
+    //     - kmac 
+    //     - alu4 
+    //     - s38417
     //
     void simplify() 
     {
@@ -664,11 +738,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     if (sdffr) {run("dfflegalize -cell $_SDFF_???_ 0 t:$_SDFFCE_*");}
                         break;
                     }
-                    case Technologies::GENESIS_2: {
+               case Technologies::GENESIS_2: {
                         run("dfflegalize -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0 t:$_SDFFCE_*");
                         break;
                     }
-                    case Technologies::GENERIC: {
+               case Technologies::GENESIS_3: {
+                        break;
+                    }
+               case Technologies::GENERIC: {
                         break;
                     }
                 }
@@ -695,7 +772,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         for (int n=1; n <= maxLoop; n++) { 
 
-            run("abc -dff");   // WARNING: "abc -dff" is very time consuming !!!
+            run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
+                                       // Use "-keepff" to preserve DFF output wire name
 
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
@@ -731,15 +809,24 @@ struct SynthRapidSiliconPass : public ScriptPass {
             The idea is that if there is a perfect fit we want to assign the smallest DSP to the RTL operator.
         */
         std::vector<DspParams> dsp_rules_loop1;
+        std::string dsp_map_file;
         switch (tech) {
             case Technologies::GENESIS: {
                 dsp_rules_loop1.push_back({10, 9, 4, 4, "$__RS_MUL10X9"});
                 dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp_check_maxwidth.v";
                 break;
             }
             // Genesis2 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_2: {
                 dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp.v";
+                break;
+            }
+            // Genesis3 technology doesn't support fractured mode for DSPs
+            case Technologies::GENESIS_3: {
+                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp.v";
                 break;
             }
             case Technologies::GENERIC: {
@@ -748,13 +835,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         switch (tech) {
             case Technologies::GENESIS: 
+            case Technologies::GENESIS_3: 
             case Technologies::GENESIS_2: {
                 for (const auto &rule : dsp_rules_loop1) {
-                    run(stringf("techmap -map +/mul2dsp_check_maxwidth.v "
+                    run(stringf("techmap -map %s "
                                 " -D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
                                 "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                "-D DSP_NAME=%s",
-                                rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                                "-D DSP_NAME=%s %s",
+                                dsp_map_file.c_str(), rule.a_maxwidth, 
+                                rule.b_maxwidth, rule.a_minwidth, 
+                                rule.b_minwidth, rule.type.c_str(), max_dsp != -1 ? "a:valid_map" : ""));
                     run("stat");
 
                     if (cec)
@@ -764,7 +854,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 }
 
                 // Genesis2 technology doesn't support fractured mode for DSPs, so no need for second iteration.
-                if (tech != Technologies::GENESIS_2) {
+                // Genesis3 technology doesn't support fractured mode for DSPs, so no need for second iteration.
+                if ((tech != Technologies::GENESIS_2) && 
+                    (tech != Technologies::GENESIS_3)) {
                     /* 
                        In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
                        The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
@@ -774,11 +866,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         {10, 9, 4, 4, "$__RS_MUL10X9"},
                     };
                     for (const auto &rule : dsp_rules_loop2) {
-                        run(stringf("techmap -map +/mul2dsp.v "
-                                    "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                    "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                    "-D DSP_NAME=%s",
-                                    rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                        if (max_dsp != -1)
+                            run(stringf("techmap -map +/mul2dsp.v "
+                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                        "-D DSP_NAME=%s a:valid_map",
+                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                        else
+                            run(stringf("techmap -map +/mul2dsp.v "
+                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                        "-D DSP_NAME=%s",
+                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
@@ -827,9 +926,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
                         cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
                         cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_36) {
-                	RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                	std::vector<RTLIL::State> init_value1;
-                	std::vector<RTLIL::State> init_value2;
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_value2;
                     for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                         if (i % 2 == 0) {
                             for (int j = 0; j <BRAM_WIDTH_18; ++j) {
@@ -845,16 +944,42 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
+                /// For 9/4/2/1 bit modes
+                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
+                        ((cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_9) ||
+                         (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_4) ||
+                         (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
+                         (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_temp; 
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                        for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                            init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                            init_value1.push_back(init_temp[k]);
+                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                            init_value1.push_back(init_temp[m]);
+                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
+                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                        init_temp.clear();
+                    }
+                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                }
             }
         }
     }
 
     void mapBrams() {
         std::string bramTxt;
-        std::string bramTxtSwap = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB_SWAP);
+        std::string bramTxtSwap = "";
         std::string bramAsyncTxt;
         std::string bramMapFile;
         std::string bramFinalMapFile;
+
         switch (tech) {
             case Technologies::GENESIS: {
                 if(nolibmap) {
@@ -870,6 +995,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 break;
             }
             case Technologies::GENESIS_2: {
+                bramTxtSwap = GET_FILE_PATH(GENESIS_2_DIR, BRAM_LIB_SWAP);
                 if(nolibmap) {
                     bramTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_TXT);
                     bramAsyncTxt = GET_FILE_PATH(GENESIS_2_DIR, BRAM_ASYNC_TXT);
@@ -882,12 +1008,28 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 }
                 break;
             }
+            case Technologies::GENESIS_3: {
+                bramTxtSwap = GET_FILE_PATH(GENESIS_3_DIR, BRAM_LIB_SWAP);
+                if(nolibmap) {
+                    bramTxt = GET_FILE_PATH(GENESIS_3_DIR, BRAM_TXT);
+                    bramAsyncTxt = GET_FILE_PATH(GENESIS_3_DIR, BRAM_ASYNC_TXT);
+                    bramMapFile = GET_FILE_PATH(GENESIS_3_DIR, BRAM_MAP_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_3_DIR, BRAM_FINAL_MAP_FILE);
+                } else {
+                    bramTxt = GET_FILE_PATH(GENESIS_3_DIR, BRAM_LIB);
+                    bramMapFile = GET_FILE_PATH(GENESIS_3_DIR, BRAM_MAP_NEW_FILE);
+                    bramFinalMapFile = GET_FILE_PATH(GENESIS_3_DIR, BRAM_FINAL_MAP_NEW_FILE);
+                }
+                break;
+            }
+
             case Technologies::GENERIC: {
                 break;
             }
         }
         switch (tech) {
             case Technologies::GENESIS:
+            case Technologies::GENESIS_3:
             case Technologies::GENESIS_2: {
                     /* Aram: Disabled as it's not supported
                      *run("rs_bram_asymmetric");
@@ -907,8 +1049,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * to memory_libmap is for these memeories. We counter swap
                          * port mappings to get correct connections for the read ports.
                          */
-                        run("memory_libmap -lib" + bramTxtSwap + " a:read_swapped");
-                        run("memory_libmap -lib" + bramTxt);
+                        if (tech != Technologies::GENESIS)
+                            run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
+                        run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
@@ -981,6 +1124,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                 GET_FILE_PATH(GENESIS_2_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
+                case Technologies::GENESIS_3: {
+                    readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
+                    break;
+                }    
                 // Just to make compiler happy
                 case Technologies::GENERIC: {
                     break;
@@ -1048,6 +1197,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 std::string dspMapFile;
                 std::string dspFinalMapFile;
                 std::string genesis2;
+                std::string genesis3;
+
                 switch (tech) {
                     case Technologies::GENESIS: {
                         dspMapFile = GET_FILE_PATH(GENESIS_DIR, DSP_MAP_FILE);
@@ -1058,6 +1209,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         dspMapFile = GET_FILE_PATH(GENESIS_2_DIR, DSP_MAP_FILE);
                         dspFinalMapFile = GET_FILE_PATH(GENESIS_2_DIR, DSP_FINAL_MAP_FILE);
                         genesis2 = " -genesis2";
+                        break;
+                    }
+                    case Technologies::GENESIS_3: {
+                        dspMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_MAP_FILE);
+                        dspFinalMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_FINAL_MAP_FILE);
+                        genesis3 = " -genesis3";
                         break;
                     }
                     case Technologies::GENERIC: {
@@ -1071,7 +1228,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         run("wreduce t:$mul");
-                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis2);
+                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis2 + " -max_dsp " + std::to_string(max_dsp));
+                        if (max_dsp != -1)
+                            for(auto& modules : _design->selected_modules()){
+                                for(auto& cells : modules->selected_cells()){
+                                    if(cells->type == RTLIL::escape_id("$mul")){
+                                        if(DSP_COUNTER < max_dsp){
+                                            cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
+                                        }
+                                        ++DSP_COUNTER;
+                                    }
+                                }
+                            }
 
                         processDsp(cec);
 
@@ -1084,7 +1252,57 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
 
                         // Fractuated mode has been disabled for Genesis2
-                        if (tech != Technologies::GENESIS_2)
+                        // Fractuated mode has been disabled for Genesis3
+                        //
+                        if ((tech != Technologies::GENESIS_2) &&
+                            (tech != Technologies::GENESIS_3)) {
+
+                            run("rs_dsp_simd");
+                        }
+                        run("techmap -map " + dspFinalMapFile);
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map4.v");
+
+                        run("rs-pack-dsp-regs");
+                        run("rs_dsp_io_regs");
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map5.v");
+
+                        break;
+                    }
+
+                    case Technologies::GENESIS_3: {
+#ifdef DEV_BUILD
+                        run("stat");
+#endif
+                        run("wreduce t:$mul");
+                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
+                        if (max_dsp != -1)
+                            for(auto& modules : _design->selected_modules()){
+                                for(auto& cells : modules->selected_cells()){
+                                    if(cells->type == RTLIL::escape_id("$mul")){
+                                        if(DSP_COUNTER < max_dsp){
+                                            cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
+                                        }
+                                        ++DSP_COUNTER;
+                                    }
+                                }
+                            }
+
+                        processDsp(cec);
+
+                        if (use_dsp_cfg_params.empty())
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
+                        else
+                            run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1");
+                            
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dsp_map3.v");
+
+                        // Fractuated mode has been disabled for Genesis3
+                        if (tech != Technologies::GENESIS_3)
                             run("rs_dsp_simd");
                         run("techmap -map " + dspFinalMapFile);
 
@@ -1099,6 +1317,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         break;
                     }
+
                     case Technologies::GENERIC: {
                         break;
                     }
@@ -1156,12 +1375,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     allArithMapFile = GET_FILE_PATH(GENESIS_2_DIR, ALL_ARITH_MAP_FILE);
                     break;
                 }    
+                case Technologies::GENESIS_3: {
+                    arithMapFile = GET_FILE_PATH(GENESIS_3_DIR, ARITH_MAP_FILE);
+                    allArithMapFile = GET_FILE_PATH(GENESIS_3_DIR, ALL_ARITH_MAP_FILE);
+                    break;
+                }    
                 case Technologies::GENERIC: {
                     break;
                 }    
             }
             switch (tech) {
                 case Technologies::GENESIS:
+                case Technologies::GENESIS_3:
                 case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                     run("stat");
@@ -1234,13 +1459,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         } else {
             // Perform a small loop of successive "abc -dff" calls.  
             // This simplify pass may have some big QoR impact on this list of designs:
-            // 	- wrapper_io_reg_max 
-            // 	- wrapper_io_reg_tc1 
-            // 	- wrapper_multi_enc_decx2x4
-            // 	- keymgr 
-            // 	- kmac 
-            // 	- alu4 
-            // 	- s38417
+            //     - wrapper_io_reg_max 
+            //     - wrapper_io_reg_tc1 
+            //     - wrapper_multi_enc_decx2x4
+            //     - keymgr 
+            //     - kmac 
+            //     - alu4 
+            //     - s38417
             //
             if (!nosimplify) {
                 if (cec)
@@ -1296,6 +1521,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         techMapArgs += GET_FILE_PATH(GENESIS_DIR, FFS_MAP_FILE);
                         break;    
                     }    
+
                     case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                         run("stat");
@@ -1314,6 +1540,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         techMapArgs += GET_FILE_PATH(GENESIS_2_DIR, FFS_MAP_FILE);
+                        break;
+                    }
+
+                    case Technologies::GENESIS_3: {
+#ifdef DEV_BUILD
+                        run("stat");
+#endif
+                        // TODO: run("shregmap -minlen 8 -maxlen 20");
+                        run(
+                               "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
+                               );
+
+                        if (cec)
+                            run("write_verilog -noattr -nohex after_dfflegalize.v");
+
+#ifdef DEV_BUILD
+                        run("stat");
+#endif
+                        techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
                     }
                     // Just to make compiler happy
