@@ -66,7 +66,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 129
+#define VERSION_PATCH 130
 
 
 enum Strategy {
@@ -819,13 +819,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             // Genesis2 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_2: {
-                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_rules_loop1.push_back({20, 18, 4, 4, "$__RS_MUL20X18"});
                 dsp_map_file = "+/mul2dsp.v";
                 break;
             }
             // Genesis3 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_3: {
-                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_rules_loop1.push_back({20, 18, 4, 4, "$__RS_MUL20X18"});
                 dsp_map_file = "+/mul2dsp.v";
                 break;
             }
