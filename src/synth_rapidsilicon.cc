@@ -57,7 +57,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_WIDTH_1 1
 #define BRAM_first_byte_parity_bit 8
 #define BRAM_second_byte_parity_bit 17
-#define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
+#define BRAM_MAX_ADDRESS_FOR_36_WIDTH 2048
+#define BRAM_MAX_ADDRESS_FOR_18_WIDTH 1024
 
 #define VERSION_MAJOR 0 // 0 - beta 
 // 0 - initial version 
@@ -954,9 +955,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1;
-                    std::vector<RTLIL::State> init_temp; 
-                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                    std::vector<RTLIL::State> init_value1(tmp_init.bits.size());
+                    std::vector<RTLIL::State> init_temp(18);
+					int width_size = 0;
+					if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
+						 (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
+						width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
+					else
+						width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
+
+                    for (int i = 0; i < width_size; ++i) {
                         for (int j = 0; j <BRAM_WIDTH_18; ++j)
                             init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
                         for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
@@ -974,11 +982,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
     }
 
     void mapBrams() {
-        std::string bramTxt;
+        std::string bramTxt = "";
         std::string bramTxtSwap = "";
-        std::string bramAsyncTxt;
-        std::string bramMapFile;
-        std::string bramFinalMapFile;
+        std::string bramAsyncTxt = "";
+        std::string bramMapFile = "";
+        std::string bramFinalMapFile = "";
 
         switch (tech) {
             case Technologies::GENESIS: {
