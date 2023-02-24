@@ -1058,8 +1058,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * port mappings to get correct connections for the read ports.
                          */
                         if (tech != Technologies::GENESIS)
-                            run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
-                        run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
+                            run("memory_libmap -lib" + bramTxtSwap + " -tech genesis " + " -limit " + std::to_string(max_bram) + " a:read_swapped");
+                        run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
