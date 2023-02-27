@@ -955,8 +955,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1(tmp_init.bits.size());
-                    std::vector<RTLIL::State> init_temp(BRAM_WIDTH_18);
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_temp;
                     int width_size = 0;
                     if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
                          (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
