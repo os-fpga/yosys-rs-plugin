@@ -276,7 +276,7 @@ endmodule
 
 module \$__RS_FACTOR_BRAM18_SDP (...);
 	parameter WIDTH = 1; 
-    parameter PORT_B_WR_BE_WIDTH = 4;
+    parameter PORT_B_WR_BE_WIDTH = 1;
     parameter PORT_A_RD_INIT_VALUE = 1;
 
     parameter [18431:0] INIT = 18432'bx;
@@ -319,7 +319,7 @@ endmodule
 
 module \$__RS_FACTOR_BRAM36_SDP (...);
 	parameter WIDTH = 1;
-	parameter PORT_B_WR_BE_WIDTH = 4;
+	parameter PORT_B_WR_BE_WIDTH = 1;
     parameter PORT_A_RD_INIT_VALUE = 1;
 
 	parameter [36863:0] INIT = 36864'bx;
