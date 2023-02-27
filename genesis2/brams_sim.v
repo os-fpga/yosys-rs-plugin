@@ -758,19 +758,19 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
     wire PORT_A1_REN = A1EN;
     wire PORT_A1_WEN = B1EN;
-    wire [CFG_ENABLE_B-1:0] PORT_A1_BE = {B1BE[1:0]};
+    wire [CFG_ENABLE_B-1:0] PORT_A1_BE = B1BE;
 
     wire PORT_A2_REN = E1EN;
     wire PORT_A2_WEN = F1EN;
-    wire [CFG_ENABLE_F-1:0] PORT_A2_BE = {F1BE[1:0]};
+    wire [CFG_ENABLE_F-1:0] PORT_A2_BE = F1BE;
 
     wire PORT_B1_REN = C1EN;
     wire PORT_B1_WEN = D1EN;
-    wire [CFG_ENABLE_D-1:0] PORT_B1_BE = {D1BE[1:0]};
+    wire [CFG_ENABLE_D-1:0] PORT_B1_BE = D1BE;
 
     wire PORT_B2_REN = G1EN;
     wire PORT_B2_WEN = H1EN;
-    wire [CFG_ENABLE_H-1:0] PORT_B2_BE = {H1BE[1:0]};
+    wire [CFG_ENABLE_H-1:0] PORT_B2_BE = H1BE;
 
     case (CFG_DBITS)
         1: begin
@@ -1183,11 +1183,11 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
     wire PORT_B1_REN = 1'b0;
     wire PORT_B1_WEN = B1EN;
-    wire [CFG_ENABLE_B-1:0] PORT_B1_BE = {B1BE[1:0]};
+    wire [CFG_ENABLE_B-1:0] PORT_B1_BE = B1BE;
 
     wire PORT_B2_REN = 1'b0;
     wire PORT_B2_WEN = D1EN;
-    wire [CFG_ENABLE_D-1:0] PORT_B2_BE = {D1BE[1:0]};
+    wire [CFG_ENABLE_D-1:0] PORT_B2_BE = D1BE;
 
     case (CFG_DBITS)
         1: begin
