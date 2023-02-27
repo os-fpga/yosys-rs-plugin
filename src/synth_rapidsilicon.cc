@@ -67,7 +67,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 131
+#define VERSION_PATCH 132
 
 
 enum Strategy {
@@ -955,8 +955,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1(tmp_init.bits.size());
-                    std::vector<RTLIL::State> init_temp(BRAM_WIDTH_18);
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_temp;
                     int width_size = 0;
                     if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
                          (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
@@ -1058,8 +1058,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          * port mappings to get correct connections for the read ports.
                          */
                         if (tech != Technologies::GENESIS)
-                            run("memory_libmap -lib" + bramTxtSwap + " -limit " + std::to_string(max_bram) + " a:read_swapped");
-                        run("memory_libmap -lib" + bramTxt + " -limit " + std::to_string(max_bram));
+                            run("memory_libmap -lib" + bramTxtSwap + " -tech genesis " + " -limit " + std::to_string(max_bram) + " a:read_swapped");
+                        run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
