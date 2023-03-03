@@ -47,33 +47,33 @@ module _80_rs_alu (A, B, CI, BI, X, Y, CO);
         //assign CO[Y_WIDTH-1] = co;
 
 	generate
-	     fa_1bit intermediate_adder (
+	     adder_carry intermediate_adder (
 	       .cin     ( ),
 	       .cout    (C[0]),
 	       .p       (1'b0),
 	       .g       (CI),
-	       .sum     ()
+	       .sumout     ()
 	     );
 	endgenerate
 	genvar i;
 	generate if (Y_WIDTH > 2) begin
 	  for (i = 0; i < Y_WIDTH-2; i = i + 1) begin:slice
-		fa_1bit  my_adder (
+		adder_carry  my_adder (
 			.cin(C[i]),
 			.g(AA[i]),
 			.p(S[i]),
 			.cout(C[i+1]),
-		    .sum(Y[i])
+		    .sumout(Y[i])
 		);
     end
 	end endgenerate
 	generate
-	     fa_1bit final_adder (
+	     adder_carry final_adder (
 	       .cin     (C[Y_WIDTH-2]),
 	       .cout    (),
 	       .p       (1'b0),
 	       .g       (1'b0),
-	       .sum     (co)
+	       .sumout     (co)
 	     );
 	endgenerate
 
