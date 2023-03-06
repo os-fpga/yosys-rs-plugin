@@ -19,21 +19,6 @@ module dffre(
 endmodule
 
 //------------------------------------------------------------------------------
-// Falling-edge D-flip-flop with
-// active-Low asynchronous reset and
-// active-high enable
-//------------------------------------------------------------------------------
-(* blackbox *)
-module dffnre(
-    input D,
-    input R,
-    input E,
-    input C,
-    output reg Q
-);
-endmodule
-
-//------------------------------------------------------------------------------
 // Positive level-sensitive latch
 //------------------------------------------------------------------------------
 (* blackbox *)
