@@ -394,36 +394,36 @@ module TDP36K (
     RDATA_B2_o,
     FLUSH2_i
 );
-    parameter [80:0] MODE_BITS = 81'd0;
+    parameter [0:80] MODE_BITS = 81'd0;
 
     // First 18K RAMFIFO (41 bits)
-    localparam [ 0:0] SYNC_FIFO1_i  = MODE_BITS[0];
-    localparam [ 2:0] RMODE_A1_i    = MODE_BITS[3 : 1];
-    localparam [ 2:0] RMODE_B1_i    = MODE_BITS[6 : 4];
-    localparam [ 2:0] WMODE_A1_i    = MODE_BITS[9 : 7];
-    localparam [ 2:0] WMODE_B1_i    = MODE_BITS[12:10];
-    localparam [ 0:0] FMODE1_i      = MODE_BITS[13];
-    localparam [ 0:0] POWERDN1_i    = MODE_BITS[14];
-    localparam [ 0:0] SLEEP1_i      = MODE_BITS[15];
-    localparam [ 0:0] PROTECT1_i    = MODE_BITS[16];
-    localparam [11:0] UPAE1_i       = MODE_BITS[28:17];
-    localparam [11:0] UPAF1_i       = MODE_BITS[40:29];
+    localparam [0:0] SYNC_FIFO1_i  = MODE_BITS[0];
+    localparam [0:2] RMODE_A1_i    = MODE_BITS[1:3];
+    localparam [0:2] RMODE_B1_i    = MODE_BITS[4:6];
+    localparam [0:2] WMODE_A1_i    = MODE_BITS[7:9];
+    localparam [0:2] WMODE_B1_i    = MODE_BITS[10:12];
+    localparam [0:0] FMODE1_i      = MODE_BITS[13];
+    localparam [0:0] POWERDN1_i    = MODE_BITS[14];
+    localparam [0:0] SLEEP1_i      = MODE_BITS[15];
+    localparam [0:0] PROTECT1_i    = MODE_BITS[16];
+    localparam [0:11] UPAE1_i       = MODE_BITS[17:28];
+    localparam [0:11] UPAF1_i       = MODE_BITS[29:40];
 
     // Second 18K RAMFIFO (39 bits)
-    localparam [ 0:0] SYNC_FIFO2_i  = MODE_BITS[41];
-    localparam [ 2:0] RMODE_A2_i    = MODE_BITS[44:42];
-    localparam [ 2:0] RMODE_B2_i    = MODE_BITS[47:45];
-    localparam [ 2:0] WMODE_A2_i    = MODE_BITS[50:48];
-    localparam [ 2:0] WMODE_B2_i    = MODE_BITS[53:51];
-    localparam [ 0:0] FMODE2_i      = MODE_BITS[54];
-    localparam [ 0:0] POWERDN2_i    = MODE_BITS[55];
-    localparam [ 0:0] SLEEP2_i      = MODE_BITS[56];
-    localparam [ 0:0] PROTECT2_i    = MODE_BITS[57];
-    localparam [10:0] UPAE2_i       = MODE_BITS[68:58];
-    localparam [10:0] UPAF2_i       = MODE_BITS[79:69];
+    localparam [0:0] SYNC_FIFO2_i  = MODE_BITS[41];
+    localparam [0:2] RMODE_A2_i    = MODE_BITS[42:44];
+    localparam [0:2] RMODE_B2_i    = MODE_BITS[45:47];
+    localparam [0:2] WMODE_A2_i    = MODE_BITS[48:50];
+    localparam [0:2] WMODE_B2_i    = MODE_BITS[51:53];
+    localparam [0:0] FMODE2_i      = MODE_BITS[54];
+    localparam [0:0] POWERDN2_i    = MODE_BITS[55];
+    localparam [0:0] SLEEP2_i      = MODE_BITS[56];
+    localparam [0:0] PROTECT2_i    = MODE_BITS[57];
+    localparam [0:10] UPAE2_i       = MODE_BITS[58:68];
+    localparam [0:10] UPAF2_i       = MODE_BITS[69:79];
 
     // Split (1 bit)
-    localparam [ 0:0] SPLIT_i       = MODE_BITS[80];
+    localparam [0:0] SPLIT_i       = MODE_BITS[80];
 
     parameter [36863:0] INIT_i = 36864'h0;
 
@@ -544,6 +544,15 @@ module TDP36K (
     wire sreset;
     wire flush1;
     wire flush2;
+    reg RESET_n_i;
+    
+   //Avinash - Delay for initial global reset 
+    initial begin
+      RESET_ni = 1'b0;
+     #1   //laddr_a1 & laddr_b1 registers are taking that much delay then get reset
+      RESET_ni = 1'b1;
+    end
+    localparam MODE_36 = 3'b110;
     assign sreset = RESET_ni;
     assign flush1 = ~FLUSH1_i;
     assign flush2 = ~FLUSH2_i;
@@ -557,12 +566,12 @@ module TDP36K (
     assign sclk_a2 = smux_clk_a2;
     assign sclk_b1 = smux_clk_b1;
     assign sclk_b2 = smux_clk_b2;
-    assign ram_ren_a1 = (SPLIT_i ? REN_A1_i : (FMODE1_i ? 0 : REN_A1_i));
-    assign ram_ren_a2 = (SPLIT_i ? REN_A2_i : (FMODE1_i ? 0 : REN_A1_i));
+    assign ram_ren_a1 = (SPLIT_i ? REN_A1_i : (FMODE1_i ? 0 : (RMODE_A1_i == MODE_36 ? REN_A1_i : REN_A1_i & ~ADDR_A1[4]) ));
+    assign ram_ren_a2 = (SPLIT_i ? REN_A2_i : (FMODE1_i ? 0 : (RMODE_A1_i == MODE_36 ? REN_A1_i : REN_A1_i & ADDR_A1[4]) ));
     assign ram_ren_b1 = (SPLIT_i ? REN_B1_i : (FMODE1_i ? ren_o : REN_B1_i));
     assign ram_ren_b2 = (SPLIT_i ? REN_B2_i : (FMODE1_i ? ren_o : REN_B1_i));
-    localparam MODE_36 = 3'b011;
-    assign ram_wen_a1 = (SPLIT_i ? WEN_A1_i : (FMODE1_i ? ~FULL3 & WEN_A1_i : (WMODE_A1_i == MODE_36 ? WEN_A1_i : WEN_A1_i & ~ADDR_A1_i[4])));
+
+    assign ram_wen_a1 = (SPLIT_i ? WEN_A1_i : (FMODE1_i ? WEN_A1_i : (WMODE_A1_i == MODE_36 ? WEN_A1_i : WEN_A1_i & ~ADDR_A1_i[4])));
     assign ram_wen_a2 = (SPLIT_i ? WEN_A2_i : (FMODE1_i ? ~FULL3 & WEN_A1_i : (WMODE_A1_i == MODE_36 ? WEN_A1_i : WEN_A1_i & ADDR_A1_i[4])));
     assign ram_wen_b1 = (SPLIT_i ? WEN_B1_i : (WMODE_B1_i == MODE_36 ? WEN_B1_i : WEN_B1_i & ~ADDR_B1_i[4]));
     assign ram_wen_b2 = (SPLIT_i ? WEN_B2_i : (WMODE_B1_i == MODE_36 ? WEN_B1_i : WEN_B1_i & ADDR_B1_i[4]));
@@ -572,7 +581,7 @@ module TDP36K (
     assign ram_addr_b2 = (SPLIT_i ? ADDR_B2_i[13:0] : (FMODE1_i ? {ff_raddr[11:2], ff_raddr[0], 3'b000} : {ADDR_B1_i[14:5], ADDR_B1_i[3:0]}));
     assign bwl = (SPLIT_i ? ADDR_A1_i[4:3] : (FMODE1_i ? ff_waddr[1:0] : ADDR_A1_i[4:3]));
     localparam MODE_18 = 3'b010;
-    localparam MODE_9 = 3'b001;
+    localparam MODE_9 = 3'b100;
     always @(*) begin : WDATA_SEL
         case (SPLIT_i)
             1: begin
@@ -684,8 +693,8 @@ module TDP36K (
         endcase
     end
     localparam MODE_1 = 3'b101;
-    localparam MODE_2 = 3'b110;
-    localparam MODE_4 = 3'b100;
+    localparam MODE_2 = 3'b011;
+    localparam MODE_4 = 3'b001;
     always @(*) begin : RDATA_SEL
         case (SPLIT_i)
             1: begin
@@ -773,12 +782,12 @@ module TDP36K (
         if (sreset == 0)
             laddr_a1 <= 1'sb0;
         else
-            laddr_a1 <= ADDR_A1_i;
+            laddr_a1 <= REN_A1_i?ADDR_A1_i:laddr_a1;
     always @(posedge sclk_b1 or negedge sreset)
         if (sreset == 0)
             laddr_b1 <= 1'sb0;
         else
-            laddr_b1 <= ADDR_B1_i;
+            laddr_b1 <= REN_B1_i?ADDR_B1_i:laddr_b1;
     assign fifo_wmode = ((WMODE_A1_i == MODE_36) ? 2'b00 : ((WMODE_A1_i == MODE_18) ? 2'b01 : ((WMODE_A1_i == MODE_9) ? 2'b10 : 2'b00)));
     assign fifo_rmode = ((RMODE_B1_i == MODE_36) ? 2'b00 : ((RMODE_B1_i == MODE_18) ? 2'b01 : ((RMODE_B1_i == MODE_9) ? 2'b10 : 2'b00)));
     fifo_ctl #(
@@ -803,8 +812,8 @@ module TDP36K (
         .upae(UPAE1_i)
     );
     TDP18K_FIFO #(
-        .UPAF_i(UPAF1_i[10:0]),
-        .UPAE_i(UPAE1_i[10:0]),
+        .UPAF_i(UPAF1_i[0:10]),
+        .UPAE_i(UPAE1_i[0:10]),
         .SYNC_FIFO_i(SYNC_FIFO1_i),
         .POWERDN_i(POWERDN1_i),
         .SLEEP_i(SLEEP1_i),
@@ -879,25 +888,25 @@ module TDP36K (
         .FMODE_i(ram_fmode2)
     );
 endmodule
-module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN);
+module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, D1BE, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, F1BE, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN, H1BE);
     parameter CFG_ABITS = 11;
     parameter CFG_DBITS = 18;
-    parameter CFG_ENABLE_B = 4;
-    parameter CFG_ENABLE_D = 4;
-    parameter CFG_ENABLE_F = 4;
-    parameter CFG_ENABLE_H = 4;
+    parameter CFG_ENABLE_B = 2;
+    parameter CFG_ENABLE_D = 2;
+    parameter CFG_ENABLE_F = 2;
+    parameter CFG_ENABLE_H = 2;
 
     parameter CLKPOL2 = 1;
     parameter CLKPOL3 = 1;
     parameter [18431:0] INIT0 = 18432'bx;
     parameter [18431:0] INIT1 = 18432'bx;
 
-    localparam MODE_36 = 3'b011; // 36- or 32-bit
-    localparam MODE_18 = 3'b010; // 18- or 16-bit
-    localparam MODE_9 = 3'b001; // 9- or 8-bit
-    localparam MODE_4 = 3'b100; // 4-bit
-    localparam MODE_2 = 3'b110; // 2-bit
-    localparam MODE_1 = 3'b101; // 1-bit
+    localparam MODE_36 = 3'b110;    // 36 or 32-bit
+    localparam MODE_18 = 3'b010;    // 18 or 16-bit
+    localparam MODE_9  = 3'b100;    // 9 or 8-bit
+    localparam MODE_4  = 3'b001;    // 4-bit
+    localparam MODE_2  = 3'b011;    // 32-bit
+    localparam MODE_1  = 3'b101;    // 32-bit
 
     input CLK1;
     input CLK2;
@@ -910,7 +919,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
     input [CFG_ABITS-1:0] B1ADDR;
     input [CFG_DBITS-1:0] B1DATA;
-    input [CFG_ENABLE_B-1:0] B1EN;
+    input B1EN;
+    input [CFG_ENABLE_B-1:0] B1BE;
 
     input [CFG_ABITS-1:0] C1ADDR;
     output [CFG_DBITS-1:0] C1DATA;
@@ -918,7 +928,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
     input [CFG_ABITS-1:0] D1ADDR;
     input [CFG_DBITS-1:0] D1DATA;
-    input [CFG_ENABLE_D-1:0] D1EN;
+    input D1EN;
+    input [CFG_ENABLE_D-1:0] D1BE;
 
     input [CFG_ABITS-1:0] E1ADDR;
     output [CFG_DBITS-1:0] E1DATA;
@@ -926,7 +937,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
     input [CFG_ABITS-1:0] F1ADDR;
     input [CFG_DBITS-1:0] F1DATA;
-    input [CFG_ENABLE_F-1:0] F1EN;
+    input F1EN;
+    input [CFG_ENABLE_F-1:0] F1BE;
 
     input [CFG_ABITS-1:0] G1ADDR;
     output [CFG_DBITS-1:0] G1DATA;
@@ -934,7 +946,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
     input [CFG_ABITS-1:0] H1ADDR;
     input [CFG_DBITS-1:0] H1DATA;
-    input [CFG_ENABLE_H-1:0] H1EN;
+    input H1EN;
+    input [CFG_ENABLE_H-1:0] H1BE;
 
     wire FLUSH1;
     wire FLUSH2;
@@ -992,20 +1005,20 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
     wire PORT_B2_CLK = CLK4;
 
     wire PORT_A1_REN = A1EN;
-    wire PORT_A1_WEN = B1EN[0];
-    wire [CFG_ENABLE_B-1:0] PORT_A1_BE = {B1EN[1],B1EN[0]};
+    wire PORT_A1_WEN = B1EN;
+    wire [CFG_ENABLE_B-1:0] PORT_A1_BE = B1BE;
 
     wire PORT_A2_REN = E1EN;
-    wire PORT_A2_WEN = F1EN[0];
-    wire [CFG_ENABLE_F-1:0] PORT_A2_BE = {F1EN[1],F1EN[0]};
+    wire PORT_A2_WEN = F1EN;
+    wire [CFG_ENABLE_F-1:0] PORT_A2_BE = F1BE;
 
     wire PORT_B1_REN = C1EN;
-    wire PORT_B1_WEN = D1EN[0];
-    wire [CFG_ENABLE_D-1:0] PORT_B1_BE = {D1EN[1],D1EN[0]};
+    wire PORT_B1_WEN = D1EN;
+    wire [CFG_ENABLE_D-1:0] PORT_B1_BE = D1BE;
 
     wire PORT_B2_REN = G1EN;
-    wire PORT_B2_WEN = H1EN[0];
-    wire [CFG_ENABLE_H-1:0] PORT_B2_BE = {H1EN[1],H1EN[0]};
+    wire PORT_B2_WEN = H1EN;
+    wire [CFG_ENABLE_H-1:0] PORT_B2_BE = H1BE;
 
     case (CFG_DBITS)
         1: begin
@@ -1305,23 +1318,23 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
     endcase
 endmodule
 
-module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, D1ADDR, D1DATA, D1EN);
+module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C1DATA, C1EN, CLK1, CLK2, D1ADDR, D1DATA, D1EN, D1BE);
     parameter CFG_ABITS = 11;
     parameter CFG_DBITS = 18;
-    parameter CFG_ENABLE_B = 4;
-    parameter CFG_ENABLE_D = 4;
+    parameter CFG_ENABLE_B = 2;
+    parameter CFG_ENABLE_D = 2;
 
     parameter CLKPOL2 = 1;
     parameter CLKPOL3 = 1;
     parameter [18431:0] INIT0 = 18432'bx;
     parameter [18431:0] INIT1 = 18432'bx;
 
-    localparam MODE_36 = 3'b011; // 36- or 32-bit
-    localparam MODE_18 = 3'b010; // 18- or 16-bit
-    localparam MODE_9 = 3'b001; // 9- or 8-bit
-    localparam MODE_4 = 3'b100; // 4-bit
-    localparam MODE_2 = 3'b110; // 2-bit
-    localparam MODE_1 = 3'b101; // 1-bit
+    localparam MODE_36 = 3'b110;    // 36 or 32-bit
+    localparam MODE_18 = 3'b010;    // 18 or 16-bit
+    localparam MODE_9  = 3'b100;    // 9 or 8-bit
+    localparam MODE_4  = 3'b001;    // 4-bit
+    localparam MODE_2  = 3'b011;    // 32-bit
+    localparam MODE_1  = 3'b101;    // 32-bit
 
     input CLK1;
     input CLK2;
@@ -1332,7 +1345,8 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
     input [CFG_ABITS-1:0] B1ADDR;
     input [CFG_DBITS-1:0] B1DATA;
-    input [CFG_ENABLE_B-1:0] B1EN;
+    input B1EN;
+    input [CFG_ENABLE_B-1:0] B1BE;
 
     input [CFG_ABITS-1:0] C1ADDR;
     output [CFG_DBITS-1:0] C1DATA;
@@ -1340,7 +1354,8 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
     input [CFG_ABITS-1:0] D1ADDR;
     input [CFG_DBITS-1:0] D1DATA;
-    input [CFG_ENABLE_D-1:0] D1EN;
+    input D1EN;
+    input [CFG_ENABLE_D-1:0] D1BE;
 
     wire FLUSH1;
     wire FLUSH2;
@@ -1415,12 +1430,12 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
     wire [CFG_ENABLE_D-1:0] PORT_A2_BE = {PORT_A2_WEN,PORT_A2_WEN};
 
     wire PORT_B1_REN = 1'b0;
-    wire PORT_B1_WEN = B1EN[0];
-    wire [CFG_ENABLE_B-1:0] PORT_B1_BE = {B1EN[1],B1EN[0]};
+    wire PORT_B1_WEN = B1EN;
+    wire [CFG_ENABLE_B-1:0] PORT_B1_BE = B1BE;
 
     wire PORT_B2_REN = 1'b0;
-    wire PORT_B2_WEN = D1EN[0];
-    wire [CFG_ENABLE_D-1:0] PORT_B2_BE = {D1EN[1],D1EN[0]};
+    wire PORT_B2_WEN = D1EN;
+    wire [CFG_ENABLE_D-1:0] PORT_B2_BE = D1BE;
 
     case (CFG_DBITS)
         1: begin
@@ -1715,9 +1730,9 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 endmodule
 
 module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST, WR_ADDR, WR_CLK, WR_DATA, WR_EN);
-    localparam CFG_ABITS = 10;
-    localparam CFG_DBITS = 36;
-    localparam CFG_ENABLE_B = 4;
+    parameter CFG_ABITS = 10;
+    parameter CFG_DBITS = 36;
+    parameter CFG_ENABLE_B = 4;
 
     localparam CLKPOL2 = 1;
     localparam CLKPOL3 = 1;
