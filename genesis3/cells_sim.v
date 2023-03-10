@@ -29,31 +29,6 @@ end
 endmodule
 
 //------------------------------------------------------------------------------
-// Falling-edge D-flip-flop with
-// active-Low asynchronous reset and
-// active-high enable
-//------------------------------------------------------------------------------
-module dffnre(
-    input D,
-    input R,
-    input E,
-    input C,
-    output reg Q
-);
-`ifndef VCS_MODE
-parameter INIT_VALUE = 1'b0;
-initial begin
-    Q = INIT_VALUE;
-end
-`endif
-    always @(negedge C or negedge R)
-        if (R == 1'b0)
-            Q <= 1'b0;
-        else if (E == 1'b1)
-            Q <= D;
-endmodule
-
-//------------------------------------------------------------------------------
 // Positive level-sensitive latch
 //------------------------------------------------------------------------------
 module latch(
@@ -139,12 +114,12 @@ endmodule
 //------------------------------------------------------------------------------
 // 1 bit adder_carry
 //------------------------------------------------------------------------------
-module fa_1bit (p, g, cin, sum, cout);
+module adder_carry (p, g, cin, sumout, cout);
     input p;
     input g;
     input cin;
-    output sum;
+    output sumout;
     output cout;
 
-    assign {cout, sum} = {p ? cin : g, p ^ cin};
+    assign {cout, sumout} = {p ? cin : g, p ^ cin};
 endmodule

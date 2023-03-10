@@ -1,19 +1,19 @@
 // Copyright (C) 2022 RapidSilicon
 //
 
-`define MODE_36 3'b011	// 36 or 32-bit
+`define MODE_36 3'b110	// 36 or 32-bit
 `define MODE_18 3'b010	// 18 or 16-bit
-`define MODE_9  3'b001	// 9 or 8-bit
-`define MODE_4  3'b100	// 4-bit
-`define MODE_2  3'b110	// 32-bit
+`define MODE_9  3'b100	// 9 or 8-bit
+`define MODE_4  3'b001	// 4-bit
+`define MODE_2  3'b011	// 32-bit
 `define MODE_1  3'b101	// 32-bit
 
-module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN);
+module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, D1BE, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, F1BE, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN, H1BE);
 	parameter CFG_DBITS = 18;
-	parameter CFG_ENABLE_B = 4;
-	parameter CFG_ENABLE_D = 4;
-	parameter CFG_ENABLE_F = 4;
-	parameter CFG_ENABLE_H = 4;
+	parameter CFG_ENABLE_B = 2;
+	parameter CFG_ENABLE_D = 2;
+	parameter CFG_ENABLE_F = 2;
+	parameter CFG_ENABLE_H = 2;
 
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
@@ -33,7 +33,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	input [CFG_ABITS-1:0] B1ADDR;
 	input [CFG_DBITS-1:0] B1DATA;
-	input [CFG_ENABLE_B-1:0] B1EN;
+	input B1EN;
+	input [CFG_ENABLE_B-1:0] B1BE;
 
 	input [CFG_ABITS-1:0] C1ADDR;
 	output [CFG_DBITS-1:0] C1DATA;
@@ -41,7 +42,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	input [CFG_ABITS-1:0] D1ADDR;
 	input [CFG_DBITS-1:0] D1DATA;
-	input [CFG_ENABLE_D-1:0] D1EN;
+	input D1EN;
+	input [CFG_ENABLE_D-1:0] D1BE;
 
 	input [CFG_ABITS-1:0] E1ADDR;
 	output [CFG_DBITS-1:0] E1DATA;
@@ -49,7 +51,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	input [CFG_ABITS-1:0] F1ADDR;
 	input [CFG_DBITS-1:0] F1DATA;
-	input [CFG_ENABLE_F-1:0] F1EN;
+	input F1EN;
+	input [CFG_ENABLE_F-1:0] F1BE;
 
 	input [CFG_ABITS-1:0] G1ADDR;
 	output [CFG_DBITS-1:0] G1DATA;
@@ -57,7 +60,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	input [CFG_ABITS-1:0] H1ADDR;
 	input [CFG_DBITS-1:0] H1DATA;
-	input [CFG_ENABLE_H-1:0] H1EN;
+	input H1EN;
+	input [CFG_ENABLE_H-1:0] H1BE;
 
 	wire FLUSH1;
 	wire FLUSH2;
@@ -94,44 +98,44 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	case (CFG_DBITS)
 		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 	endcase
@@ -181,20 +185,20 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 	wire PORT_B2_CLK = CLK4;
 
 	wire PORT_A1_REN = A1EN;
-	wire PORT_A1_WEN = B1EN[0];
-	wire [CFG_ENABLE_B-1:0] PORT_A1_BE = {B1EN[1],B1EN[0]};
+	wire PORT_A1_WEN = B1EN;
+	wire [CFG_ENABLE_B-1:0] PORT_A1_BE = B1BE;
 
 	wire PORT_A2_REN = E1EN;
-	wire PORT_A2_WEN = F1EN[0];
-	wire [CFG_ENABLE_F-1:0] PORT_A2_BE = {F1EN[1],F1EN[0]};
+	wire PORT_A2_WEN = F1EN;
+	wire [CFG_ENABLE_F-1:0] PORT_A2_BE = F1BE;
 
 	wire PORT_B1_REN = C1EN;
-	wire PORT_B1_WEN = D1EN[0];
-	wire [CFG_ENABLE_D-1:0] PORT_B1_BE = {D1EN[1],D1EN[0]};
+	wire PORT_B1_WEN = D1EN;
+	wire [CFG_ENABLE_D-1:0] PORT_B1_BE = D1BE;
 
 	wire PORT_B2_REN = G1EN;
-	wire PORT_B2_WEN = H1EN[0];
-	wire [CFG_ENABLE_H-1:0] PORT_B2_BE = {H1EN[1],H1EN[0]};
+	wire PORT_B2_WEN = H1EN;
+	wire [CFG_ENABLE_H-1:0] PORT_B2_BE = H1BE;
 
 	TDP36K #(
 		.INIT_i({INIT1[0*18432+:18432],INIT0[0*18432+:18432]})
@@ -236,10 +240,10 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 	);
 endmodule
 
-module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN);
+module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, D1BE);
 	parameter CFG_DBITS = 18;
-	parameter CFG_ENABLE_B = 4;
-	parameter CFG_ENABLE_D = 4;
+	parameter CFG_ENABLE_B = 2;
+	parameter CFG_ENABLE_D = 2;
 
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
@@ -259,7 +263,8 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	input [CFG_ABITS-1:0] B1ADDR;
 	input [CFG_DBITS-1:0] B1DATA;
-	input [CFG_ENABLE_B-1:0] B1EN;
+	input B1EN;
+	input [CFG_ENABLE_B-1:0] B1BE;
 
 	input [CFG_ABITS-1:0] C1ADDR;
 	output [CFG_DBITS-1:0] C1DATA;
@@ -267,7 +272,8 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	input [CFG_ABITS-1:0] D1ADDR;
 	input [CFG_DBITS-1:0] D1DATA;
-	input [CFG_ENABLE_D-1:0] D1EN;
+	input D1EN;
+	input [CFG_ENABLE_D-1:0] D1BE;
 
 	wire FLUSH1;
 	wire FLUSH2;
@@ -296,44 +302,44 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 	case (CFG_DBITS)
 		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_1, `MODE_1, `MODE_1, `MODE_1, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_2, `MODE_2, `MODE_2, `MODE_2, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_4, `MODE_4, `MODE_4, `MODE_4, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_9, `MODE_9, `MODE_9, `MODE_9, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_18, `MODE_18, `MODE_18, `MODE_18, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 
 		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'b1,
-				11'd10, 11'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0,
-				12'd10, 12'd10, 4'd0, `MODE_36, `MODE_36, `MODE_36, `MODE_36, 1'd0
+			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
 	endcase
@@ -387,12 +393,12 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 	wire [CFG_ENABLE_D-1:0] PORT_A2_BE = {PORT_A2_WEN,PORT_A2_WEN};
 
 	wire PORT_B1_REN = 1'b0;
-	wire PORT_B1_WEN = B1EN[0];
-	wire [CFG_ENABLE_B-1:0] PORT_B1_BE = {B1EN[1],B1EN[0]};
+	wire PORT_B1_WEN = B1EN;
+	wire [CFG_ENABLE_B-1:0] PORT_B1_BE = B1BE;
 
 	wire PORT_B2_REN = 1'b0;
-	wire PORT_B2_WEN = D1EN[0];
-	wire [CFG_ENABLE_D-1:0] PORT_B2_BE = {D1EN[1],D1EN[0]};
+	wire PORT_B2_WEN = D1EN;
+	wire [CFG_ENABLE_D-1:0] PORT_B2_BE = D1BE;
 
 	TDP36K #(
 		.INIT_i({INIT1[0*18432+:18432],INIT0[0*18432+:18432]})
