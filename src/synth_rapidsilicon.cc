@@ -8,10 +8,13 @@
 #include "kernel/rtlil.h"
 #include "kernel/yosys.h"
 #include "kernel/mem.h"
+#include "kernel/ffinit.h"
+#include "kernel/ff.h"
 #include "include/abc.h"
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <string>
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
@@ -67,7 +70,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 135
+#define VERSION_PATCH 136
 
 
 enum Strategy {
@@ -1116,6 +1119,44 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_error("%s\n", msg.str().c_str());
     }
 
+    // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
+    // This is specific for Genesis3 since it does not support DFFs with async. SR.
+    //
+    void check_DFFSR() 
+    {
+       FfInitVals initvals;
+       int nbErrors = 0;
+       int maxPrintOut = 20; // Print out the first 'maxPrintOut' DFF with async. SR
+
+       for (auto cell : _design->top_module()->cells()) {
+
+          if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+              continue;
+
+          FfData ff(&initvals, cell);
+
+          if (ff.has_sr) {
+
+              string instName = log_id(ff.name);
+
+              if (nbErrors < maxPrintOut) {
+
+                log_warning("Generic DFF '%s' (type %s) cannot be mapped\n", instName.c_str(),
+                            log_id(ff.cell->type));
+
+              } else if (nbErrors == maxPrintOut) {
+                log_warning("...\n");
+              }
+
+              nbErrors++;
+          }
+       }
+
+       if (nbErrors) {
+          log_error("Cannot map %d Generic DFFs. Abort Synthesis.\n", nbErrors);
+       }
+    }
+
     void script() override
     {
         if (check_label("begin") && tech != Technologies::GENERIC) {
@@ -1567,6 +1608,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
+                        check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
+                                       // Error out if it is the case. 
+                                       
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
                     }
@@ -1627,6 +1671,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_vhdl " + vhdl_file);
             }
         }
+
     }
 
 } SynthRapidSiliconPass;
