@@ -70,7 +70,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 138
+#define VERSION_PATCH 139
 
 
 enum Strategy {
@@ -1196,7 +1196,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void check_DFFSR() 
     {
-       FfInitVals initvals;
+       SigMap sigmap(_design->top_module());
+       FfInitVals initvals(&sigmap, _design->top_module());
        int nbErrors = 0;
        int maxPrintOut = 20; // Print out the first 'maxPrintOut' DFF with async. SR
 
