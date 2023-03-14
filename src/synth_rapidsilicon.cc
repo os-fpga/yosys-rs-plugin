@@ -1196,7 +1196,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void check_DFFSR() 
     {
-       FfInitVals initvals;
+       SigMap sigmap(_design->top_module());
+       FfInitVals initvals(&sigmap, _design->top_module());
        int nbErrors = 0;
        int maxPrintOut = 20; // Print out the first 'maxPrintOut' DFF with async. SR
 
