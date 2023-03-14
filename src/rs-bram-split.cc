@@ -58,8 +58,11 @@ struct RsBramSplitPass : public Pass {
     const std::vector<std::string> m_BramParams = {"CFG_ABITS", "CFG_DBITS"};
     // BRAM parameters for new mapping
     const std::vector<std::pair<std::string,std::string>> m_BramParamsNew = {
-        std::make_pair("WIDTH", "CFG_DBITS")};
-
+        std::make_pair("PORT_B_WIDTH", "PORT_B_WIDTH"),std::make_pair("PORT_A_WIDTH", "PORT_A_WIDTH"),
+        };
+    const std::vector<std::pair<std::string,std::string>> m_BramParamsNewtdp = {
+        std::make_pair("WIDTH", "CFG_DBITS")
+        };
     // TDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target TDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_0 = {
       std::make_pair("A1ADDR", "A1ADDR"), std::make_pair("A1DATA", "A1DATA"), std::make_pair("A1EN", "A1EN"),     std::make_pair("B1ADDR", "B1ADDR"),
@@ -232,12 +235,20 @@ struct RsBramSplitPass : public Pass {
                 // Connect second bram
                 map_ports(m_BramDataPorts_1, bram_1, bram_2x18);
 
-                if (m_newMapping) {
+                if (m_newMapping) { 
                     // Set bram parameters
-                    for (const auto &it : m_BramParamsNew) {
-                        auto val = bram_0->getParam(RTLIL::escape_id(it.first));
-                        bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                    if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
+                    for (const auto &it : m_BramParamsNewtdp) {
+                            auto val = bram_0->getParam(RTLIL::escape_id(it.first));
+                            bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                        }
                     }
+                    else{
+                        for (const auto &it : m_BramParamsNew) {
+                            auto val = bram_0->getParam(RTLIL::escape_id(it.first));
+                            bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                        }
+                    }    
                 } else { 
                     // Set bram parameters
                     for (const auto &it : m_BramParams) {

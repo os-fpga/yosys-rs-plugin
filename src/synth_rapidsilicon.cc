@@ -70,7 +70,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 136
+#define VERSION_PATCH 137
 
 
 enum Strategy {
@@ -920,6 +920,28 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
+    int get_width_mode(int port_width) {
+        int width_mode;
+        if (port_width == BRAM_WIDTH_1) {
+            width_mode = BRAM_WIDTH_1;
+        }
+        else if (port_width ==BRAM_WIDTH_2) {
+            width_mode = BRAM_WIDTH_2;
+        }
+        else if (port_width > BRAM_WIDTH_2 && port_width<=BRAM_WIDTH_4) {
+            width_mode = BRAM_WIDTH_4;
+        }
+        else if ( port_width > BRAM_WIDTH_4 && port_width <= BRAM_WIDTH_9) {
+            width_mode = BRAM_WIDTH_9;
+        }
+        else if ( port_width >BRAM_WIDTH_9 && port_width <= BRAM_WIDTH_18) {
+            width_mode = BRAM_WIDTH_18;
+        }
+        else 
+            width_mode = BRAM_WIDTH_36;
+
+        return width_mode;
+    }
     /* Lia: When data width is greater than 18 bits reading is performed from 
      * two 18K RAMs, so we need to split Init bits to 2x18 bit pairs, first half
      * will go to the first 18K RAM and the second half to the second 18k RAM.
@@ -927,8 +949,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void correctBramInitValues() {
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
-                if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
-                        cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                //For $__RS_FACTOR_BRAM36_TDP
+                if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP")) && 
                         cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_36) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
@@ -948,15 +970,65 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
-                /// For 9/4/2/1 bit modes
+                //For $__RS_FACTOR_BRAM36_SDP, 
+               else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36)) {      
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_value2;
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                        if (i % 2 == 0) {
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j) {
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            }
+                        }
+                        else {
+                            for (int j = 0; j < BRAM_WIDTH_18; ++j) {
+                                init_value2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            }
+                        }
+                    }
+                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                }
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_TDP and $__RS_FACTOR_BRAM18_TDP
                 else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
-                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))||
-                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))||
-                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))) && 
                         ((cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_9) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_4) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
                          (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_temp;
+                    int width_size = 0;
+                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
+                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
+                        width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
+                    else
+                        width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
+
+                    for (int i = 0; i < width_size; ++i) {
+                        for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                            init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                            init_value1.push_back(init_temp[k]);
+                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                            init_value1.push_back(init_temp[m]);
+                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
+                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                        init_temp.clear();
+                    }
+                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                }
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_SDP and $__RS_FACTOR_BRAM18_SDP
+                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))||
+                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
+                        ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
+                    std::cout<<"PORT_B_WIDTH :"<<(get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()))<<std::endl;
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
