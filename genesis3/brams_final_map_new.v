@@ -1,6 +1,6 @@
 // Copyright (C) 2022 RapidSilicon
 //
-// In Genesis2, parameters MODE_BITS vectors have been reversed
+// In Genesis3, parameters MODE_BITS vectors have been reversed
 // in order to match big endian behavior used by the fabric
 // primitives DSP/BRAM (CASTORIP-121)
 
