@@ -1028,7 +1028,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
                          (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
                          (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
-                    std::cout<<"PORT_B_WIDTH :"<<(get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()))<<std::endl;
+                    
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
