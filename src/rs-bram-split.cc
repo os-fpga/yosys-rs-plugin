@@ -244,10 +244,15 @@ struct RsBramSplitPass : public Pass {
                         }
                     }
                     else{
-                        for (const auto &it : m_BramParamsNew) {
-                            auto val = bram_0->getParam(RTLIL::escape_id(it.first));
-                            bram_2x18->setParam(RTLIL::escape_id(it.second), val);
-                        }
+                        // for (const auto &it : m_BramParamsNew) {
+                        //     auto val = bram_0->getParam(RTLIL::escape_id(it.first));
+                        //     bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                        // }
+                         // Note: Setting parameters manually 
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_A_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_B_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_C_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_D_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                     }    
                 } else { 
                     // Set bram parameters
