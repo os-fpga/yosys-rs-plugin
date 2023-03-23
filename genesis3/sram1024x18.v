@@ -19,6 +19,8 @@ module sram1024x18 (
 	rdata_b
 );
 	parameter [18431:0] INIT_s_i = 18432'h0;
+	parameter PORT_A_RD_INIT_VALUE = 'hx;
+	parameter PORT_C_RD_INIT_VALUE = 'hx;
 
 	(* clkbuf_sink *)
 	input wire clk_a;
@@ -53,6 +55,8 @@ module sram1024x18 (
 		for(i = 0; i < 1024; i = i + 1) begin
 			ram[i] = INIT_s_i[i*18+:18];
 		end
+		rdata_a = PORT_A_RD_INIT_VALUE;
+		rdata_b = PORT_C_RD_INIT_VALUE;
 	end
 
 	always @(posedge clk_a) begin

@@ -13,11 +13,11 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	parameter WIDTH = 1;
 	
 	parameter PORT_B_WR_BE_WIDTH = 1;
-	parameter PORT_A_RD_INIT_VALUE = 0;
+	parameter PORT_A_RD_INIT_VALUE = 'hx;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
 	parameter PORT_D_WR_BE_WIDTH = 1;
-	parameter PORT_C_RD_INIT_VALUE = 0;
+	parameter PORT_C_RD_INIT_VALUE = 'hx;
 	parameter PORT_C_RD_SRST_VALUE = 1;
 
 	localparam ABITS = 15;
@@ -147,7 +147,9 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 	assign FLUSH2 = 1'b0;
     
 	TDP36K #(
-        .INIT_i(INIT)
+        .INIT_i(INIT),
+		.PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE),
+		.PORT_B_RD_INIT_VALUE(PORT_C_RD_INIT_VALUE)
         ) _TECHMAP_REPLACE_ (
 		.RESET_ni(1'b1),
 		.WDATA_A1_i(B1DATA_TOTAL[17:0]),
@@ -192,11 +194,11 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter WIDTH = 1;
 	
 	parameter PORT_B_WR_BE_WIDTH = 1;
-	parameter PORT_A_RD_INIT_VALUE = 0;
+	parameter PORT_A_RD_INIT_VALUE = 'hx;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
 	parameter PORT_D_WR_BE_WIDTH = 1;
-	parameter PORT_C_RD_INIT_VALUE = 0;
+	parameter PORT_C_RD_INIT_VALUE = 'hx;
 	parameter PORT_C_RD_SRST_VALUE = 1;
 
 	localparam ABITS = 14;
@@ -232,6 +234,9 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 		.CFG_DBITS(WIDTH),
 		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
 		.CFG_ENABLE_D(PORT_D_WR_BE_WIDTH),
+		.CLKPOL2(CLKPOL2),
+		.PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE),
+		.PORT_B_RD_INIT_VALUE(PORT_C_RD_INIT_VALUE),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
 		.INIT0(INIT)
@@ -277,7 +282,7 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
     parameter PORT_B_WR_BE_WIDTH = 1;
 	parameter PORT_A_WIDTH=1;
 	parameter PORT_B_WIDTH=1;
-    parameter PORT_A_RD_INIT_VALUE = 1;
+    parameter PORT_A_RD_INIT_VALUE = 'hx;
 
     parameter [18431:0] INIT = 18432'bx;
 
@@ -302,6 +307,7 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 		.PORT_A_WIDTH(PORT_A_WIDTH),
 		.PORT_B_WIDTH(PORT_B_WIDTH),
 		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
+		.PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
 		.INIT0(INIT)
@@ -324,7 +330,7 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 	parameter PORT_B_WIDTH=1;
 	parameter PORT_A_WIDTH=1;
 	parameter PORT_B_WR_BE_WIDTH = 1;
-    parameter PORT_A_RD_INIT_VALUE = 1;
+    parameter PORT_A_RD_INIT_VALUE = 'hx;
 
 	parameter [36863:0] INIT = 36864'bx;
 	
@@ -706,7 +712,8 @@ endcase
 	assign FLUSH2 = 1'b0;
 
 	TDP36K #(
-        .INIT_i(INIT)
+        .INIT_i(INIT),
+		.PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE)
          ) _TECHMAP_REPLACE_ (
 		.RESET_ni(1'b1),
 		.WDATA_A1_i(18'h3FFFF),
