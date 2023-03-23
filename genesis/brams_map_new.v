@@ -713,7 +713,7 @@ endcase
 
 	TDP36K #(
         .INIT_i(INIT),
-		.PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE)
+        .PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE)
          ) _TECHMAP_REPLACE_ (
 		.RESET_ni(1'b1),
 		.WDATA_A1_i(18'h3FFFF),
