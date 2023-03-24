@@ -247,6 +247,10 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
 	parameter PORT_A_WIDTH=1;
 	parameter PORT_B_WIDTH=1;
+
+	parameter PORT_C_WIDTH=1;
+	parameter PORT_D_WIDTH=1;
+
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
 	parameter [18431:0] INIT0 = 18432'bx;
@@ -269,11 +273,11 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	input [CFG_ENABLE_B-1:0] B1BE;
 
 	input [CFG_ABITS-1:0] C1ADDR;
-	output [PORT_A_WIDTH-1:0] C1DATA;
+	output [PORT_C_WIDTH-1:0] C1DATA;
 	input C1EN;
 
 	input [CFG_ABITS-1:0] D1ADDR;
-	input [PORT_B_WIDTH-1:0] D1DATA;
+	input [PORT_D_WIDTH-1:0] D1DATA;
 	input D1EN;
 	input [CFG_ENABLE_D-1:0] D1BE;
 
@@ -287,10 +291,10 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	wire [14:0] B1ADDR_TOTAL = {B1ADDR_CMPL, B1ADDR};
 
 	wire [17:PORT_A_WIDTH] A1_RDATA_CMPL;
-	wire [17:PORT_A_WIDTH] C1_RDATA_CMPL;
+	wire [17:PORT_C_WIDTH] C1_RDATA_CMPL;
 
 	wire [17:PORT_B_WIDTH] B1_WDATA_CMPL;
-	wire [17:PORT_B_WIDTH] D1_WDATA_CMPL;
+	wire [17:PORT_D_WIDTH] D1_WDATA_CMPL;
 
 	wire [14:0] PORT_A1_ADDR;
 	wire [13:0] PORT_A2_ADDR;
@@ -301,245 +305,6095 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	assign PORT_B1_ADDR = B1ADDR_TOTAL;
 	assign PORT_A2_ADDR = C1ADDR;
 	assign PORT_B2_ADDR = D1ADDR;
+    // Assign Mode Bits for each port 
+    case (PORT_A_WIDTH)
+    1: begin
+        case (PORT_B_WIDTH)
+            1: begin
+                case (PORT_C_WIDTH)
+                    1: begin
+                        case (PORT_D_WIDTH)
+                            1: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                                };
+                                end
+    
+                            2: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            4: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            8, 9: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            16, 18: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
 
-	case (PORT_B_WIDTH)
-	1: begin
-		case (PORT_A_WIDTH)
-		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-		end
+                            default: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+                            endcase
+                        end
+    
+                    2: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
 
-		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-		end
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-		end
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-		end
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-		end
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-		end
-		endcase
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    4: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    8, 9: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    16, 18: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                    end
+                endcase
+                end
+    
+            2: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+            end
+    
+            4: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            8, 9: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            16, 18: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            default: begin
+                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                }; 
+                end
+        endcase
+	end 
+
+    2: begin
+        case (PORT_B_WIDTH)
+            1: begin
+                case (PORT_C_WIDTH)
+                    1: begin
+                        case (PORT_D_WIDTH)
+                            1: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                                };
+                                end
+    
+                            2: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            4: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            8, 9: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            16, 18: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+
+                            default: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+                            endcase
+                        end
+    
+                    2: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    4: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    8, 9: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    16, 18: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                    end
+                endcase
+                end
+    
+            2: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+            end
+    
+            4: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            8, 9: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            16, 18: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            default: begin
+                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                }; 
+                end
+        endcase
 	end
 
-2: begin
-	case (PORT_A_WIDTH)
-	1: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
+    4: begin
+        case (PORT_B_WIDTH)
+            1: begin
+                case (PORT_C_WIDTH)
+                    1: begin
+                        case (PORT_D_WIDTH)
+                            1: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                                };
+                                end
+    
+                            2: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            4: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            8, 9: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            16, 18: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+
+                            default: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+                            endcase
+                        end
+    
+                    2: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    4: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    8, 9: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    16, 18: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                    end
+                endcase
+                end
+    
+            2: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+            end
+    
+            4: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            8, 9: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            16, 18: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            default: begin
+                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                }; 
+                end
+        endcase
 	end
 
-	2: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
+    8, 9: begin
+        case (PORT_B_WIDTH)
+            1: begin
+                case (PORT_C_WIDTH)
+                    1: begin
+                        case (PORT_D_WIDTH)
+                            1: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                                };
+                                end
+    
+                            2: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            4: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            8, 9: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            16, 18: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+
+                            default: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+                            endcase
+                        end
+    
+                    2: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    4: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    8, 9: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    16, 18: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                    end
+                endcase
+                end
+    
+            2: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+            end
+    
+            4: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            8, 9: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            16, 18: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            default: begin
+                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                }; 
+                end
+        endcase
 	end
 
-	4: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+    16, 18: begin
+        case (PORT_B_WIDTH)
+            1: begin
+                case (PORT_C_WIDTH)
+                    1: begin
+                        case (PORT_D_WIDTH)
+                            1: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                                `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                                };
+                                end
+    
+                            2: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            4: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            8, 9: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+    
+                            16, 18: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
 
-	8, 9: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                            default: begin
+                                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                                `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                                `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                                };
+                                end
+                            endcase
+                        end
+    
+                    2: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
 
-	16, 18: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	default: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
-	endcase
-	end
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-4: begin
-	case (PORT_A_WIDTH)
-	1: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	2: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	4: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    4: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
 
-	8, 9: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	16, 18: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	default: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
-	endcase
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	end
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-8, 9: begin
-	case (PORT_A_WIDTH)
-	1: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-		};
-	end
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    8, 9: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
 
-	2: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	4: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	8, 9: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	16, 18: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	default: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
-	endcase
-	end
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    16, 18: begin
+                        case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
 
-16, 18: begin
-	case (PORT_A_WIDTH)
-	1: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	2: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	4: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	8, 9: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
 
-	16, 18: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
-	
-	default: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-	};
-	end
-	endcase
-	end
-default: begin
-	defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-	`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-	`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
-};
-end
-endcase
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                        end
+    
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                    end
+                endcase
+                end
+    
+            2: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+            end
+    
+            4: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            8, 9: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            16, 18: begin
+                case (PORT_C_WIDTH)
+                1: begin
+                    case (PORT_D_WIDTH)
+                        1: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                            `MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                            };
+                            end
+
+                        2: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        4: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        8, 9: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        16, 18: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+
+                        default: begin
+                            defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                            `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                            `MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                            };
+                            end
+                        endcase
+                    end
+
+                2: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                4: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                8, 9: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                16, 18: begin
+                    case (PORT_D_WIDTH)
+                    1: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)=(A,B)
+                        `MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)=(C,D)
+                        };
+                        end
+
+                    2: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    4: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    8, 9: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    16, 18: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+
+                    default: begin
+                        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                        };
+                        end
+                    endcase
+                    end
+
+                default: begin
+                    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                    `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                    };
+                end
+                endcase
+                end
+    
+            default: begin
+                defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+                `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+                `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+                }; 
+                end
+        endcase
+	    end
+
+    default: begin
+        defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+        `MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   
+        }; 
+        end
+    endcase
 
 	assign FLUSH1 = 1'b0;
 	assign FLUSH2 = 1'b0;
@@ -564,7 +6418,7 @@ endcase
 			//assign PORT_A1_WDATA = {18{1'b0}};
 			assign PORT_B1_WDATA = {B1_WDATA_CMPL[17], B1DATA[8], B1_WDATA_CMPL[16:9], B1DATA[7:0]};
 			//assign PORT_A2_WDATA = {18{1'b0}};
-			assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+			//assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
 		end
 		default: begin
 			//assign A1DATA = PORT_A1_RDATA[CFG_DBITS-1:0];
@@ -572,7 +6426,7 @@ endcase
 			//assign PORT_A1_WDATA = {18{1'b1}};
 			assign PORT_B1_WDATA = {B1_WDATA_CMPL, B1DATA};
 			//assign PORT_A2_WDATA = {18{1'b1}};
-			assign PORT_B2_WDATA = {D1_WDATA_CMPL, D1DATA};
+			//assign PORT_B2_WDATA = {D1_WDATA_CMPL, D1DATA};
 
 		end
 	endcase
@@ -580,22 +6434,43 @@ endcase
 	case (PORT_A_WIDTH)
 	9: begin
 		assign A1DATA = {PORT_A1_RDATA[16], PORT_A1_RDATA[7:0]};
-		assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
+		//assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
 		assign PORT_A1_WDATA = {18{1'b0}};
 		//assign PORT_B1_WDATA = {B1_WDATA_CMPL[17], B1DATA[8], B1_WDATA_CMPL[16:9], B1DATA[7:0]};
-		assign PORT_A2_WDATA = {18{1'b0}};
+		//assign PORT_A2_WDATA = {18{1'b0}};
 		//assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
 	end
 	default: begin
 		assign A1DATA = PORT_A1_RDATA[PORT_A_WIDTH-1:0];
-		assign C1DATA = PORT_A2_RDATA[PORT_A_WIDTH-1:0];
+		//assign C1DATA = PORT_A2_RDATA[PORT_A_WIDTH-1:0];
 		assign PORT_A1_WDATA = {18{1'b1}};
 		//assign PORT_B1_WDATA = {B1_WDATA_CMPL, B1DATA};
-		assign PORT_A2_WDATA = {18{1'b1}};
+		//assign PORT_A2_WDATA = {18{1'b1}};
 		//assign PORT_B2_WDATA = {D1_WDATA_CMPL, D1DATA};
 
 	end
-endcase
+    endcase
+
+	case (PORT_C_WIDTH)
+		9: begin
+			assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
+			assign PORT_A2_WDATA = {18{1'b0}};
+		end
+		default: begin
+			assign C1DATA = PORT_A2_RDATA[CFG_DBITS-1:0];
+			assign PORT_A2_WDATA = {18{1'b1}};
+		end
+	endcase
+	// Port D
+	case (PORT_D_WIDTH)
+	9: begin
+		assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+	end
+	default: begin
+		assign PORT_B2_WDATA = {D1_WDATA_CMPL, D1DATA};
+
+	end
+    endcase
 
 	wire PORT_A1_CLK = CLK1;
 	wire PORT_A2_CLK = CLK3;
