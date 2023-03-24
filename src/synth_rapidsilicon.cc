@@ -1194,9 +1194,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
     // Check if DLATCH has been found.
     // This is specific for Genesis3 since it does not support DLATCH   
     //
+    void check_DLATCH(){
+        int nError =0;
+        int maxDL= 20;
+        for (auto cell : _design->top_module()->cells()){
+            if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+            continue;
 
-    void check_DLATCH() {
-        for (auto cell : _design->top_module()->cells()) {
             if (cell->type.in(ID($_DLATCH_N_),
 		                    ID($_DLATCH_P_),
 		                    ID($_DLATCH_NN0_),
@@ -1214,12 +1218,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
 		                    ID($_DLATCHSR_PNN_),
 		                    ID($_DLATCHSR_PNP_),
 		                    ID($_DLATCHSR_PPN_),
-		                    ID($_DLATCHSR_PPP_))
-                ){
-
-                log_error("DLATCH is not supported for Gemini Compact. Abort Synthesis \n");
-            }
+		                    ID($_DLATCHSR_PPP_))){
+                                if(nError < maxDL){
+                                    log_warning("Generic DLATCH (type '%s') cannot be mapped \n", log_id(cell->type));
+                                }
+                                else if (nError == maxDL){
+                                    log_warning("..\n");
+                                }
+                            nError++;
+                            }
         }
+        if(nError){
+            log_error("DLATCH is not supported for Gemini Compact. Abort Synthesis \n");
+            }
     }
 
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
@@ -1712,7 +1723,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
+                        // check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
                         
                         check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
