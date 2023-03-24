@@ -1195,14 +1195,31 @@ struct SynthRapidSiliconPass : public ScriptPass {
     // This is specific for Genesis3 since it does not support DLATCH   
     //
 
-    bool check_dlatch() {
-    bool dlatch =false;
-    for (auto cell : _design->top_module()->cells()) {
-        if (cell->type.in(ID($_DLATCH_N_), ID($_DLATCH_P_))){
-            dlatch = true;
+    void check_DLATCH() {
+        for (auto cell : _design->top_module()->cells()) {
+            if (cell->type.in(ID($_DLATCH_N_),
+		                    ID($_DLATCH_P_),
+		                    ID($_DLATCH_NN0_),
+		                    ID($_DLATCH_NN1_),
+		                    ID($_DLATCH_NP0_),
+		                    ID($_DLATCH_NP1_),
+		                    ID($_DLATCH_PN0_),
+		                    ID($_DLATCH_PN1_),
+		                    ID($_DLATCH_PP0_),
+		                    ID($_DLATCH_PP1_),
+		                    ID($_DLATCHSR_NNN_),
+		                    ID($_DLATCHSR_NNP_),
+		                    ID($_DLATCHSR_NPN_),
+		                    ID($_DLATCHSR_NPP_),
+		                    ID($_DLATCHSR_PNN_),
+		                    ID($_DLATCHSR_PNP_),
+		                    ID($_DLATCHSR_PPN_),
+		                    ID($_DLATCHSR_PPP_))
+                ){
+
+                log_error("DLATCH is not supported for Gemini Compact. Abort Synthesis \n");
+            }
         }
-    }
-    return dlatch;
     }
 
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
@@ -1697,6 +1714,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
+                        
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
+
                                        
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
@@ -1716,13 +1737,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_expr");
             run("opt_merge");
             run("opt_dff -nodffe -nosdff");
-
-            // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
-            // Error out if it is the case. 
-
-            if (tech == Technologies::GENESIS_3 && check_dlatch() == true)
-                log_error("DLATCH is not supported for Gemini Compact. Abort Synthesis \n");
-
             run("opt_clean");
 
             if (cec)
