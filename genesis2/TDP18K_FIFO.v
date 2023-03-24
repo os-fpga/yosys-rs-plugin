@@ -128,9 +128,15 @@ module TDP18K_FIFO (
 	wire ADDR_A_i_new,ADDR_B_i_new;
 	assign ADDR_A_i_new=REN_A_i?ADDR_A_i[3]: addr_a_d[3]; //
     assign ADDR_B_i_new=REN_B_i?ADDR_B_i[3]: addr_b_d[3]; //
-    
-	always @(posedge CLK_A_i) addr_a_d[3:0] <= {ADDR_A_i_new,ADDR_A_i[2:0]}; // 
-	always @(posedge CLK_B_i) addr_b_d[3:0] <= {ADDR_B_i_new,ADDR_B_i[2:0]}; // 
+    reg ren_b_new, ren_a_new;
+	always @(posedge CLK_A_i) begin
+	   addr_a_d[3:0] <= {ADDR_A_i_new,ADDR_A_i[2:0]}; // 
+	   ren_a_new <= REN_A_i; // Change: Awais, pipeline the RED_EN
+	end
+	always @(posedge CLK_B_i) begin 
+	   addr_b_d[3:0] <= {ADDR_B_i_new,ADDR_B_i[2:0]};
+	   ren_b_new <= REN_B_i;  // Change: Awais, pipeline the RED_EN
+	end // 
 	assign cen_a_n = ~cen_a;
 	assign ram_wen_a_n = ~ram_wen_a;
 	assign cen_b_n = ~cen_b;
@@ -278,12 +284,16 @@ module TDP18K_FIFO (
 			end
 			MODE_4: begin
 				RDATA_A_o[17:4] = 14'h0000;
-				case (ram_addr_a[3:2])
-					3: RDATA_A_o[3:0] = ram_rdata_a[15:12];
-					2: RDATA_A_o[3:0] = ram_rdata_a[11:8];
-					1: RDATA_A_o[3:0] = ram_rdata_a[7:4];
-					0: RDATA_A_o[3:0] = ram_rdata_a[3:0];
-				endcase
+				if (ren_a_new)begin
+					case (ram_addr_a[3:2])
+						3: RDATA_A_o[3:0] = ram_rdata_a[15:12];
+						2: RDATA_A_o[3:0] = ram_rdata_a[11:8];
+						1: RDATA_A_o[3:0] = ram_rdata_a[7:4];
+						0: RDATA_A_o[3:0] = ram_rdata_a[3:0];
+					endcase
+				end
+				else
+					RDATA_A_o = RDATA_A_o;
 			end
 			MODE_2: begin
 				RDATA_A_o[17:2] = 16'h0000;
@@ -313,12 +323,16 @@ module TDP18K_FIFO (
 				{RDATA_B_o[16], RDATA_B_o[7:0]} = (ram_addr_b[3] ? {ram_rdata_b[17], ram_rdata_b[15:8]} : {ram_rdata_b[16], ram_rdata_b[7:0]});
 			end
 			MODE_4:
+			if (ren_b_new) begin
 				case (ram_addr_b[3:2])
 					3: RDATA_B_o[3:0] = ram_rdata_b[15:12];
 					2: RDATA_B_o[3:0] = ram_rdata_b[11:8];
 					1: RDATA_B_o[3:0] = ram_rdata_b[7:4];
 					0: RDATA_B_o[3:0] = ram_rdata_b[3:0];
 				endcase
+			end
+			else
+				RDATA_B_o = RDATA_B_o;
 			MODE_2:
 				case (ram_addr_b[3:1])
 					7: RDATA_B_o[1:0] = ram_rdata_b[15:14];
