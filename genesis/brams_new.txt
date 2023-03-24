@@ -1,13 +1,13 @@
 ram block $__RS_FACTOR_BRAM18_SDP {
     byte 9;
     abits 14;
-    widths  1 2 4 9 18 global;
+    widths  1 2 4 9 18 per_port;
 	cost 129;
 	init any;
     port sr "A" {
         clock posedge;
         rden;
-        rdinit any;
+        rdinit none;
     }
 	port sw "B" {
         clock posedge;
@@ -19,13 +19,13 @@ ram block $__RS_FACTOR_BRAM18_SDP {
 ram block $__RS_FACTOR_BRAM36_SDP {
     byte 9;
     abits 15;
-    widths  1 2 4 9 18 36 global;
+    widths  1 2 4 9 18 36 per_port;
 	cost 257;
 	init any;
     port sr "A" {
         clock posedge;
         rden;
-        rdinit any;
+        rdinit none;
     }
 	port sw "B" {
         clock posedge;
@@ -43,7 +43,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
 	port sr "A" {
         clock posedge "C1";
         rden;
-        rdinit any;
+        rdinit none;
     }
 	port sw "B" {
         clock posedge "C1";
@@ -53,7 +53,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
 	port sr "C" {
         clock posedge "C2";
         rden;
-        rdinit any;
+        rdinit none;
     }
 	port sw "D" {
         clock posedge "C2";
@@ -71,7 +71,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
 	port sr "A" {
         clock posedge "C1";
         rden;
-        rdinit any;
+        rdinit none;
     }
 	port sw "B" {
         clock posedge "C1";
@@ -81,7 +81,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
 	port sr "C" {
         clock posedge "C2";
         rden;
-        rdinit any;
+        rdinit none;
     }
 	port sw "D" {
         clock posedge "C2";

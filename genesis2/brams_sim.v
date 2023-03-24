@@ -144,7 +144,6 @@ module RS_TDP36K (
     FLUSH2
 );
     parameter [0:80] MODE_BITS = 81'd0;
-
     // First 18K RAMFIFO (41 bits)
     localparam [0:0] SYNC_FIFO1_i  = MODE_BITS[0];
     localparam [0:2] RMODE_A1_i    = MODE_BITS[1:3];
@@ -175,7 +174,6 @@ module RS_TDP36K (
     localparam [0:0] SPLIT_i       = MODE_BITS[80];
 
     parameter [36863:0] INIT_i = 36864'h0;
-
 
  //   input wire RESET_n;
 
@@ -1502,7 +1500,6 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
     parameter RD_CLK_ENABLE = 0;
     parameter RD_CLK_POLARITY = 0;
     parameter RD_COLLISION_X_MASK = 0;
-    parameter RD_INIT_VALUE = 0;
     parameter RD_PORTS = 0;
     parameter RD_SRST_VALUE = 0;
     parameter RD_TRANSPARENCY_MASK = 0;

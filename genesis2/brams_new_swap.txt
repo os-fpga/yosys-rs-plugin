@@ -7,7 +7,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
 	port sr "C" {
 		clock posedge "C1";
 		rden;
-		rdinit any;
+		rdinit none;
 	}
 	port sw "B" {
 		clock posedge "C1";
@@ -17,7 +17,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
 	port sr "A" {
 		clock posedge "C2";
 		rden;
-		rdinit any;
+		rdinit none;
 	}
 	port sw "D" {
 		clock posedge "C2";
@@ -35,7 +35,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
 	port sr "C" {
 		clock posedge "C1";
 		rden;
-		rdinit any;
+		rdinit none;
 	}
 	port sw "B" {
 		clock posedge "C1";
@@ -45,7 +45,7 @@ ram block $__RS_FACTOR_BRAM36_TDP {
 	port sr "A" {
 		clock posedge "C2";
 		rden;
-		rdinit any;
+		rdinit none;
 	}
 	port sw "D" {
 		clock posedge "C2";
