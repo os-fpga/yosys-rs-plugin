@@ -176,7 +176,6 @@ module RS_TDP36K (
 
     parameter [36863:0] INIT_i = 36864'h0;
 
-
  //   input wire RESET_n;
 
     input wire WEN_A1;
@@ -1502,7 +1501,6 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
     parameter RD_CLK_ENABLE = 0;
     parameter RD_CLK_POLARITY = 0;
     parameter RD_COLLISION_X_MASK = 0;
-    parameter RD_INIT_VALUE = 0;
     parameter RD_PORTS = 0;
     parameter RD_SRST_VALUE = 0;
     parameter RD_TRANSPARENCY_MASK = 0;

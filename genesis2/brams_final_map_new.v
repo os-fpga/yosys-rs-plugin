@@ -258,7 +258,7 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	parameter CLKPOL3 = 1;
 	parameter [18431:0] INIT0 = 18432'bx;
 	parameter [18431:0] INIT1 = 18432'bx;
-
+	
 	localparam CFG_ABITS = 14;
 
 	input CLK1;
@@ -6489,11 +6489,11 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	wire [CFG_ENABLE_D-1:0] PORT_A2_BE = {PORT_A2_WEN,PORT_A2_WEN};
 
 	wire PORT_B1_REN = 1'b0;
-	wire PORT_B1_WEN = B1EN[0];
+	wire PORT_B1_WEN = B1EN;
 	wire [CFG_ENABLE_B-1:0] PORT_B1_BE = B1BE;
 
 	wire PORT_B2_REN = 1'b0;
-	wire PORT_B2_WEN = D1EN[0];
+	wire PORT_B2_WEN = D1EN;
 	wire [CFG_ENABLE_D-1:0] PORT_B2_BE = D1BE;
 
 	RS_TDP36K #(
