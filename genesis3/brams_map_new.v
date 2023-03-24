@@ -16,11 +16,9 @@ parameter INIT = 0;
 parameter WIDTH = 1;
 
 parameter PORT_B_WR_BE_WIDTH = 1;
-parameter PORT_A_RD_INIT_VALUE = 0;
 parameter PORT_A_RD_SRST_VALUE = 1;
 
 parameter PORT_D_WR_BE_WIDTH = 1;
-parameter PORT_C_RD_INIT_VALUE = 0;
 parameter PORT_C_RD_SRST_VALUE = 1;
 
 localparam ABITS = 15;
@@ -194,11 +192,9 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter WIDTH = 1;
 	
 	parameter PORT_B_WR_BE_WIDTH = 1;
-	parameter PORT_A_RD_INIT_VALUE = 0;
 	parameter PORT_A_RD_SRST_VALUE = 1;
 	
 	parameter PORT_D_WR_BE_WIDTH = 1;
-	parameter PORT_C_RD_INIT_VALUE = 0;
 	parameter PORT_C_RD_SRST_VALUE = 1;
 
 	localparam ABITS = 14;
@@ -279,7 +275,6 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
     parameter PORT_A_WIDTH=1;
 	parameter PORT_B_WIDTH=1;
 	parameter PORT_B_WR_BE_WIDTH = 1;
-    parameter PORT_A_RD_INIT_VALUE = 1;
 
     parameter [18431:0] INIT = 18432'bx;
 	
@@ -326,7 +321,6 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 	parameter PORT_B_WIDTH=1;
 	parameter PORT_A_WIDTH=1;
 	parameter PORT_B_WR_BE_WIDTH = 1;
-    parameter PORT_A_RD_INIT_VALUE = 1;
 
 	parameter [36863:0] INIT = 36864'bx;
 	
