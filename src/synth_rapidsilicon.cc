@@ -1191,6 +1191,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_error("%s\n", msg.str().c_str());
     }
 
+    // Check if DLATCH has been found.
+    // This is specific for Genesis3 since it does not support DLATCH   
+    //
+
+    bool check_dlatch() {
+    bool dlatch =false;
+    for (auto cell : _design->top_module()->cells()) {
+        if (cell->type.in(ID($_DLATCH_N_), ID($_DLATCH_P_))){
+            dlatch = true;
+        }
+    }
+    return dlatch;
+    }
+
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
     // This is specific for Genesis3 since it does not support DFFs with async. SR.
     //
@@ -1702,6 +1716,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("opt_expr");
             run("opt_merge");
             run("opt_dff -nodffe -nosdff");
+
+            // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
+            // Error out if it is the case. 
+
+            if (tech == Technologies::GENESIS_3 && check_dlatch() == true)
+                log_error("DLATCH is not supported for Gemini Compact. Abort Synthesis \n");
+
             run("opt_clean");
 
             if (cec)
