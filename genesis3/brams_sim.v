@@ -176,11 +176,6 @@ module RS_TDP36K (
 
     parameter [36863:0] INIT_i = 36864'h0;
 
-    parameter PORT_A_RD_INIT_VALUE = 'hx;
-    parameter PORT_B_RD_INIT_VALUE = 'hx;
-    parameter PORT_C_RD_INIT_VALUE = 'hx;
-    parameter PORT_D_RD_INIT_VALUE = 'hx;
-
  //   input wire RESET_n;
 
     input wire WEN_A1;
@@ -570,8 +565,6 @@ module RS_TDP36K (
     TDP18K_FIFO #(
         .UPAF_i(UPAF1_i[0:10]),
         .UPAE_i(UPAE1_i[0:10]),
-        .PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE),
-        .PORT_C_RD_INIT_VALUE(PORT_B_RD_INIT_VALUE),
         .SYNC_FIFO_i(SYNC_FIFO1_i),
         .POWERDN_i(POWERDN1_i),
         .SLEEP_i(SLEEP1_i),
@@ -610,8 +603,6 @@ module RS_TDP36K (
     TDP18K_FIFO #(
         .UPAF_i(UPAF2_i),
         .UPAE_i(UPAE2_i),
-        .PORT_A_RD_INIT_VALUE(PORT_C_RD_INIT_VALUE),
-        .PORT_C_RD_INIT_VALUE(PORT_D_RD_INIT_VALUE),
         .SYNC_FIFO_i(SYNC_FIFO2_i),
         .POWERDN_i(POWERDN2_i),
         .SLEEP_i(SLEEP2_i),
@@ -1510,7 +1501,6 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
     parameter RD_CLK_ENABLE = 0;
     parameter RD_CLK_POLARITY = 0;
     parameter RD_COLLISION_X_MASK = 0;
-    parameter RD_INIT_VALUE = 0;
     parameter RD_PORTS = 0;
     parameter RD_SRST_VALUE = 0;
     parameter RD_TRANSPARENCY_MASK = 0;

@@ -41,8 +41,6 @@ module TDP18K_FIFO (
 
 	parameter [18431:0] INIT_t_i = 18432'h0;
 
-	parameter PORT_A_RD_INIT_VALUE = 'hx;
-	parameter PORT_C_RD_INIT_VALUE = 'hx;
 	input wire [2:0] RMODE_A_i;
 	input wire [2:0] RMODE_B_i;
 	input wire [2:0] WMODE_A_i;
@@ -139,9 +137,7 @@ module TDP18K_FIFO (
 	assign ram_wen_b_n = ~ram_wen_b;
 
 	sram1024x18 #(
-		.INIT_s_i(INIT_t_i[0*18432+:18432]),
-		.PORT_A_RD_INIT_VALUE(PORT_A_RD_INIT_VALUE),
-		.PORT_C_RD_INIT_VALUE(PORT_C_RD_INIT_VALUE)
+		.INIT_s_i(INIT_t_i[0*18432+:18432])
 	)uram(
 		.clk_a(smux_clk_a),
 		.cen_a(cen_a_n),
