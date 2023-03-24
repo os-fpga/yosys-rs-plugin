@@ -1219,8 +1219,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 		                    ID($_DLATCHSR_PNP_),
 		                    ID($_DLATCHSR_PPN_),
 		                    ID($_DLATCHSR_PPP_))){
+                                string instName = log_id(cell->name);
                                 if(nError < maxDL){
-                                    log_warning("Generic DLATCH (type '%s') cannot be mapped \n", log_id(cell->type));
+                                    log_warning("Generic DLATCH %s (type '%s') cannot be mapped \n", instName.c_str(), log_id(cell->type));
                                 }
                                 else if (nError == maxDL){
                                     log_warning("..\n");
@@ -1229,8 +1230,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             }
         }
         if(nError){
-            log_error("DLATCH is not supported for Gemini Compact. Abort Synthesis \n");
-            }
+            log_error("Cannot map %d Generic DLATCH. Abort Synthesis \n",nError);
+        }
     }
 
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
@@ -1723,7 +1724,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        // check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
+                        check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
                         
                         check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
