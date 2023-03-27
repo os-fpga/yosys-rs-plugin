@@ -1543,9 +1543,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!fast) {
                 run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
-
-                run("opt_expr -full");
             }
+
+            run("opt_expr -full");
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
