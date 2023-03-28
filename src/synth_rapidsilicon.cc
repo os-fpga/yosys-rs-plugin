@@ -70,7 +70,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 142
+#define VERSION_PATCH 143
 
 
 enum Strategy {
@@ -1543,9 +1543,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!fast) {
                 run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
-
-                run("opt_expr -full");
             }
+
+            run("opt_expr -full");
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
