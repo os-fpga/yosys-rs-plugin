@@ -70,7 +70,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 143
+#define VERSION_PATCH 142
 
 
 enum Strategy {
@@ -162,6 +162,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -fast\n");
         log("        Used to speed up synthesis flow\n");
         log("        Disabled by default.\n");
+        log("\n");
+        log("    -no_flatten\n");
+        log("        Do not flatten design to preserve hierarchy.\n");
+        log("        Disabled, design is flattened by default.\n");
         log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
@@ -274,6 +278,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nobram;
     bool de;
     bool fast;
+    bool no_flatten;
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
@@ -300,6 +305,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         abc_script = "";
         cec = false;
         fast = false;
+        no_flatten = false;
         nobram = false;
         max_bram = -1;
         max_dsp = -1;
@@ -359,6 +365,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-goal" && argidx + 1 < args.size()) {
                 goal_str = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-no_flatten") {
+                no_flatten = true;
                 continue;
             }
             if (args[argidx] == "-fsm_encoding" && argidx + 1 < args.size()) {
@@ -1269,7 +1279,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
-            run("flatten");
+            if (!no_flatten) {
+              run("flatten");
+            }
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
