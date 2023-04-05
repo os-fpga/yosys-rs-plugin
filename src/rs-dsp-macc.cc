@@ -20,8 +20,7 @@ int max_dsp;
 static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
 {
     auto &st = pm.st_rs_dsp_macc;
-
-    // Reject if multiplier drives anything else than either $add or $add and
+    // Reject if multiplier drives anything else than either $add or $sub and
     // $mux
     if (st.mux == nullptr && st.mul_nusers > 2) {
         return;
@@ -29,7 +28,7 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
 
     // Determine whether the output is taken from before or after the ff
     bool out_ff;
-    if (st.ff_d_nusers == 2 && st.ff_q_nusers == 3) {
+    if (st.ff_d_nusers == 2 && st.ff_q_nusers > 2) { // Awais: Increased limit for accomulator ouput
         out_ff = true;
     } else if (st.ff_d_nusers == 3 && st.ff_q_nusers == 2) {
         out_ff = false;
@@ -123,7 +122,7 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     type = RTLIL::escape_id(cell_full_name);
     log("Inferring MACC %zux%zu->%zu as %s from:\n", a_width, b_width, z_width, RTLIL::unescape_id(type).c_str());
 
-    for (auto cell : {st.mul, st.add, st.mux, st.ff}) {
+    for (auto cell : {st.mul, st.add, st.mux, st.ff, st.neg}) { //Awais: unescape $neg which is being handled in MACC
         if (cell != nullptr) {
             log(" %s (%s)\n", RTLIL::unescape_id(cell->name).c_str(), RTLIL::unescape_id(cell->type).c_str());
         }
@@ -206,14 +205,20 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
         RTLIL::SigSpec sig_s = st.mux->getPort(ID(S));
 
         // Depending on the mux port ordering insert inverter if needed
-        log_assert(st.mux_ab == ID(A) || st.mux_ab == ID(B));
-        if (st.mux_ab == ID(A)) {
+        log_assert(st.mux_ba == ID(A) || st.mux_ba == ID(B)); // Awais: if not $neg then mux b input is connected with adder
+        if (st.mux_ba == ID(B)) {
             sig_s = pm.module->Not(NEW_ID, sig_s);
         }
 
         // Assemble the full control signal for the feedback_i port
         RTLIL::SigSpec sig_f;
-        sig_f.append(sig_s);
+        if (st.neg!=nullptr){ // Awais: append 0 to feedback control signal, if MACC is of type, macc_out = sub?acc-mul:acc+mul;
+            sig_f.append(RTLIL::S0);
+        }
+        else{
+            sig_f.append(sig_s);
+        }
+        
         sig_f.append(RTLIL::S0);
         sig_f.append(RTLIL::S0);
         cell->setPort(RTLIL::escape_id("feedback_i"), sig_f);
@@ -251,7 +256,25 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
     }
 
     bool subtract = (st.add->type == RTLIL::escape_id("$sub"));
-    cell->setPort(RTLIL::escape_id("subtract_i"), RTLIL::SigSpec(subtract ? RTLIL::S1 : RTLIL::S0));
+    
+    // Awais: handle mux select signal for accomulator as per MACC type
+    if (st.mux != nullptr) {
+        RTLIL::SigSpec sig_s = st.mux->getPort(ID(S));
+        // Depending on the mux port ordering insert inverter if needed
+        log_assert(st.mux_ba == ID(A) || st.mux_ba == ID(B));
+        if (st.mux->getPort(ID(A)) == st.add->getPort(ID(Y)) or (st.neg!=nullptr and st.add->type == RTLIL::escape_id("$add"))) {
+            sig_s = pm.module->Not(NEW_ID, sig_s);
+        }
+        if (st.neg==nullptr and st.add->type == RTLIL::escape_id("$add"))
+            cell->setPort(RTLIL::escape_id("subtract_i"), RTLIL::S0);
+        else
+            cell->setPort(RTLIL::escape_id("subtract_i"),  sig_s);
+        
+    }
+    else{
+        cell->setPort(RTLIL::escape_id("subtract_i"), RTLIL::SigSpec(subtract ? RTLIL::S1 : RTLIL::S0));
+    }
+    
 
     // Mark the cells for removal
     pm.autoremove(st.mul);
@@ -260,6 +283,8 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
         pm.autoremove(st.mux);
     }
     pm.autoremove(st.ff);
+    if (st.neg != nullptr)
+        pm.autoremove(st.neg);  // Awais: remove $neg, it is handle in MACC
 }
 
 struct RSDspMacc : public Pass {
