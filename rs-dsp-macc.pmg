@@ -15,7 +15,6 @@ match mul
     set mul_nusers nusers(port(mul, \Y))
 endmatch
 
-# Awais: add $neg block for handling conditions like, macc_out = sub?acc-mul:acc+mul
 match neg 
     select neg->type.in($neg)
     index <SigSpec> port(neg, \A) === port(mul, \Y)
