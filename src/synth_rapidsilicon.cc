@@ -70,7 +70,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 143
+#define VERSION_PATCH 142
 
 
 enum Strategy {
@@ -1265,10 +1265,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void display_inst(int nbErrors){
         std::regex pattern1("\\$verific\\$");
         std::regex pattern2("\\$\\d+$");
+        std::regex pattern3(".*\\$");
         // Replace the pattern with an empty string
         std::string output = std::regex_replace(inst_names[nbErrors], pattern1, "");
         output = std::regex_replace(output, pattern2, "");
-        log("at '%s' \n", output.c_str());   
+        output = std::regex_replace(output,pattern3, "");
+        log("Please update the RTL at '%s' to either change the description to synchronous set/reset or a static 0 or 1 value \n", output.c_str());   
          
     }
 
@@ -1296,7 +1298,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
               if (nbErrors < maxPrintOut) {
                 GenericDFF_exist=true;
-                log_warning("Generic DFF (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL code to either change the description to synchronous set/reset or a static 0 or 1 value ", log_id(ff.cell->type));
+                log_warning("Synchronous register element Generic DFF %s(type %s) describes both asynchrnous set and reset function and not supported by the architecture. ", instName.c_str(),log_id(ff.cell->type));
                 if (GenericDFF_exist) display_inst(nbErrors);
               } else if (nbErrors == maxPrintOut) {
                 log_warning("...\n");
@@ -1308,7 +1310,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
        }
 
        if (nbErrors) {
-          log_error("Cannot map %d Generic DFFs. Please Update the RTL. Abort Synthesis.\n", nbErrors);
+          log_error("Cannot map %d Generic DFFs. Abort Synthesis.\n", nbErrors);
        }
     }
 
