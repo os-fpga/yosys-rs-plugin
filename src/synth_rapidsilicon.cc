@@ -3,6 +3,7 @@
  *
  */
 #include "kernel/celltypes.h"
+#include "backends/rtlil/rtlil_backend.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
@@ -1235,44 +1236,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
-    void collct_instNam_DFFSR(){
-       SigMap sigmap(_design->top_module());
-       FfInitVals initvals(&sigmap, _design->top_module());
-       int nbcells = 0;
-       int maxPrintOut = 20; // Print out the first 'maxPrintOut' DFF with async. SR
 
-       for (auto cell : _design->top_module()->cells()) {
-
-          if (!RTLIL::builtin_ff_cell_types().count(cell->type))
-              continue;
-
-          FfData ff(&initvals, cell);
-
-          if (ff.has_sr) {
-
-              string instName = log_id(ff.name);
-
-              if (nbcells < maxPrintOut) {
-                RTLIL::SigSpec sig_q = cell->getPort(ID::Q);
-                for (int i = 0; i < GetSize(sig_q); i++) 
-                inst_names.push_back(instName.c_str());
-              } 
-              nbcells++;
-          }
-       }
-    }
-
-    void display_inst(int nbErrors){
-        std::regex pattern1("\\$verific\\$");
-        std::regex pattern2("\\$\\d+$");
-        std::regex pattern3(".*\\$");
-        // Replace the pattern with an empty string
-        std::string output = std::regex_replace(inst_names[nbErrors], pattern1, "");
-        output = std::regex_replace(output, pattern2, "");
-        output = std::regex_replace(output,pattern3, "");
-        log("Please update the RTL at '%s' to either change the description to synchronous set/reset or a static 0 or 1 value \n", output.c_str());   
-         
-    }
 
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
     // This is specific for Genesis3 since it does not support DFFs with async. SR.
@@ -1283,7 +1247,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
        FfInitVals initvals(&sigmap, _design->top_module());
        int nbErrors = 0;
        int maxPrintOut = 20; // Print out the first 'maxPrintOut' DFF with async. SR
-       bool GenericDFF_exist=false;
 
        for (auto cell : _design->top_module()->cells()) {
 
@@ -1293,20 +1256,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
           FfData ff(&initvals, cell);
 
           if (ff.has_sr) {
-            
-              string instName = log_id(ff.name);
 
+              string instName = log_id(ff.name);
+              std::stringstream buf;
+              for (auto &it : cell->attributes) {
+	            	RTLIL_BACKEND::dump_const(buf, it.second);
+	            }
               if (nbErrors < maxPrintOut) {
-                GenericDFF_exist=true;
-                log_warning("Synchronous register element Generic DFF %s(type %s) describes both asynchrnous set and reset function and not supported by the architecture. ", instName.c_str(),log_id(ff.cell->type));
-                if (GenericDFF_exist) display_inst(nbErrors);
+
+                 log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
+
               } else if (nbErrors == maxPrintOut) {
                 log_warning("...\n");
               }
 
               nbErrors++;
           }
-          GenericDFF_exist=false;
        }
 
        if (nbErrors) {
@@ -1352,7 +1317,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_proc.v");
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
-	    collct_instNam_DFFSR();
+	    
             run("flatten");
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
