@@ -3,6 +3,7 @@
  *
  */
 #include "kernel/celltypes.h"
+#include "backends/rtlil/rtlil_backend.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
@@ -70,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 143
+#define VERSION_PATCH 142
 
 
 enum Strategy {
@@ -162,10 +163,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -fast\n");
         log("        Used to speed up synthesis flow\n");
         log("        Disabled by default.\n");
-        log("\n");
-        log("    -no_flatten\n");
-        log("        Do not flatten design to preserve hierarchy.\n");
-        log("        Disabled, design is flattened by default.\n");
         log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
@@ -278,7 +275,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nobram;
     bool de;
     bool fast;
-    bool no_flatten;
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
@@ -291,6 +287,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
+    vector<std::string> inst_names;
 
     void clear_flags() override
     {
@@ -305,7 +302,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         abc_script = "";
         cec = false;
         fast = false;
-        no_flatten = false;
         nobram = false;
         max_bram = -1;
         max_dsp = -1;
@@ -365,10 +361,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-goal" && argidx + 1 < args.size()) {
                 goal_str = args[++argidx];
-                continue;
-            }
-            if (args[argidx] == "-no_flatten") {
-                no_flatten = true;
                 continue;
             }
             if (args[argidx] == "-fsm_encoding" && argidx + 1 < args.size()) {
@@ -1201,6 +1193,55 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_error("%s\n", msg.str().c_str());
     }
 
+    // Check if DLATCH has been found.
+    // This is specific for Genesis3 since it does not support DLATCH   
+    //
+    void check_DLATCH(){
+        int nError =0;
+        int maxDL= 20;
+        for (auto cell : _design->top_module()->cells()){
+            if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+            continue;
+
+            if (cell->type.in(ID($_DLATCH_N_),
+		                    ID($_DLATCH_P_),
+		                    ID($_DLATCH_NN0_),
+		                    ID($_DLATCH_NN1_),
+		                    ID($_DLATCH_NP0_),
+		                    ID($_DLATCH_NP1_),
+		                    ID($_DLATCH_PN0_),
+		                    ID($_DLATCH_PN1_),
+		                    ID($_DLATCH_PP0_),
+		                    ID($_DLATCH_PP1_),
+		                    ID($_DLATCHSR_NNN_),
+		                    ID($_DLATCHSR_NNP_),
+		                    ID($_DLATCHSR_NPN_),
+		                    ID($_DLATCHSR_NPP_),
+		                    ID($_DLATCHSR_PNN_),
+		                    ID($_DLATCHSR_PNP_),
+		                    ID($_DLATCHSR_PPN_),
+		                    ID($_DLATCHSR_PPP_))){
+                                string instName = log_id(cell->name);
+                                std::stringstream buf;
+                                for (auto &it : cell->attributes) {
+	            	                RTLIL_BACKEND::dump_const(buf, it.second);
+	                            }
+                                if(nError < maxDL){
+                                    log_warning("Synchronous register element Generic DLATCH'%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
+                                }
+                                else if (nError == maxDL){
+                                    log_warning("..\n");
+                                }
+                            nError++;
+                            }
+        }
+        if(nError){
+            log_error("Cannot map %d Generic DLATCH. Abort Synthesis \n",nError);
+        }
+    }
+
+
+
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
     // This is specific for Genesis3 since it does not support DFFs with async. SR.
     //
@@ -1221,11 +1262,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
           if (ff.has_sr) {
 
               string instName = log_id(ff.name);
-
+              std::stringstream buf;
+              for (auto &it : cell->attributes) {
+	            	RTLIL_BACKEND::dump_const(buf, it.second);
+	            }
               if (nbErrors < maxPrintOut) {
 
-                log_warning("Generic DFF '%s' (type %s) cannot be mapped\n", instName.c_str(),
-                            log_id(ff.cell->type));
+                 log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
 
               } else if (nbErrors == maxPrintOut) {
                 log_warning("...\n");
@@ -1278,10 +1321,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_proc.v");
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
-
-            if (!no_flatten) {
-              run("flatten");
-            }
+	    
+            run("flatten");
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
@@ -1555,9 +1596,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!fast) {
                 run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
-            }
 
-            run("opt_expr -full");
+                run("opt_expr -full");
+            }
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
@@ -1693,8 +1734,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
+                       check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
+                        
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
+
                                        
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
