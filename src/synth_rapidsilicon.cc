@@ -3,7 +3,6 @@
  *
  */
 #include "kernel/celltypes.h"
-#include "backends/rtlil/rtlil_backend.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
@@ -164,6 +163,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Used to speed up synthesis flow\n");
         log("        Disabled by default.\n");
         log("\n");
+        log("    -no_flatten\n");
+        log("        Do not flatten design to preserve hierarchy.\n");
+        log("        Disabled, design is flattened by default.\n");
+        log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
         log("        Disabled by default.\n");
@@ -275,6 +278,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nobram;
     bool de;
     bool fast;
+    bool no_flatten;
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
@@ -287,7 +291,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
-    vector<std::string> inst_names;
 
     void clear_flags() override
     {
@@ -302,6 +305,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         abc_script = "";
         cec = false;
         fast = false;
+        no_flatten = false;
         nobram = false;
         max_bram = -1;
         max_dsp = -1;
@@ -361,6 +365,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-goal" && argidx + 1 < args.size()) {
                 goal_str = args[++argidx];
+                continue;
+            }
+            if (args[argidx] == "-no_flatten") {
+                no_flatten = true;
                 continue;
             }
             if (args[argidx] == "-fsm_encoding" && argidx + 1 < args.size()) {
@@ -1321,8 +1329,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_proc.v");
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
-	    
-            run("flatten");
+
+            if (!no_flatten) {
+              run("flatten");
+            }
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
@@ -1596,9 +1606,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!fast) {
                 run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
-
-                run("opt_expr -full");
             }
+
+            run("opt_expr -full");
 
             if (cec)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
@@ -1734,12 +1744,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                       check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
+                        check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
-                        
+
+                                       
                         check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
                                          // Error out if it is the case. 
-
                                        
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
