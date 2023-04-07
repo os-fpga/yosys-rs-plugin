@@ -3,6 +3,7 @@
  *
  */
 #include "kernel/celltypes.h"
+#include "backends/rtlil/rtlil_backend.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
