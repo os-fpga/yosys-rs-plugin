@@ -393,12 +393,12 @@ with open(outfile, "w") as f:
             print("  typedef std::tuple<{}> index_{}_key_type;".format(", ".join(index_types), index), file=f)
             print("  typedef std::tuple<{}> index_{}_value_type;".format(", ".join(value_types), index), file=f)
             print("  dict<index_{}_key_type, vector<index_{}_value_type>> index_{};".format(index, index, index), file=f)
-            if (customize_file): # Awais: emulate "out = subtr?acc-mul:acc+mul" for RS DSP MACC against EDA-348
-                if(prefix == "rs_dsp_macc" and block["cell"]=="mux"): 
-                    print("  dict<index_{}_key_type, vector<index_{}_value_type>> index_{}_mux;".format(index, index, index), file=f)
-                elif ((prefix == "rs_dsp_macc" and block["cell"]=="add")):
-                    print("  dict<index_{}_key_type, vector<index_{}_value_type>> index_{}_add;".format(index, index, index), file=f)
-
+            # BEGIN: Code added to original one in order to handle case of Jira-348 (Awais)
+            if(prefix == "rs_dsp_macc" and block["cell"]=="mux"): 
+                print("  dict<index_{}_key_type, vector<index_{}_value_type>> index_{}_mux;".format(index, index, index), file=f)
+            elif ((prefix == "rs_dsp_macc" and block["cell"]=="add")):
+                print("  dict<index_{}_key_type, vector<index_{}_value_type>> index_{}_add;".format(index, index, index), file=f)
+            # END: Code added to original one in order to handle case of Jira-348 (Awais)
     print("  dict<SigBit, pool<Cell*>> sigusers;", file=f)
     print("  pool<Cell*> blacklist_cells;", file=f)
     print("  pool<Cell*> autoremove_cells;", file=f)
@@ -544,13 +544,14 @@ with open(outfile, "w") as f:
                     valueidx += 1
             print("        index_{}_key_type key;".format(index), file=f)
             for field, entry in enumerate(block["index"]):
-                if (customize_file):
-                    if (len(block["if"]) and prefix == "rs_dsp_macc"): # Awais: emulate "out = subtr?acc-mul:acc+mul" for RS DSP MACC against EDA-348
-                        for expr in block["if"]: #
-                            if((entry[2].find("neg") != -1) and  (entry[2].find("mux_ba") == -1) ): #
-                                print("        index_{}_{}[key].push_back(value);".format(index,block["cell"]), file=f) #
-                            elif((entry[2].find("neg") == -1) and  (entry[2].find("mux_ba") != -1) ): #
-                                print("        index_{}_{}[key].push_back(value);".format(index,block["cell"]), file=f) #
+                # BEGIN: Code added to original one in order to handle case of Jira-348 (Awais)
+                if (len(block["if"]) and prefix == "rs_dsp_macc"): 
+                    for expr in block["if"]:
+                        if((entry[2].find("neg") != -1) and  (entry[2].find("mux_ba") == -1) ):
+                            print("        index_{}_{}[key].push_back(value);".format(index,block["cell"]), file=f)
+                        elif((entry[2].find("neg") == -1) and  (entry[2].find("mux_ba") != -1) ):
+                            print("        index_{}_{}[key].push_back(value);".format(index,block["cell"]), file=f)
+                # END: Code added to original one in order to handle case of Jira-348 (Awais)
                 print("        std::get<{}>(key) = {};".format(field, entry[1]), file=f)
 
             print("        index_{}[key].push_back(value);".format(index), file=f)
@@ -726,11 +727,12 @@ with open(outfile, "w") as f:
 
             if len(block["if"]):
                 for expr in block["if"]:
-                    if (customize_file): # Awais: emulate "out = subtr?acc-mul:acc+mul" for RS DSP MACC against EDA-348
-                        if ((expr.find("neg")!=-1) and (expr.find("nullptr")!=-1) and prefix == "rs_dsp_macc"):
-                            if (block["cell"] ==  "mux" or block["cell"] == "add"):
-                                print("", file=f)
-                    else:     #
+                    # BEGIN: Code added to original one in order to handle case of Jira-348 (Awais)
+                    if ((expr.find("neg")!=-1) and (expr.find("nullptr")!=-1) and prefix == "rs_dsp_macc"):
+                        if (block["cell"] ==  "mux" or block["cell"] == "add"):
+                            print("", file=f)
+                    else:
+                    # END: Code added to original one in order to handle case of Jira-348 (Awais)
                         print("", file=f)
                         print("    if (!({})) {{".format(expr), file=f)
                         print("      {} = nullptr;".format(block["cell"]), file=f)
@@ -742,26 +744,27 @@ with open(outfile, "w") as f:
             print("", file=f)
             print("    index_{}_key_type key;".format(index), file=f)
             for field, entry in enumerate(block["index"]):
-                if (customize_file):
-                    if (len(block["if"]) and prefix == "rs_dsp_macc"): # Awais: emulate "out = subtr?acc-mul:acc+mul" for RS DSP MACC against EDA-348
-                        for expr in block["if"]:
-                            if((block["cell"] == "mux"  and (entry[2].find("neg") != -1) and  (entry[2].find("mux_ba") == -1)) or (block["cell"] == "add"  and (entry[2].find("neg") == -1) and  (entry[2].find("mux_ba") != -1))):
-                                print("", file=f) 
-                                if (block["cell"] == "mux"):
-                                    print("    if ({}) {{".format(expr), file=f)
-                                else:
-                                    print("    if (!({}) and {} != nullptr) {{".format(expr,block["cell"]), file=f)
-                                print("        std::get<{}>(key) = {};".format(field, entry[2]), file=f)
-                                print("    }", file=f)
-                                print("", file=f)
-                                print("    else {", file=f)
-                                print("      index_{}.clear();".format(index), file=f)
-                                print("      index_{} = index_{}_{};".format(index,index,block["cell"]), file=f)
-                                print("    }", file=f)
+                # BEGIN: Code added to original one in order to handle case of Jira-348 (Awais)
+                if (len(block["if"]) and prefix == "rs_dsp_macc"):
+                    for expr in block["if"]:
+                        if((block["cell"] == "mux"  and (entry[2].find("neg") != -1) and  (entry[2].find("mux_ba") == -1)) or (block["cell"] == "add"  and (entry[2].find("neg") == -1) and  (entry[2].find("mux_ba") != -1))):
+                            print("", file=f) 
+                            if (block["cell"] == "mux"):
+                                print("    if ({}) {{".format(expr), file=f)
                             else:
-                                print("    std::get<{}>(key) = {};".format(field, entry[2]), file=f)
-                    else:
-                        print("    std::get<{}>(key) = {};".format(field, entry[2]), file=f)
+                                print("    if (!({}) and {} != nullptr) {{".format(expr,block["cell"]), file=f)
+                            print("        std::get<{}>(key) = {};".format(field, entry[2]), file=f)
+                            print("    }", file=f)
+                            print("", file=f)
+                            print("    else {", file=f)
+                            print("      index_{}.clear();".format(index), file=f)
+                            print("      index_{} = index_{}_{};".format(index,index,block["cell"]), file=f)
+                            print("    }", file=f)
+                        else:
+                            print("    std::get<{}>(key) = {};".format(field, entry[2]), file=f)
+                else:
+                # END: Code added to original one in order to handle case of Jira-348 (Awais)
+                    print("    std::get<{}>(key) = {};".format(field, entry[2]), file=f)
             print("    auto cells_ptr = index_{}.find(key);".format(index), file=f)
 
             if block["semioptional"] or block["genargs"] is not None:
