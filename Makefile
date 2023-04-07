@@ -154,7 +154,7 @@ test:
 	$(MAKE) -C tests tests_gen2 YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
-	rm -rf src/*.d src/*.o *.so pmgen*
+	rm -rf src/*.d src/*.o *.so pmgen/
 	$(MAKE) -C tests clean_tests YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:
