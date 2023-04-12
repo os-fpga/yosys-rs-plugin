@@ -1,0 +1,56 @@
+ram block $__RS_FACTOR_BRAM18_TDP {
+	byte 9;
+	abits 14;
+	widths  1 2 4 9 18 global;
+	cost 129;
+	init any;
+	port sr "C" {
+		clock posedge "C1";
+		rden;
+		rdinit none;
+	}
+	port sw "B" {
+		clock posedge "C1";
+		wrbe_separate;
+		wrtrans all new;
+	}
+	port sr "A" {
+		clock posedge "C2";
+		rden;
+		rdinit none;
+	}
+	port sw "D" {
+		clock posedge "C2";
+		wrbe_separate;
+		wrtrans all new;
+	}
+}
+
+ram block $__RS_FACTOR_BRAM36_TDP {
+	byte 9;
+	abits 15;
+	widths  1 2 4 9 18 36 global;
+	cost 257;
+	init any;
+	port sr "C" {
+		clock posedge "C1";
+		rden;
+		rdinit none;
+	}
+	port sw "B" {
+		clock posedge "C1";
+		wrbe_separate;
+		wrtrans all new;
+	}
+	port sr "A" {
+		clock posedge "C2";
+		rden;
+		rdinit none;
+	}
+	port sw "D" {
+		clock posedge "C2";
+		wrbe_separate;
+		wrtrans all new;
+	}
+}
+
