@@ -178,10 +178,10 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
     string command  = "fm_shell -f "+cmd;
     command.append(" 2>&1");
 
-    cout<<"PID: "<<getpid()<<endl;
+    //cout<<"PID: "<<getpid()<<endl;
     
-    pid_t child_id;
-    cout<<"Child ID:" <<child_id<<endl;
+    //pid_t child_id;
+    //cout<<"Child ID:" <<child_id<<endl;
     auto start = chrono::high_resolution_clock::now();
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe) {
@@ -512,7 +512,7 @@ void compare(std::ofstream& fv_script,struct hdl_args hdlarg,std::string *out_pa
     }
     
     if( remove( (*out_path_rs+hdlarg.top+"_"+hdlarg.stage2+"_results.log").c_str() ) != 0 )
-    std::cout<<"Error deleting onespin result file"<<endl;
+    std::cout<<""<<endl;
 }
 
 void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path ,string *w_dir_){
@@ -612,7 +612,7 @@ void *run_fv(void* flow) {
     struct fv_args *fvargs = (struct fv_args *)flow;
     string ref_net = *fvargs->ref_net;
     string shared_dir = *fvargs->shared_dir_path;
-    int fV_timeout = *fvargs->fv_timeout;
+    //int fV_timeout = *fvargs->fv_timeout;
 
     fs::path cwd_dir_ = fs::current_path();
     string synth_dir_ = (cwd_dir_.generic_string()+"/");
