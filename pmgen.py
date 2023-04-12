@@ -819,6 +819,11 @@ with open(outfile, "w") as f:
             print("    }", file=f)
 
             print("", file=f)
+            # BEGIN: Code added to original one in order to handle case of Jira-348 (Awais)
+            if (customize_file):
+                if ((block["cell"] == "ff") and prefix == "rs_dsp_macc"):
+                    print("    rollback = 1;", file=f)
+            # END: Code added to original one in order to handle case of Jira-348 (Awais)
             print("    {} = nullptr;".format(block["cell"]), file=f)
 
             if block["optional"]:
