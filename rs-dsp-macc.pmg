@@ -1,7 +1,7 @@
 pattern rs_dsp_macc
 
 state <IdString> add_ba
-state <IdString> mux_ab
+state <IdString> mux_ba
 
 state <int> mul_nusers
 state <int> add_nusers
@@ -15,14 +15,10 @@ match mul
     set mul_nusers nusers(port(mul, \Y))
 endmatch
 
-match add
-    select add->type.in($add, $sub)
-    choice <IdString> AB {\A, \B}
-    define <IdString> BA (AB == \A ? \B : \A)
-    index <SigSpec> port(add, AB) === port(mul, \Y)
-    select nusers(port(add, \Y)) <= 3
-    set add_nusers nusers(port(add, \Y))
-    set add_ba BA
+match neg 
+    select neg->type.in($neg)
+    index <SigSpec> port(neg, \A) === port(mul, \Y)
+    optional
 endmatch
 
 match mux
@@ -30,16 +26,32 @@ match mux
     choice <IdString> AB {\A, \B}
     define <IdString> BA (AB == \A ? \B : \A)
     index <SigSpec> port(mux, AB) === port(mul, \Y)
-    index <SigSpec> port(mux, BA) === port(add, \Y)
+    if (neg != nullptr)
+        index <SigSpec> port(mux, BA) === port(neg, \Y)
     select nusers(port(mux, \Y)) <= 3
     set mux_nusers nusers(port(mux, \Y))
-    set mux_ab AB
+    set mux_ba BA
     optional
 endmatch
 
+match add
+    select add->type.in($add, $sub)
+    choice <IdString> AB {\A, \B}
+    define <IdString> BA (AB == \A ? \B : \A)
+    index <SigSpec> port(add, AB) === (neg == nullptr?port(mul,\Y):port(mux, \Y))
+    
+    if (neg == nullptr)
+        index <SigSpec> port(add, \Y) === port(mux,mux_ba)
+    select nusers(port(add, \Y)) <= 3
+    set add_nusers nusers(port(add, \Y))
+    
+    set add_ba BA
+endmatch
+
+
 match ff
-    select ff->type.in($dff, $adff, $dffe, $adffe)
-    index <SigSpec> port(ff, \D) === (mux == nullptr ? port(add, \Y) : port(mux, \Y))
+    select ff->type.in($dff,  $sdff, $adff, $dffe, $adffe)
+    index <SigSpec> port(ff, \D) === (neg == nullptr?mux ==nullptr?port(add,\Y): port(mux, \Y):port(add,\Y))
     index <SigSpec> port(ff, \Q) === port(add, add_ba)
     set ff_d_nusers nusers(port(ff, \D))
     set ff_q_nusers nusers(port(ff, \Q))
