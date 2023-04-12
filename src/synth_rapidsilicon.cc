@@ -3,6 +3,7 @@
  *
  */
 #include "kernel/celltypes.h"
+#include "backends/rtlil/rtlil_backend.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
@@ -1201,6 +1202,55 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_error("%s\n", msg.str().c_str());
     }
 
+    // Check if DLATCH has been found.
+    // This is specific for Genesis3 since it does not support DLATCH   
+    //
+    void check_DLATCH(){
+        int nError =0;
+        int maxDL= 20;
+        for (auto cell : _design->top_module()->cells()){
+            if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+            continue;
+
+            if (cell->type.in(ID($_DLATCH_N_),
+		                    ID($_DLATCH_P_),
+		                    ID($_DLATCH_NN0_),
+		                    ID($_DLATCH_NN1_),
+		                    ID($_DLATCH_NP0_),
+		                    ID($_DLATCH_NP1_),
+		                    ID($_DLATCH_PN0_),
+		                    ID($_DLATCH_PN1_),
+		                    ID($_DLATCH_PP0_),
+		                    ID($_DLATCH_PP1_),
+		                    ID($_DLATCHSR_NNN_),
+		                    ID($_DLATCHSR_NNP_),
+		                    ID($_DLATCHSR_NPN_),
+		                    ID($_DLATCHSR_NPP_),
+		                    ID($_DLATCHSR_PNN_),
+		                    ID($_DLATCHSR_PNP_),
+		                    ID($_DLATCHSR_PPN_),
+		                    ID($_DLATCHSR_PPP_))){
+                                string instName = log_id(cell->name);
+                                std::stringstream buf;
+                                for (auto &it : cell->attributes) {
+	            	                RTLIL_BACKEND::dump_const(buf, it.second);
+	                            }
+                                if(nError < maxDL){
+                                    log_warning("Synchronous register element Generic DLATCH'%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
+                                }
+                                else if (nError == maxDL){
+                                    log_warning("..\n");
+                                }
+                            nError++;
+                            }
+        }
+        if(nError){
+            log_error("Cannot map %d Generic DLATCH. Abort Synthesis \n",nError);
+        }
+    }
+
+
+
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
     // This is specific for Genesis3 since it does not support DFFs with async. SR.
     //
@@ -1221,11 +1271,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
           if (ff.has_sr) {
 
               string instName = log_id(ff.name);
-
+              std::stringstream buf;
+              for (auto &it : cell->attributes) {
+	            	RTLIL_BACKEND::dump_const(buf, it.second);
+	            }
               if (nbErrors < maxPrintOut) {
 
-                log_warning("Generic DFF '%s' (type %s) cannot be mapped\n", instName.c_str(),
-                            log_id(ff.cell->type));
+                 log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
 
               } else if (nbErrors == maxPrintOut) {
                 log_warning("...\n");
@@ -1695,6 +1747,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
+
+                                       
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
                                        
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
