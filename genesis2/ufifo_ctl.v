@@ -56,8 +56,8 @@ module fifo_ctl (
 			pushtopop2 <= 'h0;
 		end
 		else begin
-			pushtopop1 = pushtopop0;
-			pushtopop2 = pushtopop1;
+			pushtopop1 <= pushtopop0;
+			pushtopop2 <= pushtopop1;
 		end
 	always @(posedge wclk or negedge rst_W_n)
 		if (~rst_W_n) begin
