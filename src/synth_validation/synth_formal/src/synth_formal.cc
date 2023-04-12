@@ -68,12 +68,12 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
     onespin_lic_fail = false;
     bool lic_captured = false;
     string result = "", str_buff="";
-    smatch lic_match,lic_match1,fv_pass, fv_fail;
+    smatch lic_match,lic_match1,fv_pass, fv_fail, fv_inconc;
     regex _lic_pass_("(.*Loading.*'RTL2RTL'?)");
     regex _lic_fail_("(.*Error:.*Cannot.*get.*license?)");
     regex _fv_succeeded_ ("(.*designs.*are equivalent.*?)");
     regex _fv_failed_ ("(.*designs.*are not equivalent.*?)");
-
+    regex _fv_inconclusive_ ("(.*esign.*equivalence.*inconclusive.*?)");
     string command  = "onespin_sh "+cmd;
     command.append(" 2>&1");
 
@@ -85,6 +85,11 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
     // pid_t child_id;
     // cout<<"Child ID:" <<child_id<<endl;
     auto start = chrono::high_resolution_clock::now();
+    ofstream pipe_out;
+    pipe_out.open(stage+".log", ios::out);
+    pipe_out.close(); 
+    pipe_out.open(stage+".log", ios::app);
+    
     FILE* pipe = popen(command.c_str(), "r");
     if (!pipe) {
         return "popen failed!";
@@ -93,7 +98,7 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
         while (!feof(pipe)) {
             if (fgets(buffer, 256, pipe) != NULL){
                 result.append(buffer);
-                // cout<<buffer;
+                pipe_out<<buffer;
             }
             if (!onespin_lic_fail){
                 str_buff = buffer;
@@ -121,21 +126,26 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
         }
     }
     
-    ofstream pipe_out;
-    pipe_out.open(stage+".log", ios::out);
-    pipe_out.close(); 
-    pipe_out.open(stage+".log", ios::app);
-    pipe_out<<result<<endl;
+    
     string fv_status;
     // check for Formal Verification Status
     regex_search(result, fv_pass, _fv_succeeded_);
     regex_search(result, fv_fail, _fv_failed_);
+    regex_search(result, fv_inconc, _fv_inconclusive_);
     if(fv_pass[1].str().length()>0){
         fv_status = "Verification Succeeded";
         std::cerr<<"Verification Succeeded for "<<stage<<endl;
     }
     else if(fv_fail[1].str().length()>0){
         fv_status = "Verification Failed";
+        std::cout<<"Verification Failed for "<<stage<<endl;
+    }
+    else if(fv_inconc[1].str().length()>0){
+        fv_status = "Verification Inconclusive";
+        std::cout<<"Verification Failed for "<<stage<<endl;
+    }
+    else if(onespin_lic_fail){
+        fv_status = "FV Tool License Error";
         std::cout<<"Verification Failed for "<<stage<<endl;
     }
     else{
@@ -234,6 +244,10 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
     }
     else if(fv_fail[1].str().length()>0){
         fv_status = "Verification Failed";
+        std::cout<<"Verification Failed for "<<stage<<endl;
+    }
+    else if(fm_lic_fail){
+        fv_status = "FV Tool License Error";
         std::cout<<"Verification Failed for "<<stage<<endl;
     }
     else{
@@ -663,7 +677,7 @@ void *run_fv(void* flow) {
     fv_results.insert(make_pair(("stage"+to_string(verif_stage)),fv_results_tp));
     mtx.unlock();
     // cout<<*fvargs->fv<<endl;
-    if (*fvargs->fv == "formal"){
+    if (*fvargs->fv == "formal_inc" || *fvargs->fv == "formal_noinc"){
         string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,"stage"+to_string(verif_stage),synth_dir_);
     }
     else if (*fvargs->fv == "simulation"){
