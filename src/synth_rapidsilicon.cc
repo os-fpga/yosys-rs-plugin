@@ -1213,12 +1213,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         for (auto cell : _design->top_module()->cells()){
             if(cell->type.in(ID($tribuf), ID($_TBUF_),ID($assert))){
 
-                std::stringstream buf;
                 std::string inst_names= log_id(cell->name);
                 std::regex pattern1("\\$tribuf_conflict\\$");
                 std::regex pattern2("\\$\\d+$");
                 std::regex pattern3(".*\\$");
-                std::string replace = "";
                 std::string out = std::regex_replace(inst_names,pattern1,"");
                 out = std::regex_replace(out,pattern2,"");
                 out = std::regex_replace(out,pattern3,"");
