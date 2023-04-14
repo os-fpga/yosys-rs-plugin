@@ -71,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 144
+#define VERSION_PATCH 145
 
 
 enum Strategy {
@@ -1202,6 +1202,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_error("%s\n", msg.str().c_str());
     }
 
+
+    //check if internal 3 states exist
+    // This is for Gemini 
+
+
+    void check_internal_3states(){
+        int tri_nError =0;
+        int tri_max =20;
+        for (auto cell : _design->top_module()->cells()){
+            if(cell->type.in(ID($tribuf), ID($_TBUF_),ID($assert))){
+
+                std::string inst_names= log_id(cell->name);
+                std::regex pattern1("\\$tribuf_conflict\\$");
+                std::regex pattern2("\\$\\d+$");
+                std::regex pattern3(".*\\$");
+                std::string out = std::regex_replace(inst_names,pattern1,"");
+                out = std::regex_replace(out,pattern2,"");
+                out = std::regex_replace(out,pattern3,"");
+                
+                if(tri_nError < tri_max){
+                    log_warning("Does not support internal 3-states.Please change the RTL at %s. \n", out.c_str());
+                }
+                else if (tri_nError == tri_max){
+                    log_warning("..\n");
+                }
+                tri_nError++;
+            }
+        }
+        if(tri_nError){
+            log_error("Cannot map %d internal 3-states Abort Synthesis  \n",tri_nError);
+        }
+    }
+
     // Check if DLATCH has been found.
     // This is specific for Genesis3 since it does not support DLATCH   
     //
@@ -1341,7 +1374,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("tribuf -logic");
             else
                 run("tribuf -logic -formal");
-
+            
+            check_internal_3states();
             run("deminout");
             run("opt_expr");
             run("opt_clean");
