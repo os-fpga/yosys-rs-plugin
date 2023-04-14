@@ -1269,7 +1269,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 	            	                RTLIL_BACKEND::dump_const(buf, it.second);
 	                            }
                                 if(nError < maxDL){
-                                    log_warning("Synchronous register element Generic DLATCH'%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
+                                    log_warning("Generic DLATCH '%s' (type %s) is not supported by the architecture. Please rewrite the RTL at %s to avoid a LATCH behavior.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
                                 }
                                 else if (nError == maxDL){
                                     log_warning("..\n");
@@ -1779,12 +1779,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
+                                       
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH 
+                                         // support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
+
                         check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
 
-                                       
-                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH support has not been added to genesis3 architecture.
-                                         // Error out if it is the case. 
                                        
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
