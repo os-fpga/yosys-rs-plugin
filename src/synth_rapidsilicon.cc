@@ -1207,7 +1207,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     // This is for Gemini 
 
 
-    void internal_3states(){
+    void check_internal_3states(){
         int tri_nError =0;
         int tri_max =20;
         for (auto cell : _design->top_module()->cells()){
@@ -1377,7 +1377,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             else
                 run("tribuf -logic -formal");
             
-            internal_3states();
+            check_internal_3states();
             run("deminout");
             run("opt_expr");
             run("opt_clean");
