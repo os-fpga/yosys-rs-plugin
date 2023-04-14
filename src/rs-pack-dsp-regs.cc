@@ -313,20 +313,19 @@ struct RsPackDspRegsWorker
             RTLIL::SigSpec _arst_;
             bool rst_inv = false;
             if (DFF_hasArst || DFF_hasSrst) {
+                // BEGIN: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
                 if (DFF_ARST_POL == 0  and DFF_hasArst){
                     rst_inv = true;
                     _arst_ = m_module->Not(NEW_ID, DFF_rst);
                 }
                 if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv){
-                    log("Reset has low polarity\n");
                     DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), _arst_);
                 }
+                // END: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
                 else if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv == 0){
-                    log("Reset has high polarity\n");
                     DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
                 }
                 else{
-                    log("Reset is in else statement\n");
                     DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
                 }
             }
