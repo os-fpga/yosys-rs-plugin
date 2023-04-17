@@ -60,6 +60,7 @@ struct RsPackDspRegsWorker
         RTLIL::SigSpec DFF_rst;
         bool DFF_hasArst = false;
         bool DFF_hasSrst = false;
+        bool DFF_ARST_POL = true;
 
         // Getting each DSP from all DSPs of our MODULE
         for (auto &it_dsp : DSP_used_cells) {
@@ -131,7 +132,7 @@ struct RsPackDspRegsWorker
                 FfData ff(&m_initvals, it_dff);
 
                 // Lambda function for action when having connection between DSP and DFF
-                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
+                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
                     log_debug("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
                     if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk) {
                         ignore_dsp = true;
@@ -141,6 +142,7 @@ struct RsPackDspRegsWorker
                         // Getting selected DFF RESET and CLOCK SigSepc
                         DFF_hasArst = ff.has_arst;
                         DFF_hasSrst = ff.has_srst;
+                        DFF_ARST_POL = ff.pol_arst;
                         if (DFF_hasArst)
                             DFF_rst = ff.sig_arst;
                         if (DFF_hasSrst)
@@ -308,11 +310,24 @@ struct RsPackDspRegsWorker
             // Getting DSP clock port to connect it with DFF clock port
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
             // Getting DSP reset port to connect it with DFF reset port
+            RTLIL::SigSpec _arst_;
+            bool rst_inv = false;
             if (DFF_hasArst || DFF_hasSrst) {
-                if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP"))
+                // BEGIN: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
+                if (DFF_ARST_POL == 0  and DFF_hasArst){
+                    rst_inv = true;
+                    _arst_ = m_module->Not(NEW_ID, DFF_rst);
+                }
+                if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv){
+                    DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), _arst_);
+                }
+                // END: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
+                else if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv == 0){
                     DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
-                else
+                }
+                else{
                     DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+                }
             }
 
             run_opt_clean = true;
