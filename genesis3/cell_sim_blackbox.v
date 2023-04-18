@@ -1,4 +1,216 @@
 //
+// Copyright (C) 2023 RapidSilicon
+// gear box top and IO buffs black box
+//
+//
+//------------------------------------------------------------------------------
+
+(* blackbox *)
+module gbox_top
+    #(
+    parameter PAR_TX_DWID = 10,
+    parameter PAR_RX_DWID = 10,
+    parameter PAR_TWID =  6
+    )
+    (
+    input  system_reset_n, 		                    // Input async system Reset
+    input  pll_lock ,  
+    input  [3:0] cfg_rate_sel  ,  
+    input  cfg_done  ,  
+    input  cfg_dif  ,  
+    input  cfg_chan_master  ,  
+    input  [1:0] cfg_tx_clk_phase , 
+    input  cfg_peer_is_on  ,  
+    input  cfg_tx_bypass  ,  
+    input  cfg_rx_bypass  ,  
+    input  cfg_tx_mode  ,  
+    input  cfg_rx_mode  ,  
+    input  [PAR_TWID-1:0] cfg_tx_dly ,  
+    input  [PAR_TWID-1:0] cfg_rx_dly ,  
+    input  [1:0] cfg_tx_ddr_mode  ,  
+    input  [1:0] cfg_rx_ddr_mode  ,  
+    input  fast_clk,  			                    // Input fast Clock
+    input  i2g_rx_in,  			                    // Input fast Clock
+    input  [3:0] fast_phase_clk  ,  
+    input  f2g_tx_reset_n,  			            // Input sync Reset , core clock domain
+    input  f2g_trx_core_clk ,  		                // core clock , shared by TX and RX,  new
+    input  f2g_tx_dly_ld , 
+    input  f2g_tx_dly_adj , 
+    input  f2g_tx_dly_inc ,         
+    input  f2g_tx_oe ,  		                    // core clock
+    input  [PAR_TX_DWID-1:0] f2g_tx_out ,           // core clock
+    input  f2g_in_en ,  		                    // core clock
+    input  f2g_tx_dvalid,  			                // core clock domain
+    input  f2g_rx_reset_n,  			            // Input sync Reset , core clock domain
+    input  f2g_rx_sfifo_reset,  		            // dpa sync_fifo_dpa fifo reset , core clock domain
+    input  f2g_rx_dly_ld , 
+    input  f2g_rx_dly_adj , 
+    input  f2g_rx_dly_inc , 
+    input  f2g_rx_bitslip_adj ,  		            // core clock
+    input  [1:0] cfg_rx_dpa_mode,                   // f2g_rx_dpa_mode  ,  
+    input  f2g_rx_dpa_restart ,  		            // core clock
+    input  fast_clk_sync_in ,  	                    // fast clock from adjacent GBOX
+    input  fast_cdr_clk_sync_in ,  	                // fast clock from adjacent GBOX
+    input  [5-1:0] peer_data_in ,                   // core clock domain
+    //****************************
+    output logic fast_clk_sync_out ,                // fast clock domain to adjacent GBOX
+    output logic fast_cdr_clk_sync_out ,            // fast clock domain to adjacent GBOX
+    output logic g2i_tx_out , 		                // fast clock
+    output logic g2i_tx_oe , 		                // fast clock
+    output logic g2i_tx_clk , 		                // fast clock divided by 2 in DDR mode
+    output logic g2i_ie , 		                    // core clock
+    output logic cdr_clk , 		                    // fast clock domain
+    output logic [PAR_TWID-1:0] g2f_tx_dly_tap , 	// core clock domain
+    output logic g2f_core_clk , 	                // core clock domain , used by both tx and rx if source-synchronous
+    output logic g2f_rx_cdr_core_clk , 	            // core clock domain , used by only rx if not source-synchronous
+    output logic g2f_rx_dpa_lock , 		            // fast clock domain
+    output logic g2f_rx_dpa_error , 		        // fast clock domain
+    output logic [2:0] g2f_rx_dpa_phase , 	        // fast clock domain
+    output logic [PAR_TWID-1:0] g2f_rx_dly_tap , 	// core clock domain
+    output logic [PAR_RX_DWID-1:0] g2f_rx_in ,      // quasi core clock domain 
+    output logic g2f_rx_dvalid                      // core clock domain 
+    );
+
+endmodule
+// ---------------------------------------- //
+// --------------- IO MODEL --------------- //
+// -------------- BLACK BOXES ------------- //
+// ---------------------------------------- //
+
+
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module clkbuf (
+    input  logic I,             
+    output logic O              
+    );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module ibuf#(
+    parameter PULL_UP_DOWN = "NONE",
+    parameter SLEW_RATE = "SLOW",
+    parameter REG_EN = "TRUE",
+    parameter DELAY = 0
+    )(
+        input  logic I, 
+        input  logic C,            
+        output logic O             
+    );
+endmodule 
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module ibufds  #(
+    parameter SLEW_RATE = 1,
+    parameter DELAY = 0
+  )( 
+    input  logic OE,
+    input  logic I_N,
+    input  logic I_P,             
+    output logic O    
+  );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module iddr #(
+    parameter SLEW_RATE = "SLOW",
+    parameter DELAY = 0
+  )(
+    input  logic D, 
+    input  logic R,
+    input  logic DLY_ADJ,
+    input  logic DLY_LD,     
+    input  logic DLY_INC,
+    input  logic C,          
+    output logic [1:0] Q              
+  );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module obuf#(
+    parameter PULL_UP_DOWN = "NONE",
+    parameter SLEW_RATE = "SLOW",
+    parameter REG_EN = "TRUE",
+    parameter DELAY = 00
+)(
+    input  logic I,     
+    input  logic C,    
+    output logic O          
+);
+
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module obuftds #(
+        parameter SLEW_RATE = 1,
+        parameter DELAY = 0
+    )( 
+        input  logic OE,
+        input  logic I,       
+        input  logic C,           
+        output logic O_N,
+        output logic O_P             
+    );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module obuft#(
+    parameter SLEW_RATE = 1,
+    parameter DELAY = 0
+  )(
+    input  logic I,             
+    input  logic OE,
+    output logic O              
+  );
+    
+endmodule  
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module oddr #(
+    parameter SLEW_RATE = 1,
+    parameter DELAY = 0
+  )(
+    input  logic [1:0] D,
+    input  logic R,             
+    input  logic E,
+    input  logic DLY_ADJ,     
+    input  logic DLY_LD,
+    input  logic DLY_INC,                 
+    input  logic C,                      
+    output logic Q              
+  );
+
+endmodule
+//
 // Copyright (C) 2022 RapidSilicon
 // genesis3 DFFs and LATChes
 //
