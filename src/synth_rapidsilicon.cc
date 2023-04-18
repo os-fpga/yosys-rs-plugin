@@ -37,6 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
+#define IO_LIB_FILE io_cells_sim.sv
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
@@ -1311,7 +1312,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
-                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
+                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, IO_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
@@ -1319,7 +1321,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     break;
                 }    
             }
-            run("read_verilog -lib -specify -nomem2reg" GET_FILE_PATH(COMMON_DIR, SIM_LIB_FILE) + readArgs);
+            run("read_verilog -sv -lib -specify -nomem2reg" GET_FILE_PATH(COMMON_DIR, SIM_LIB_FILE) + readArgs);
         }
 
         if (check_label("prepare")) {
