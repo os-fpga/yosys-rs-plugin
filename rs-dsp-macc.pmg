@@ -38,7 +38,7 @@ match add
     select add->type.in($add, $sub)
     choice <IdString> AB {\A, \B}
     define <IdString> BA (AB == \A ? \B : \A)
-    index <SigSpec> port(add, AB) === (neg == nullptr?port(mul,\Y):port(mux, \Y))
+    index <SigSpec> port(add, AB) === (neg == nullptr?port(mul,\Y):mux == nullptr?port(mul,\Y):port(mux, \Y))
     
     if (neg == nullptr)
         index <SigSpec> port(add, \Y) === port(mux,mux_ba)
