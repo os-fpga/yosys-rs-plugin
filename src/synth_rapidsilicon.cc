@@ -71,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 147
+#define VERSION_PATCH 148
 
 
 enum Strategy {
@@ -1814,6 +1814,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (!fast)
                 run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
+
+        // Map left over cells like $mux (EDA-1441)
+        //
+        run("techmap");
 
         if (check_label("map_luts_2")) {
             if(fast) 
