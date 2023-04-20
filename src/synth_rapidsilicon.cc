@@ -1815,6 +1815,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
 
+        // Map left over cells like $mux (EDA-1441)
+        //
+        run("techmap");
+
         if (check_label("map_luts_2")) {
             if(fast) 
                 map_luts(EffortLevel::LOW);
