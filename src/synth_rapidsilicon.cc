@@ -758,6 +758,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         break;
                     }
                case Technologies::GENESIS_3: {
+                       // run("dfflegalize -cell $_DLATCH_?_ 0 t:$_DFFSR_*_ "); //0 t:$_SDFF_*_"); // 0 t:$_DFFSR_*");
                         break;
                     }
                case Technologies::GENERIC: {
@@ -1750,7 +1751,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFFE_??_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0"
-                                " -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
+								" -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
                            );
 
                         if (cec)
@@ -1768,11 +1769,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
-                        run(
-                               "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
-                               );
-
+						run("rs_dff_conv");
+                        run("dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0 ");
+						std::cout << "AFTER LEGALIZATION!!!!!!!!" << std::endl;
+						//for(auto& module : _design->selected_modules())
+						//	for(auto& cell: module->selected_cells()){
+						//		if(cell->type == RTLIL::escape_id("$_DFF_PN0_"))
+						//			 cell->getPort("C");
+						//					//RTLIL::unescape_id(con.first) << std::endl;
+						//	}
+						run("stat");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
 
