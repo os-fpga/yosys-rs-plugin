@@ -96,6 +96,7 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-dsp-simd.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
+		  src/rs-dffsr-conv.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc \
 		  src/rs-pack-dsp-regs.cc
