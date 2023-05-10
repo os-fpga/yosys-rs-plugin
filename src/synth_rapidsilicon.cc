@@ -71,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 150
+#define VERSION_PATCH 151
 
 
 enum Strategy {
@@ -758,6 +758,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         break;
                     }
                case Technologies::GENESIS_3: {
+                       // run("dfflegalize -cell $_DLATCH_?_ 0 t:$_DFFSR_*_ "); //0 t:$_SDFF_*_"); // 0 t:$_DFFSR_*");
                         break;
                     }
                case Technologies::GENERIC: {
@@ -1795,11 +1796,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
-                        run(
+                         run(
                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
-                               );
-
+                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
+                            );
+                        run("rs_dffsr_conv");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
 
