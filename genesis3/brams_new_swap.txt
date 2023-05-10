@@ -1,7 +1,7 @@
 ram block $__RS_FACTOR_BRAM18_TDP {
 	byte 9;
 	abits 14;
-	widths  1 2 4 9 18 global;
+	widths  1 2 4 9 18 per_port;
 	cost 129;
 	init any;
 	port sr "C" {
@@ -29,7 +29,7 @@ ram block $__RS_FACTOR_BRAM18_TDP {
 ram block $__RS_FACTOR_BRAM36_TDP {
 	byte 9;
 	abits 15;
-	widths  1 2 4 9 18 36 global;
+	widths  1 2 4 9 18 36 per_port;
 	cost 257;
 	init any;
 	port sr "C" {
