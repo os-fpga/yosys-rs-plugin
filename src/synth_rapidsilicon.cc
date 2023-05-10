@@ -1796,16 +1796,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
-						run("rs_dff_conv");
-                        run("dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0 ");
-						std::cout << "AFTER LEGALIZATION!!!!!!!!" << std::endl;
-						//for(auto& module : _design->selected_modules())
-						//	for(auto& cell: module->selected_cells()){
-						//		if(cell->type == RTLIL::escape_id("$_DFF_PN0_"))
-						//			 cell->getPort("C");
-						//					//RTLIL::unescape_id(con.first) << std::endl;
-						//	}
-						run("stat");
+                         run(
+                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
+                            );
+                        run("rs_dffsr_conv");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
 
