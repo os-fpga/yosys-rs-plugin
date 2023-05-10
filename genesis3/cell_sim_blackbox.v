@@ -312,6 +312,7 @@ module RS_DSP_MULT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     input   [2:0] feedback,
     input         unsigned_a,
@@ -328,6 +329,7 @@ module RS_DSP_MULT_REGIN (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input         clk,
@@ -347,6 +349,7 @@ module RS_DSP_MULT_REGOUT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input         clk,
@@ -368,6 +371,7 @@ module RS_DSP_MULT_REGIN_REGOUT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input         clk,
@@ -390,6 +394,7 @@ module RS_DSP_MULTADD (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -419,6 +424,7 @@ module RS_DSP_MULTADD_REGIN (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -447,6 +453,7 @@ module RS_DSP_MULTADD_REGOUT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -475,6 +482,7 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -502,6 +510,7 @@ module RS_DSP_MULTACC (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -526,6 +535,7 @@ module RS_DSP_MULTACC_REGIN (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -553,6 +563,7 @@ module RS_DSP_MULTACC_REGOUT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,
@@ -578,6 +589,7 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
     input   [19:0] a,
     input   [17:0] b,
     output  [37:0] z,
+    output  [17:0] dly_b,
 
     (* clkbuf_sink *)
     input          clk,

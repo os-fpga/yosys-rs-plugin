@@ -72,7 +72,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 147
+#define VERSION_PATCH 150
 
 
 enum Strategy {
@@ -1372,12 +1372,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
+#if 1
+            // New tri-state handling (Thierry)
+            //
+            if (cec)
+               run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
+
+            // specific Rapid Silicon merge with -rs_merge option
+            //
+            run("tribuf -rs_merge");
+
+            if (cec) {
+               run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
+               run("write_verilog -noattr -nohex after_tribuf_merge.v");
+            }
+
+            // specific Rapid Silicon logic with -rs_logic option
+            //
+            run("tribuf -rs_logic");
+
+            if (cec)
+               run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
+
+#else
+            // Old tri-state handling
+            //
             if (keep_tribuf)
                 run("tribuf -logic");
             else
                 run("tribuf -logic -formal");
             
             check_internal_3states();
+#endif
+
             run("deminout");
             run("opt_expr");
             run("opt_clean");
@@ -1816,6 +1843,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (!fast)
                 run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
+
+        // Map left over cells like $mux (EDA-1441)
+        //
+        run("techmap");
 
         if (check_label("map_luts_2")) {
             if(fast) 
