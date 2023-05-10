@@ -1778,7 +1778,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run(
                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFFE_??_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
                                 " -cell $_SDFF_???_ 0 -cell $_SDFFE_????_ 0"
-								" -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
+                                " -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
                            );
 
                         if (cec)
@@ -1797,8 +1797,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
                          run(
-                                 "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                                 " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
+                               "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
+                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
                             );
                         run("rs_dffsr_conv");
                         if (cec)
