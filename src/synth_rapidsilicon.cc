@@ -1184,7 +1184,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (tech != Technologies::GENESIS)
                             run("memory_libmap -lib" + bramTxtSwap + " -tech genesis " + " -limit " + std::to_string(max_bram) + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
-                        run("write_verilog -noattr -nohex after_libmap.v");
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
