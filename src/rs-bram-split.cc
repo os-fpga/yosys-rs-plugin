@@ -61,7 +61,8 @@ struct RsBramSplitPass : public Pass {
         std::make_pair("PORT_B_WIDTH", "PORT_B_WIDTH"),std::make_pair("PORT_A_WIDTH", "PORT_A_WIDTH"),
         };
     const std::vector<std::pair<std::string,std::string>> m_BramParamsNewtdp = {
-        std::make_pair("WIDTH", "CFG_DBITS")
+        std::make_pair("PORT_B_WIDTH", "PORT_B_WIDTH"),std::make_pair("PORT_A_WIDTH", "PORT_A_WIDTH"),
+        std::make_pair("PORT_D_WIDTH", "PORT_D_WIDTH"),std::make_pair("PORT_C_WIDTH", "PORT_C_WIDTH")
         };
     // TDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target TDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_0 = {
@@ -238,10 +239,21 @@ struct RsBramSplitPass : public Pass {
                 if (m_newMapping) { 
                     // Set bram parameters
                     if (bram_0->type == RTLIL::escape_id(m_Bram1x18TDPType)) {
-                    for (const auto &it : m_BramParamsNewtdp) {
-                            auto val = bram_0->getParam(RTLIL::escape_id(it.first));
-                            bram_2x18->setParam(RTLIL::escape_id(it.second), val);
-                        }
+                    // for (const auto &it : m_BramParamsNewtdp) {
+                    //         auto val = bram_0->getParam(RTLIL::escape_id(it.first));
+                    //         bram_2x18->setParam(RTLIL::escape_id(it.second), val);
+                    //     }
+                    // Note: Setting parameters manually 
+                        //cell#0
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_A_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_B_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_C_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_C_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_D_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_D_WIDTH")));
+                        //Cell#1
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_E_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_F_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_G_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_C_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_H_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_D_WIDTH")));
                     }
                     else{
                         // for (const auto &it : m_BramParamsNew) {

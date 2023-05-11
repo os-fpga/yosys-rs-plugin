@@ -13,7 +13,20 @@
 
 module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, D1BE, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, F1BE, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN, H1BE);
 	parameter CFG_DBITS = 18;
-	parameter CFG_ENABLE_B = 2;
+	
+    parameter PORT_A_WIDTH = 1;
+    parameter PORT_B_WIDTH = 1;
+
+    parameter PORT_C_WIDTH = 1;
+    parameter PORT_D_WIDTH = 1;
+
+    parameter PORT_E_WIDTH = 1;
+    parameter PORT_F_WIDTH = 1;
+
+    parameter PORT_G_WIDTH = 1;
+    parameter PORT_H_WIDTH = 1;
+
+    parameter CFG_ENABLE_B = 2;
 	parameter CFG_ENABLE_D = 2;
 	parameter CFG_ENABLE_F = 2;
 	parameter CFG_ENABLE_H = 2;
@@ -23,7 +36,17 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	parameter [18431:0] INIT0 = 18432'bx;
 	parameter [18431:0] INIT1 = 18432'bx;
 
-	localparam CFG_ABITS = 14;
+	localparam CFG_ABITS = 14;    
+
+    localparam [2:0]PORT_A_MODE = (PORT_A_WIDTH == 1)?`MODE_1:(PORT_A_WIDTH == 2)?`MODE_2:(PORT_A_WIDTH == 4)?`MODE_4:(PORT_A_WIDTH ==8)?`MODE_9:(PORT_A_WIDTH ==9)?`MODE_9:(PORT_A_WIDTH ==16)?`MODE_18:(PORT_A_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_B_MODE = (PORT_B_WIDTH == 1)?`MODE_1:(PORT_B_WIDTH == 2)?`MODE_2:(PORT_B_WIDTH == 4)?`MODE_4:(PORT_B_WIDTH ==8)?`MODE_9:(PORT_B_WIDTH ==9)?`MODE_9:(PORT_B_WIDTH ==16)?`MODE_18:(PORT_B_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_C_MODE = (PORT_C_WIDTH == 1)?`MODE_1:(PORT_C_WIDTH == 2)?`MODE_2:(PORT_C_WIDTH == 4)?`MODE_4:(PORT_C_WIDTH ==8)?`MODE_9:(PORT_C_WIDTH ==9)?`MODE_9:(PORT_C_WIDTH ==16)?`MODE_18:(PORT_C_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_D_MODE = (PORT_D_WIDTH == 1)?`MODE_1:(PORT_D_WIDTH == 2)?`MODE_2:(PORT_D_WIDTH == 4)?`MODE_4:(PORT_D_WIDTH ==8)?`MODE_9:(PORT_D_WIDTH ==9)?`MODE_9:(PORT_D_WIDTH ==16)?`MODE_18:(PORT_D_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_E_MODE = (PORT_E_WIDTH == 1)?`MODE_1:(PORT_E_WIDTH == 2)?`MODE_2:(PORT_E_WIDTH == 4)?`MODE_4:(PORT_E_WIDTH ==8)?`MODE_9:(PORT_E_WIDTH ==9)?`MODE_9:(PORT_E_WIDTH ==16)?`MODE_18:(PORT_E_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_F_MODE = (PORT_F_WIDTH == 1)?`MODE_1:(PORT_F_WIDTH == 2)?`MODE_2:(PORT_F_WIDTH == 4)?`MODE_4:(PORT_F_WIDTH ==8)?`MODE_9:(PORT_F_WIDTH ==9)?`MODE_9:(PORT_F_WIDTH ==16)?`MODE_18:(PORT_F_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_G_MODE = (PORT_G_WIDTH == 1)?`MODE_1:(PORT_G_WIDTH == 2)?`MODE_2:(PORT_G_WIDTH == 4)?`MODE_4:(PORT_G_WIDTH ==8)?`MODE_9:(PORT_G_WIDTH ==9)?`MODE_9:(PORT_G_WIDTH ==16)?`MODE_18:(PORT_G_WIDTH ==18)?`MODE_18:`MODE_36;
+    localparam [2:0]PORT_H_MODE = (PORT_H_WIDTH == 1)?`MODE_1:(PORT_H_WIDTH == 2)?`MODE_2:(PORT_H_WIDTH == 4)?`MODE_4:(PORT_H_WIDTH ==8)?`MODE_9:(PORT_H_WIDTH ==9)?`MODE_9:(PORT_H_WIDTH ==16)?`MODE_18:(PORT_H_WIDTH ==18)?`MODE_18:`MODE_36;
+
 
 	input CLK1;
 	input CLK2;
@@ -31,38 +54,38 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	input CLK4;
 
 	input [CFG_ABITS-1:0] A1ADDR;
-	output [CFG_DBITS-1:0] A1DATA;
+	output [PORT_A_WIDTH-1:0] A1DATA;
 	input A1EN;
 
 	input [CFG_ABITS-1:0] B1ADDR;
-	input [CFG_DBITS-1:0] B1DATA;
+	input [PORT_B_WIDTH-1:0] B1DATA;
 	input B1EN;
 	input [CFG_ENABLE_B-1:0] B1BE;
 
 	input [CFG_ABITS-1:0] C1ADDR;
-	output [CFG_DBITS-1:0] C1DATA;
+	output [PORT_C_WIDTH-1:0] C1DATA;
 	input C1EN;
 
 	input [CFG_ABITS-1:0] D1ADDR;
-	input [CFG_DBITS-1:0] D1DATA;
+	input [PORT_D_WIDTH-1:0] D1DATA;
 	input D1EN;
 	input [CFG_ENABLE_D-1:0] D1BE;
 
 	input [CFG_ABITS-1:0] E1ADDR;
-	output [CFG_DBITS-1:0] E1DATA;
+	output [PORT_E_WIDTH-1:0] E1DATA;
 	input E1EN;
 
 	input [CFG_ABITS-1:0] F1ADDR;
-	input [CFG_DBITS-1:0] F1DATA;
+	input [PORT_F_WIDTH-1:0] F1DATA;
 	input F1EN;
 	input [CFG_ENABLE_F-1:0] F1BE;
 
 	input [CFG_ABITS-1:0] G1ADDR;
-	output [CFG_DBITS-1:0] G1DATA;
+	output [PORT_G_WIDTH-1:0] G1DATA;
 	input G1EN;
 
 	input [CFG_ABITS-1:0] H1ADDR;
-	input [CFG_DBITS-1:0] H1DATA;
+	input [PORT_H_WIDTH-1:0] H1DATA;
 	input H1EN;
 	input [CFG_ENABLE_H-1:0] H1BE;
 
@@ -79,15 +102,15 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	wire [14:0] C1ADDR_TOTAL = {C1ADDR_CMPL, C1ADDR};
 	wire [14:0] D1ADDR_TOTAL = {D1ADDR_CMPL, D1ADDR};
 
-	wire [17:CFG_DBITS] A1_RDATA_CMPL;
-	wire [17:CFG_DBITS] C1_RDATA_CMPL;
-	wire [17:CFG_DBITS] E1_RDATA_CMPL;
-	wire [17:CFG_DBITS] G1_RDATA_CMPL;
+	wire [17:PORT_A_WIDTH] A1_RDATA_CMPL;
+	wire [17:PORT_C_WIDTH] C1_RDATA_CMPL;
+	wire [17:PORT_E_WIDTH] E1_RDATA_CMPL;
+	wire [17:PORT_G_WIDTH] G1_RDATA_CMPL;
 
-	wire [17:CFG_DBITS] B1_WDATA_CMPL;
-	wire [17:CFG_DBITS] D1_WDATA_CMPL;
-	wire [17:CFG_DBITS] F1_WDATA_CMPL;
-	wire [17:CFG_DBITS] H1_WDATA_CMPL;
+	wire [17:PORT_B_WIDTH] B1_WDATA_CMPL;
+	wire [17:PORT_D_WIDTH] D1_WDATA_CMPL;
+	wire [17:PORT_F_WIDTH] F1_WDATA_CMPL;
+	wire [17:PORT_H_WIDTH] H1_WDATA_CMPL;
 
 	wire [14:0] PORT_A1_ADDR;
 	wire [13:0] PORT_A2_ADDR;
@@ -99,7 +122,7 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	assign PORT_A2_ADDR = E1EN ? (E1ADDR) : (F1EN ? (F1ADDR) : 14'd0);
 	assign PORT_B2_ADDR = G1EN ? (G1ADDR) : (H1EN ? (H1ADDR) : 14'd0);
 
-	case (CFG_DBITS)
+	/*case (CFG_DBITS)
 		1: begin
 			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
 				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
@@ -141,7 +164,7 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 				`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1
 			};
 		end
-	endcase
+	endcase*/
 
 	assign FLUSH1 = 1'b0;
 	assign FLUSH2 = 1'b0;
@@ -156,9 +179,104 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	wire [17:0] PORT_A2_WDATA;
 	wire [17:0] PORT_B2_WDATA;
 
+
+
+    defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+    PORT_A_MODE, PORT_C_MODE, PORT_B_MODE, PORT_D_MODE, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,//(A1R,B1R,A1W,B1W)
+    PORT_E_MODE, PORT_G_MODE, PORT_F_MODE, PORT_H_MODE, 4'd0, 11'b01010000000, 11'b01010000000, 1'b1   //(A2R,B2R,A2W,B2W)
+    };
 	// Assign read/write data - handle special case for 9bit mode
 	// parity bit for 9bit mode is placed in R/W port on bit #16
-	case (CFG_DBITS)
+
+
+    //PORT A
+    case (PORT_A_WIDTH)
+    9: begin
+        assign A1DATA = {PORT_A1_RDATA[16], PORT_A1_RDATA[7:0]};
+
+    end
+    default: begin
+        assign A1DATA = PORT_A1_RDATA[CFG_DBITS-1:0];
+    end
+endcase
+
+    //PORT B
+    case (PORT_B_WIDTH)
+    9: begin
+        assign PORT_A1_WDATA = {B1_WDATA_CMPL[17], B1DATA[8], B1_WDATA_CMPL[16:9], B1DATA[7:0]};
+
+    end
+    default: begin
+        assign PORT_A1_WDATA = {B1_WDATA_CMPL, B1DATA};
+    end
+endcase
+
+    //PORT C
+    case (PORT_C_WIDTH)
+    9: begin
+        assign C1DATA = {PORT_B1_RDATA[16], PORT_B1_RDATA[7:0]};
+
+    end
+    default: begin
+        assign C1DATA = PORT_B1_RDATA[CFG_DBITS-1:0];
+    end
+endcase
+
+    //PORT D
+    case (PORT_D_WIDTH)
+    9: begin
+        assign PORT_B1_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+
+    end
+    default: begin
+        assign PORT_B1_WDATA = {D1_WDATA_CMPL, D1DATA};
+    end
+endcase
+    
+    //PORT E
+    case (PORT_E_WIDTH)
+    9: begin
+        assign E1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
+
+    end
+    default: begin
+        assign E1DATA = PORT_A2_RDATA[CFG_DBITS-1:0];
+    end
+endcase
+
+    //PORT F
+    case (PORT_F_WIDTH)
+    9: begin
+        assign PORT_A2_WDATA = {F1_WDATA_CMPL[17], F1DATA[8], F1_WDATA_CMPL[16:9], F1DATA[7:0]};
+
+    end
+    default: begin
+        assign PORT_A2_WDATA = {F1_WDATA_CMPL, F1DATA};
+    end
+endcase
+
+    //PORT G
+    case (PORT_G_WIDTH)
+    9: begin
+        assign G1DATA = {PORT_B2_RDATA[16], PORT_B2_RDATA[7:0]};
+
+    end
+    default: begin
+        assign G1DATA = PORT_B2_RDATA[CFG_DBITS-1:0];
+    end
+endcase
+    
+    //PORT H
+case (PORT_H_WIDTH)
+9: begin
+    assign PORT_B2_WDATA = {H1_WDATA_CMPL[17], H1DATA[8], H1_WDATA_CMPL[16:9], H1DATA[7:0]};
+
+end
+default: begin
+    assign PORT_B2_WDATA = {H1_WDATA_CMPL, H1DATA};
+end
+endcase
+    /*case (CFG_DBITS)
 		9: begin
 			assign A1DATA = {PORT_A1_RDATA[16], PORT_A1_RDATA[7:0]};
 			assign C1DATA = {PORT_B1_RDATA[16], PORT_B1_RDATA[7:0]};
@@ -180,7 +298,7 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 			assign PORT_B2_WDATA = {H1_WDATA_CMPL, H1DATA};
 
 		end
-	endcase
+	endcase*/
 
 	wire PORT_A1_CLK = CLK1;
 	wire PORT_A2_CLK = CLK3;
