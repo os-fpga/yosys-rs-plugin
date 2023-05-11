@@ -70,7 +70,8 @@ design -load postopt
 yosys cd subtractor
 stat
 #select -assert-count 5 t:fa_1bit
-select -assert-count 6 t:\$lut
+#select -assert-count 6 t:\$lut
+select -assert-count 5 t:\$lut
 
 design -reset
 
