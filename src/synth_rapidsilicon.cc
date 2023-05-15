@@ -43,6 +43,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
+#define DSP_38_MAP_FILE dsp38_map.v
+#define DSP_38_LIB_FILE DSP38.v
 #define ALL_ARITH_MAP_FILE all_arith_map.v
 #define BRAM_TXT brams.txt
 #define BRAM_LIB brams_new.txt
@@ -52,6 +54,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_MAP_NEW_FILE brams_map_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
+#define CARRY_CHAIN_MAP_FILE CARRY_CHAIN.v
+#define CARRY_CHAIN_MAP_FINAL_MAP_FILE carry_chain_map.v
+#define LUT_MAP_FILE LUT.v
+#define LUT_FINAL_MAP_FILE lut_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
@@ -727,7 +733,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
 
         if (cec)
-            run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
+            run("write_verilog -noexpr -nodec after_lut_map" + std::to_string(index) + ".v");
 
         index++;
     }
@@ -1383,7 +1389,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
-                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
+                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE)
+                                GET_FILE_PATH(GENESIS_3_DIR, CARRY_CHAIN_MAP_FILE)
+                                GET_FILE_PATH(GENESIS_3_DIR, LUT_MAP_FILE)
+                                GET_FILE_PATH(GENESIS_3_DIR, DSP_38_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
@@ -1482,6 +1491,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if(!nodsp){
                 std::string dspMapFile;
                 std::string dspFinalMapFile;
+                std::string dsp38MapFile;
                 std::string genesis2;
                 std::string genesis3;
 
@@ -1500,6 +1510,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     case Technologies::GENESIS_3: {
                         dspMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_MAP_FILE);
                         dspFinalMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_FINAL_MAP_FILE);
+                        dsp38MapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_38_MAP_FILE);
                         genesis3 = " -genesis3";
                         break;
                     }
@@ -1583,7 +1594,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
                         else
                             run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=1");
-                            
+                        run("stat");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
 
@@ -1591,16 +1602,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (tech != Technologies::GENESIS_3)
                             run("rs_dsp_simd");
                         run("techmap -map " + dspFinalMapFile);
-
+                        run("stat");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs");
+                        run("stat");
                         run("rs_dsp_io_regs");
-
+                        run("stat");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
-
+            #if 1
+                        run("techmap -map " + dsp38MapFile);
+                        run("stat");
+            #endif
                         break;
                     }
 
@@ -1650,6 +1665,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (check_label("map_gates")) {
             std::string arithMapFile;
             std::string allArithMapFile;
+            std::string carry_chainMapFile;
             switch (tech) {
                 case Technologies::GENESIS: {
                     arithMapFile = GET_FILE_PATH(GENESIS_DIR, ARITH_MAP_FILE);
@@ -1664,6 +1680,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Technologies::GENESIS_3: {
                     arithMapFile = GET_FILE_PATH(GENESIS_3_DIR, ARITH_MAP_FILE);
                     allArithMapFile = GET_FILE_PATH(GENESIS_3_DIR, ALL_ARITH_MAP_FILE);
+                    carry_chainMapFile = GET_FILE_PATH(GENESIS_3_DIR, CARRY_CHAIN_MAP_FINAL_MAP_FILE);
                     break;
                 }    
                 case Technologies::GENERIC: {
@@ -1680,10 +1697,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     switch (infer_carry) {
                         case CarryMode::AUTO: {
                             run("techmap -map +/techmap.v -map" + arithMapFile);
+#if 1        
+                            run("stat");
+                            run("techmap -map" + carry_chainMapFile);
+#endif
                             break;
                         }
                         case CarryMode::ALL: {
                             run("techmap -map +/techmap.v -map" + allArithMapFile);
+#if 0 
+                            run("stat");
+                            run("techmap -map" + carry_chainMapFile);
+#endif
                             break;
                         }
                         case CarryMode::NO: {
@@ -1770,7 +1795,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
             map_luts(effort);
-
             if (!nosimplify)
                 run("opt_ffinv"); // help for "trial1" to gain further luts
         }
@@ -1891,6 +1915,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
             else
                 map_luts(EffortLevel::HIGH);
         }
+        
+#if 1
+        string techMaplutArgs = GET_FILE_PATH(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);
+        run("techmap -map" + techMaplutArgs);
+#endif
+
 
         if (check_label("check")) {
             run("hierarchy -check");

@@ -88,7 +88,13 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/TDP18K_FIFO.v \
 				  $(GENESIS3)/sram1024x18.v \
 				  $(GENESIS3)/ufifo_ctl.v \
-				  $(GENESIS3)/cell_sim_blackbox.v
+				  $(GENESIS3)/cell_sim_blackbox.v \
+				  $(GENESIS3)/CARRY_CHAIN.v \
+				  $(GENESIS3)/carry_chain_map.v \
+				  $(GENESIS3)/LUT.v \
+				  $(GENESIS3)/lut_map.v \
+				  $(GENESIS3)/DSP38.v \
+				  $(GENESIS3)/dsp38_map.v
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
