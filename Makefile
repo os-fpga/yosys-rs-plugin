@@ -68,31 +68,39 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS2)/sram1024x18.v \
 				  $(GENESIS2)/ufifo_ctl.v \
 				  $(GENESIS2)/cell_sim_blackbox.v \
-				  sim_models.v
-				  
+				  $(GENESIS3)/cells_sim.v \
+				  $(GENESIS3)/cells_sim.vhd \
+				  $(GENESIS3)/dsp_sim.v \
+				  $(GENESIS3)/brams_sim.v \
+				  $(GENESIS3)/ffs_map.v \
+				  $(GENESIS3)/dsp_map.v \
+				  $(GENESIS3)/dsp_final_map.v \
+				  $(GENESIS3)/arith_map.v \
+				  $(GENESIS3)/all_arith_map.v \
+				  $(GENESIS3)/brams_map.v \
+				  $(GENESIS3)/brams_map_new.v \
+				  $(GENESIS3)/brams_final_map.v \
+				  $(GENESIS3)/brams_final_map_new.v \
+				  $(GENESIS3)/brams.txt \
+				  $(GENESIS3)/brams_new.txt \
+				  $(GENESIS3)/brams_new_swap.txt \
+				  $(GENESIS3)/brams_async.txt \
+				  $(GENESIS3)/TDP18K_FIFO.v \
+				  $(GENESIS3)/sram1024x18.v \
+				  $(GENESIS3)/ufifo_ctl.v \
+				  $(GENESIS3)/cell_sim_blackbox.v
+			          sim_models.v
+
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
 		  src/rs-dsp-macc.cc \
 		  src/rs-dsp-simd.cc \
 		  src/synth_rapidsilicon.cc \
           src/rs-dsp-io-regs.cc \
+		  src/rs-dffsr-conv.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc \
 		  src/rs-pack-dsp-regs.cc
-
-fv_srcs = src/synth_validation/synth_formal/src/synth_formal.cc \
-		  src/synth_validation/synth_formal/src/test_report.cc \
-		  src/synth_validation/synth_simulation/TBG.cc \
-		  src/synth_validation/synth_simulation/run_verilator.cc
-
-fv_deps = src/synth_validation/synth_formal/src//synth_formal.h \
-		  src/synth_validation/synth_formal/src/report_fv.h \
-		  src/synth_validation/synth_simulation/TBG.h
-
-simulation_model = src/synth_validation/synth_formal/src/sim_par.cc
-execute_Sim_parse:
-	g++  -lstdc++fs -std=c++17  $(simulation_model)  -o sim_par 
-	./sim_par
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
@@ -101,20 +109,20 @@ DEPS = pmgen/rs-dsp-pm.h \
 pmgen:
 	mkdir -p pmgen
 
-pmgen/rs-dsp-pm.h: pmgen.py rs_dsp.pmg | pmgen
+pmgen/rs-dsp-pm.h: rs_dsp.pmg | pmgen
 	python3 pmgen.py -o $@ -p rs_dsp rs_dsp.pmg
 
-pmgen/rs-dsp-macc.h: pmgen.py rs-dsp-macc.pmg | pmgen
+pmgen/rs-dsp-macc.h:  rs-dsp-macc.pmg | pmgen
 	python3 pmgen.py -o $@ -p rs_dsp_macc rs-dsp-macc.pmg
 
-pmgen/rs-bram-asymmetric-wider-write.h: pmgen.py rs-bram-asymmetric-wider-write.pmg | pmgen
+pmgen/rs-bram-asymmetric-wider-write.h: rs-bram-asymmetric-wider-write.pmg | pmgen
 	python3 pmgen.py -o $@ -p rs_bram_asymmetric_wider_write rs-bram-asymmetric-wider-write.pmg
 
-pmgen/rs-bram-asymmetric-wider-read.h: pmgen.py rs-bram-asymmetric-wider-read.pmg | pmgen
+pmgen/rs-bram-asymmetric-wider-read.h: rs-bram-asymmetric-wider-read.pmg | pmgen
 	python3 pmgen.py -o $@ -p rs_bram_asymmetric_wider_read rs-bram-asymmetric-wider-read.pmg
 
-pmgen.py:
-	wget -nc -O $@ https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py
+# pmgen.py:
+# 	wget -nc -O $@ https://raw.githubusercontent.com/YosysHQ/yosys/master/passes/pmgen/pmgen.py
 
 OBJS := $(SOURCES:cc=o)
 

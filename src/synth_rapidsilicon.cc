@@ -3,6 +3,7 @@
  *
  */
 #include "kernel/celltypes.h"
+#include "backends/rtlil/rtlil_backend.h"
 #include "kernel/log.h"
 #include "kernel/register.h"
 #include "kernel/rtlil.h"
@@ -72,7 +73,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 143
+#define VERSION_PATCH 152
 
 
 enum Strategy {
@@ -846,6 +847,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         break;
                     }
                case Technologies::GENESIS_3: {
+                       // run("dfflegalize -cell $_DLATCH_?_ 0 t:$_DFFSR_*_ "); //0 t:$_SDFF_*_"); // 0 t:$_DFFSR_*");
                         break;
                     }
                case Technologies::GENERIC: {
@@ -1050,7 +1052,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             for (auto &cell : module->selected_cells()) {
                 //For $__RS_FACTOR_BRAM36_TDP
                 if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP")) && 
-                        cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_36) {
+                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36) &&
+                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_36)) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_value2;
@@ -1067,6 +1070,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         }
                     }
                     init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                }
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_TDP 
+                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))) && 
+                        ((((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_9))||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_4)) ||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1))))) {
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_temp;
+                    int width_size = 0;
+                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
+                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
+                        width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
+                    else
+                        width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
+
+                    for (int i = 0; i < width_size; ++i) {
+                        for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                            init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                            init_value1.push_back(init_temp[k]);
+                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                            init_value1.push_back(init_temp[m]);
+                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
+                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                        init_temp.clear();
+                    }
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
                 //For $__RS_FACTOR_BRAM36_SDP, 
@@ -1090,13 +1126,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_TDP and $__RS_FACTOR_BRAM18_TDP
-                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
-                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))) && 
-                        ((cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_9) ||
-                         (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_4) ||
-                         (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_2) ||
-                         (cell->getParam(RTLIL::escape_id("WIDTH")).as_int() == BRAM_WIDTH_1))) {
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_TDP
+                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) && 
+                        ((((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_9))||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_4)) ||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1)))
+                        )) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
@@ -1293,6 +1333,88 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_error("%s\n", msg.str().c_str());
     }
 
+
+    //check if internal 3 states exist
+    // This is for Gemini 
+
+
+    void check_internal_3states(){
+        int tri_nError =0;
+        int tri_max =20;
+        for (auto cell : _design->top_module()->cells()){
+            if(cell->type.in(ID($tribuf), ID($_TBUF_),ID($assert))){
+
+                std::string inst_names= log_id(cell->name);
+                std::regex pattern1("\\$tribuf_conflict\\$");
+                std::regex pattern2("\\$\\d+$");
+                std::regex pattern3(".*\\$");
+                std::string out = std::regex_replace(inst_names,pattern1,"");
+                out = std::regex_replace(out,pattern2,"");
+                out = std::regex_replace(out,pattern3,"");
+                
+                if(tri_nError < tri_max){
+                    log_warning("Does not support internal 3-states.Please change the RTL at %s. \n", out.c_str());
+                }
+                else if (tri_nError == tri_max){
+                    log_warning("..\n");
+                }
+                tri_nError++;
+            }
+        }
+        if(tri_nError){
+            log_error("Cannot map %d internal 3-states Abort Synthesis  \n",tri_nError);
+        }
+    }
+
+    // Check if DLATCH has been found.
+    // This is specific for Genesis3 since it does not support DLATCH   
+    //
+    void check_DLATCH(){
+        int nError =0;
+        int maxDL= 20;
+        for (auto cell : _design->top_module()->cells()){
+            if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+            continue;
+
+            if (cell->type.in(ID($_DLATCH_N_),
+		                    ID($_DLATCH_P_),
+		                    ID($_DLATCH_NN0_),
+		                    ID($_DLATCH_NN1_),
+		                    ID($_DLATCH_NP0_),
+		                    ID($_DLATCH_NP1_),
+		                    ID($_DLATCH_PN0_),
+		                    ID($_DLATCH_PN1_),
+		                    ID($_DLATCH_PP0_),
+		                    ID($_DLATCH_PP1_),
+		                    ID($_DLATCHSR_NNN_),
+		                    ID($_DLATCHSR_NNP_),
+		                    ID($_DLATCHSR_NPN_),
+		                    ID($_DLATCHSR_NPP_),
+		                    ID($_DLATCHSR_PNN_),
+		                    ID($_DLATCHSR_PNP_),
+		                    ID($_DLATCHSR_PPN_),
+		                    ID($_DLATCHSR_PPP_))){
+                                string instName = log_id(cell->name);
+                                std::stringstream buf;
+                                for (auto &it : cell->attributes) {
+	            	                RTLIL_BACKEND::dump_const(buf, it.second);
+	                            }
+                                if(nError < maxDL){
+                                    log_warning("Generic DLATCH '%s' (type %s) is not supported by the architecture. Please rewrite the RTL at %s to avoid a LATCH behavior.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
+                                }
+                                else if (nError == maxDL){
+                                    log_warning("..\n");
+                                }
+                            nError++;
+                            }
+        }
+        if(nError){
+            log_error("Cannot map %d Generic DLATCH. Abort Synthesis \n",nError);
+        }
+    }
+
+
+
     // Make sure we do not have DFFs with async. SR. Report if any and abort at the end.
     // This is specific for Genesis3 since it does not support DFFs with async. SR.
     //
@@ -1313,11 +1435,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
           if (ff.has_sr) {
 
               string instName = log_id(ff.name);
-
+              std::stringstream buf;
+              for (auto &it : cell->attributes) {
+	            	RTLIL_BACKEND::dump_const(buf, it.second);
+	            }
               if (nbErrors < maxPrintOut) {
 
-                log_warning("Generic DFF '%s' (type %s) cannot be mapped\n", instName.c_str(),
-                            log_id(ff.cell->type));
+                 log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
 
               } else if (nbErrors == maxPrintOut) {
                 log_warning("...\n");
@@ -1397,10 +1521,38 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
+#if 1
+            // New tri-state handling (Thierry)
+            //
+            if (cec)
+               run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
+
+            // specific Rapid Silicon merge with -rs_merge option
+            //
+            run("tribuf -rs_merge");
+
+            if (cec) {
+               run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
+               run("write_verilog -noattr -nohex after_tribuf_merge.v");
+            }
+
+            // specific Rapid Silicon logic with -rs_logic option
+            //
+            run("tribuf -rs_logic");
+
+            if (cec)
+               run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
+
+#else
+            // Old tri-state handling
+            //
             if (keep_tribuf)
                 run("tribuf -logic");
             else
                 run("tribuf -logic -formal");
+            
+            check_internal_3states();
+#endif
 
             run("deminout");
             run("opt_expr");
@@ -1844,19 +1996,25 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
-                        run(
+                         run(
                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                                " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCHSR_PPP_ 0"
-                               );
-
+                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
+                            );
+                        run("rs_dffsr_conv");
                         if (cec)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
 
 #ifdef DEV_BUILD
                         run("stat");
 #endif
+                                       
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH 
+                                         // support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
+
                         check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
+
                                        
                         techMapArgs += GET_FILE_PATH(GENESIS_3_DIR, FFS_MAP_FILE);
                         break;
@@ -1884,6 +2042,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (!fast)
                 run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
         }
+
+        // Map left over cells like $mux (EDA-1441)
+        //
+        run("techmap");
 
         if (check_label("map_luts_2")) {
             if(fast) 
