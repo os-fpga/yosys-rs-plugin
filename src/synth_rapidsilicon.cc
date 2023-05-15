@@ -195,6 +195,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - no       : Do not infer any carries.\n");
         log("        By default 'auto' mode is used.\n");
         log("\n");
+        log("    -max_carry_length <num>\n");
+        log("        Specify the maximum length of carry chain.\n");
+        log("        Specify a value >= 1, which should not\n");
+        log("        exceed the available carry lenght on the target device. \n");
+        log("        The flag should be used with -max_device_carry_length. \n");
+        log("        By default synthesis tool will not limit carry chain length. \n");
+        log("\n");
+        log("    -max_device_carry_length <num>\n");
+        log("        Specify the number of available carry resources for the target device.\n");
+        log("\n");
 #ifdef DEV_BUILD
         log("    -sdffr\n");
         log("        Infer synchroneous set/reset DFFs when possible.\n");
@@ -287,6 +297,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nolibmap;
     int de_max_threads;
     int max_bram;
+    int max_carry_length;
     int max_dsp;
     RTLIL::Design *_design;
     string nosdff_str;
@@ -309,6 +320,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_flatten = false;
         nobram = false;
         max_bram = -1;
+        max_carry_length = -1;
         max_dsp = -1;
         DSP_COUNTER = 0;
         nodsp = false;
@@ -340,6 +352,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         clear_flags();
         int max_device_bram = -1;
         int max_device_dsp = -1;
+        int max_device_carry_length = -1;
         _design = design;
 
         size_t argidx;
@@ -417,6 +430,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 max_device_dsp = stoi(args[++argidx]);
                 continue;
             }
+            if (args[argidx] == "-max_carry_length" && argidx + 1 < args.size()) {
+                max_carry_length = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_carry_length" && argidx + 1 < args.size()) {
+                max_device_carry_length = stoi(args[++argidx]);
+                continue;
+            }
 #ifdef DEV_BUILD
             if (args[argidx] == "-use_dsp_cfg_params") {
                 use_dsp_cfg_params = " -use_dsp_cfg_params";
@@ -471,6 +492,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         } else if (max_bram == -1){
             max_bram = max_device_bram;
         }
+
         if (max_device_dsp == -1 && max_dsp != -1) {
                 log_cmd_error("Invalid use of max_dsp flag. Please see help.\n");
         } else if (max_dsp > max_device_dsp){
@@ -478,6 +500,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         } else if (max_dsp == -1){
             max_dsp = max_device_dsp; 
         }
+
+        if (max_device_carry_length == -1 && max_carry_length != -1) {
+                log_cmd_error("Invalid use of max_carry_length flag. Please see help.\n");
+        } else if (max_carry_length > max_device_carry_length){
+                log_cmd_error("Invalid value of max_carry_length is specified. The available carry length is %d.\n", max_device_carry_length);
+        } else if (max_carry_length == -1){
+            max_carry_length = max_device_carry_length;
+        }
+
         if (!design->full_selection())
             log_cmd_error("This command only operates on fully selected designs!\n");
 
@@ -1672,7 +1703,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             switch (tech) {
                 case Technologies::GENESIS:
-                case Technologies::GENESIS_3:
                 case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                     run("stat");
@@ -1696,6 +1726,24 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                     break;    
                 }    
+                case Technologies::GENESIS_3: {
+                    switch (infer_carry) {
+                        case CarryMode::AUTO: {
+                            run(stringf("techmap -map +/techmap.v -map %s -D MAX_CARRY_CHAIN=%u", arithMapFile.c_str(), max_carry_length));
+                            break;
+                        }
+                        case CarryMode::ALL: {
+                            run(stringf("techmap -map +/techmap.v -map %s -D MAX_CARRY_CHAIN=%u", allArithMapFile.c_str(), max_carry_length));
+                            break;
+                        }
+                        case CarryMode::NO: {
+                            run("techmap");
+                            break;
+                        }
+                    }
+                    run("stat");
+                            break;
+                }
                 case Technologies::GENERIC: {
                     run("techmap");
                     break;
