@@ -1737,7 +1737,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             break;
                         }
                         case CarryMode::NO: {
-                            run(stringf("techmap -D MAX_CARRY_CHAIN=%u", max_carry_length));
+                            run("techmap");
                             break;
                         }
                     }
