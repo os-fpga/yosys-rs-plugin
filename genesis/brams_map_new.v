@@ -10,7 +10,7 @@
 
 module \$__RS_FACTOR_BRAM36_TDP (...);
 	parameter INIT = 0;
-	parameter WIDTH = 1;
+	//parameter WIDTH = 1;
 	
 	parameter PORT_D_WIDTH = 1;
 	parameter PORT_C_WIDTH = 1;
@@ -292,7 +292,7 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	input [PORT_D_WR_BE_WIDTH-1:0]	PORT_D_WR_BE;
 
 	BRAM2x18_TDP #(
-		.CFG_DBITS(WIDTH),
+		.CFG_DBITS(),
 		.PORT_A_WIDTH(PORT_A_WIDTH),
 		.PORT_B_WIDTH(PORT_B_WIDTH),
 		.PORT_C_WIDTH(PORT_C_WIDTH),
