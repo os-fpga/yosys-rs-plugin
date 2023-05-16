@@ -27,7 +27,7 @@ module _80_rs_alu (A, B, CI, BI, X, Y, CO);
 	output [Y_WIDTH-1:0] CO;
 
 
-	wire _TECHMAP_FAIL_ = Y_WIDTH <= 16 || Y_WIDTH > MAX_CARRY_CHAIN;
+	wire _TECHMAP_FAIL_ = Y_WIDTH <= 16 || Y_WIDTH > `MAX_CARRY_CHAIN;
 
 	(* force_downto *)
 	wire [Y_WIDTH-1:0] A_buf, B_buf;
