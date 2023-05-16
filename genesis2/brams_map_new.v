@@ -15,6 +15,11 @@ module \$__RS_FACTOR_BRAM36_TDP (...);
 parameter INIT = 0;
 parameter WIDTH = 1;
 
+parameter PORT_D_WIDTH = 1;
+parameter PORT_C_WIDTH = 1;
+
+parameter PORT_B_WIDTH = 1;
+parameter PORT_A_WIDTH = 1;
 
 parameter PORT_B_WR_BE_WIDTH = 1;
 parameter PORT_A_RD_SRST_VALUE = 1;
@@ -25,28 +30,33 @@ parameter PORT_C_RD_SRST_VALUE = 1;
 localparam ABITS = 15;
 localparam CFG_ENABLE = 4;
 
+localparam [2:0]PORT_A_MODE = (PORT_A_WIDTH == 1)?`MODE_1:(PORT_A_WIDTH == 2)?`MODE_2:(PORT_A_WIDTH == 4)?`MODE_4:(PORT_A_WIDTH ==8)?`MODE_9:(PORT_A_WIDTH ==9)?`MODE_9:(PORT_A_WIDTH ==16)?`MODE_18:(PORT_A_WIDTH ==18)?`MODE_18:`MODE_36;
+localparam [2:0]PORT_B_MODE = (PORT_B_WIDTH == 1)?`MODE_1:(PORT_B_WIDTH == 2)?`MODE_2:(PORT_B_WIDTH == 4)?`MODE_4:(PORT_B_WIDTH ==8)?`MODE_9:(PORT_B_WIDTH ==9)?`MODE_9:(PORT_B_WIDTH ==16)?`MODE_18:(PORT_B_WIDTH ==18)?`MODE_18:`MODE_36;
+localparam [2:0]PORT_C_MODE = (PORT_C_WIDTH == 1)?`MODE_1:(PORT_C_WIDTH == 2)?`MODE_2:(PORT_C_WIDTH == 4)?`MODE_4:(PORT_C_WIDTH ==8)?`MODE_9:(PORT_C_WIDTH ==9)?`MODE_9:(PORT_C_WIDTH ==16)?`MODE_18:(PORT_C_WIDTH ==18)?`MODE_18:`MODE_36;
+localparam [2:0]PORT_D_MODE = (PORT_D_WIDTH == 1)?`MODE_1:(PORT_D_WIDTH == 2)?`MODE_2:(PORT_D_WIDTH == 4)?`MODE_4:(PORT_D_WIDTH ==8)?`MODE_9:(PORT_D_WIDTH ==9)?`MODE_9:(PORT_D_WIDTH ==16)?`MODE_18:(PORT_D_WIDTH ==18)?`MODE_18:`MODE_36;
+
 input CLK_C1;
 input CLK_C2;
 
 input 				PORT_A_CLK;
 input [ABITS-1:0] 		PORT_A_ADDR;
-output [WIDTH-1:0]		PORT_A_RD_DATA;
+output [PORT_A_WIDTH-1:0]		PORT_A_RD_DATA;
 input 				PORT_A_RD_EN;
 
 input 				PORT_B_CLK;
 input [ABITS-1:0] 		PORT_B_ADDR;
-input [WIDTH-1:0] 		PORT_B_WR_DATA;
+input [PORT_B_WIDTH-1:0] 		PORT_B_WR_DATA;
 input 				PORT_B_WR_EN;
 input [PORT_B_WR_BE_WIDTH-1:0]	PORT_B_WR_BE;
 
 input 				PORT_C_CLK;
 input [ABITS-1:0] 		PORT_C_ADDR;
-output [WIDTH-1:0]		PORT_C_RD_DATA;
+output [PORT_C_WIDTH-1:0]		PORT_C_RD_DATA;
 input 				PORT_C_RD_EN;
 
 input 				PORT_D_CLK;
 input [ABITS-1:0] 		PORT_D_ADDR;
-input [WIDTH-1:0] 		PORT_D_WR_DATA;
+input [PORT_D_WIDTH-1:0] 		PORT_D_WR_DATA;
 input 				PORT_D_WR_EN;
 input [PORT_B_WR_BE_WIDTH-1:0]	PORT_D_WR_BE;
 
@@ -61,8 +71,8 @@ wire [CFG_ENABLE-1:PORT_D_WR_BE_WIDTH] D1EN_CMPL = {CFG_ENABLE-PORT_D_WR_BE_WIDT
 wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_BE};
 wire [CFG_ENABLE-1:0] D1EN = {D1EN_CMPL, PORT_D_WR_BE};
 
-wire [35:WIDTH] B1DATA_CMPL;
-wire [35:WIDTH] D1DATA_CMPL;
+wire [35:PORT_B_WIDTH] B1DATA_CMPL;
+wire [35:PORT_D_WIDTH] D1DATA_CMPL;
 
 wire [35:0] A1DATA_TOTAL;
 wire [35:0] B1DATA_TOTAL;
@@ -78,7 +88,52 @@ assign B_ADDR = PORT_C_RD_EN ? PORT_C_ADDR : (PORT_D_WR_EN ? PORT_D_ADDR : 15'd0
 
 // Assign read/write data - handle special case for 9bit mode
 // parity bit for 9bit mode is placed in R/W port on bit #16
-case (WIDTH)
+// PORT A
+case (PORT_A_WIDTH)
+	9: begin
+		assign PORT_A_RD_DATA = {A1DATA_TOTAL[16], A1DATA_TOTAL[7:0]};
+	end
+	default: begin
+		assign PORT_A_RD_DATA = A1DATA_TOTAL[PORT_A_WIDTH-1:0];
+		
+	end
+endcase
+
+// PORT B
+case (PORT_B_WIDTH)
+	9: begin
+		assign B1DATA_TOTAL = {B1DATA_CMPL[35:17], PORT_B_WR_DATA[8], B1DATA_CMPL[16:9], PORT_B_WR_DATA[7:0]};
+	end
+	default: begin
+		assign B1DATA_TOTAL = {B1DATA_CMPL, PORT_B_WR_DATA};
+		
+	end
+endcase
+
+// PORT C
+case (PORT_C_WIDTH)
+	9: begin
+		assign PORT_C_RD_DATA = {C1DATA_TOTAL[16], C1DATA_TOTAL[7:0]};
+	end
+	default: begin
+		assign PORT_C_RD_DATA = C1DATA_TOTAL[PORT_C_WIDTH-1:0];
+		
+	end
+endcase
+
+// PORT D
+case (PORT_D_WIDTH)
+	9: begin
+		assign D1DATA_TOTAL = {D1DATA_CMPL[35:17], PORT_D_WR_DATA[8], D1DATA_CMPL[16:9], PORT_D_WR_DATA[7:0]};
+	end
+	default: begin
+		assign D1DATA_TOTAL = {D1DATA_CMPL, PORT_D_WR_DATA};
+		
+	end
+endcase
+
+
+/*case (WIDTH)
 	9: begin
 		assign PORT_A_RD_DATA = {A1DATA_TOTAL[16], A1DATA_TOTAL[7:0]};
 		assign PORT_C_RD_DATA = {C1DATA_TOTAL[16], C1DATA_TOTAL[7:0]};
@@ -91,9 +146,17 @@ case (WIDTH)
 		assign B1DATA_TOTAL = {B1DATA_CMPL, PORT_B_WR_DATA};
 		assign D1DATA_TOTAL = {D1DATA_CMPL, PORT_D_WR_DATA};
 	end
-endcase
+endcase*/
 
-case (WIDTH)
+// Assigning MODE BITS with respect to Port WIDTHS
+
+	defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
+		PORT_A_MODE, PORT_A_MODE, PORT_B_MODE, PORT_B_MODE, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
+		PORT_C_MODE, PORT_C_MODE, PORT_D_MODE, PORT_D_MODE, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
+	};
+
+
+/*case (WIDTH)
 	1: begin
 		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
 			`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
@@ -141,7 +204,8 @@ case (WIDTH)
 			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
 		};
 	end
-endcase
+endcase*/
+
 
 assign SPLIT = 1'b0;
 assign FLUSH1 = 1'b0;
@@ -189,7 +253,13 @@ endmodule
 
 module \$__RS_FACTOR_BRAM18_TDP (...);
 	parameter INIT = 0;
-	parameter WIDTH = 1;
+	//parameter WIDTH = 1;
+
+	parameter PORT_D_WIDTH = 1;
+    parameter PORT_C_WIDTH = 1;
+	
+    parameter PORT_B_WIDTH = 1;
+    parameter PORT_A_WIDTH = 1;
 	
 	parameter PORT_B_WR_BE_WIDTH = 1;
 	parameter PORT_A_RD_SRST_VALUE = 1;
@@ -206,28 +276,32 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 	
     input 				PORT_A_CLK;
 	input [ABITS-1:0] 		PORT_A_ADDR;
-	output [WIDTH-1:0]		PORT_A_RD_DATA;
+	output [PORT_A_WIDTH-1:0]		PORT_A_RD_DATA;
 	input 				PORT_A_RD_EN;
 	
 	input 				PORT_B_CLK;
 	input [ABITS-1:0] 		PORT_B_ADDR;
-	input [WIDTH-1:0] 		PORT_B_WR_DATA;
+	input [PORT_B_WIDTH-1:0] 		PORT_B_WR_DATA;
 	input 				PORT_B_WR_EN;
 	input [PORT_B_WR_BE_WIDTH-1:0]	PORT_B_WR_BE;
 	
     input 				PORT_C_CLK;
 	input [ABITS-1:0] 		PORT_C_ADDR;
-	output [WIDTH-1:0]		PORT_C_RD_DATA;
+	output [PORT_C_WIDTH-1:0]		PORT_C_RD_DATA;
 	input 				PORT_C_RD_EN;
 	
 	input 				PORT_D_CLK;
 	input [ABITS-1:0] 		PORT_D_ADDR;
-	input [WIDTH-1:0] 		PORT_D_WR_DATA;
+	input [PORT_D_WIDTH-1:0] 		PORT_D_WR_DATA;
 	input 				PORT_D_WR_EN;
 	input [PORT_D_WR_BE_WIDTH-1:0]	PORT_D_WR_BE;
 
 	BRAM2x18_TDP #(
-		.CFG_DBITS(WIDTH),
+		.CFG_DBITS(),
+		.PORT_A_WIDTH(PORT_A_WIDTH),
+		.PORT_B_WIDTH(PORT_B_WIDTH),
+		.PORT_C_WIDTH(PORT_C_WIDTH),
+		.PORT_D_WIDTH(PORT_D_WIDTH),
 		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
 		.CFG_ENABLE_D(PORT_D_WR_BE_WIDTH),
 		.CLKPOL2(CLKPOL2),
