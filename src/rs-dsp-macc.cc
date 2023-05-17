@@ -247,7 +247,7 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
         if (is_genesis2 || is_genesis3) {
             cell->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
             // 4 - output post acc; 5 - output pre acc
-            cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(4, 3) : RTLIL::Const(5, 3));
+            cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
         } else {
             cell->setPort(RTLIL::escape_id("register_inputs_i"), RTLIL::SigSpec(RTLIL::S0));
             // 3 - output post acc; 1 - output pre acc
