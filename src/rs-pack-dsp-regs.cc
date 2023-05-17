@@ -13,7 +13,7 @@ PRIVATE_NAMESPACE_BEGIN
 // MODE_BITS are stored in Big Endian order, so we have to
 // use reverse of the bit indecies for the access:
 // actual bit idx = 83 --> access idx = 0
-#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 0
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83
 #define MODE_BITS_REGISTER_INPUTS_ID 92
 
 struct RsPackDspRegsWorker
