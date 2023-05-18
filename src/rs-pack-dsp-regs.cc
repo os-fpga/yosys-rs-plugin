@@ -13,7 +13,8 @@ PRIVATE_NAMESPACE_BEGIN
 // MODE_BITS are stored in Big Endian order, so we have to
 // use reverse of the bit indecies for the access:
 // actual bit idx = 83 --> access idx = 0
-#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 83
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 0
+#define MODE_BITS_GENESIS3_REGISTER_INPUTS_ID 83
 #define MODE_BITS_REGISTER_INPUTS_ID 92
 
 struct RsPackDspRegsWorker
@@ -27,7 +28,7 @@ struct RsPackDspRegsWorker
 
     bool run_opt_clean = false;
 
-    void run_scr () {
+    void run_scr (bool gen3) {
 
         std::vector<Cell *> DSP_used_cells;
         std::vector<Cell *> DFF_used_cells;
@@ -303,7 +304,11 @@ struct RsPackDspRegsWorker
                 // Getting RS_DSP MODE_BITS param;
                 RTLIL::Const dsp_mode_bits_const = DSP_driven_DFF->getParam(RTLIL::escape_id("MODE_BITS"));
                 // Changing RS_DSP MODE_BITS param with index 83, which is REGISTER_INPUTS
-                dsp_mode_bits_const[MODE_BITS_GENESIS2_REGISTER_INPUTS_ID] = RTLIL::S1;
+				if (!gen3)
+	                dsp_mode_bits_const[MODE_BITS_GENESIS2_REGISTER_INPUTS_ID] = RTLIL::S1;
+				else
+	                dsp_mode_bits_const[MODE_BITS_GENESIS3_REGISTER_INPUTS_ID] = RTLIL::S1;
+
                 DSP_driven_DFF->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
             }
 
@@ -350,12 +355,18 @@ struct RsPackDspRegsPass : public Pass {
     void execute(std::vector<std::string> a_Args, RTLIL::Design *design) override
     {
         log_header(design, "Executing rs_pack_dsp_regs pass.\n");
-
-        extra_args(a_Args, 1, design);
+		bool gen3 = false;
+        size_t argidx;
+        for (argidx = 1; argidx < a_Args.size(); argidx++) {
+			if (a_Args[argidx] == "-genesis3")
+				gen3 = true;
+		}
+        
+		extra_args(a_Args, argidx, design);
 
         for (auto mod : design->selected_modules()) {
             RsPackDspRegsWorker worker(mod);
-            worker.run_scr();
+            worker.run_scr(gen3);
             if (worker.run_opt_clean)
                 Pass::call(design, "opt_clean");
         }
