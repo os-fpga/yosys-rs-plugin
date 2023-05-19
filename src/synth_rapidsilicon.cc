@@ -71,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 154
+#define VERSION_PATCH 155
 
 
 enum Strategy {
@@ -1626,7 +1626,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
-                        run("rs-pack-dsp-regs");
+                        run("rs-pack-dsp-regs -genesis3");
                         run("rs_dsp_io_regs");
 
                         if (cec)
@@ -1642,6 +1642,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
 
             run("alumacc");
+			
+			int carry_length = 0;
+			for(auto& module: _design->selected_modules()){
+				for(auto& cell : module->selected_cells()){
+					if(cell->type == RTLIL::escape_id("$alu")){
+						int tmp = cell->getParam(RTLIL::escape_id("Y_WIDTH")).as_int();
+						if(carry_length + tmp <= max_carry_length){
+							cell->set_bool_attribute(RTLIL::escape_id("valid_carry"), true);
+							carry_length+=tmp;
+						}
+					}
+						
+				}
+			}
 
             if (cec)
                 run("write_verilog -noattr -nohex after_alumacc.v");
@@ -1729,11 +1743,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Technologies::GENESIS_3: {
                     switch (infer_carry) {
                         case CarryMode::AUTO: {
-                            run(stringf("techmap -map +/techmap.v -map %s -D MAX_CARRY_CHAIN=%u", arithMapFile.c_str(), max_carry_length));
+                            run(stringf("techmap -map +/techmap.v -map %s a:valid_carry", arithMapFile.c_str()));
                             break;
                         }
                         case CarryMode::ALL: {
-                            run(stringf("techmap -map +/techmap.v -map %s -D MAX_CARRY_CHAIN=%u", allArithMapFile.c_str(), max_carry_length));
+                            run(stringf("techmap -map +/techmap.v -map %s a:valid_carry", allArithMapFile.c_str()));
                             break;
                         }
                         case CarryMode::NO: {
