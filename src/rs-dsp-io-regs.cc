@@ -46,13 +46,16 @@ struct rsDspIORegs : public Pass {
         log_header(a_Design, "Executing RS_DSP_IO_REGS pass.\n");
 
         size_t argidx;
-        for (argidx = 1; argidx < a_Args.size(); argidx++) {
-            break;
+        bool is_genesis2 = false;
+		for (argidx = 1; argidx < a_Args.size(); argidx++) {
+            if (a_Args[argidx] == "-genesis2") {
+                is_genesis2 = true;
+            }
         }
         extra_args(a_Args, argidx, a_Design);
 
         for (auto module : a_Design->selected_modules()) {
-            rs_dsp_io_regs_pass(module);
+            rs_dsp_io_regs_pass(module, is_genesis2);
         }
     }
 
@@ -80,7 +83,7 @@ struct rsDspIORegs : public Pass {
         return std::make_pair(mask, value);
     }
 
-    void rs_dsp_io_regs_pass(RTLIL::Module *module)
+    void rs_dsp_io_regs_pass(RTLIL::Module *module, bool is_genesis2)
     {
         // Setup the SigMap
         m_SigMap.clear();
@@ -99,7 +102,6 @@ struct rsDspIORegs : public Pass {
 
                 bool del_clk = true;
                 bool use_dsp_cfg_params = (cell_type == RTLIL::escape_id("RS_DSP3"));
-                bool is_genesis2 = (cell_type == RTLIL::escape_id("RS_DSP"));
 
                 int reg_in_i;
                 int out_sel_i;
@@ -169,6 +171,19 @@ struct rsDspIORegs : public Pass {
                         default:
                             break;
                         }
+                    } else {
+                        switch (out_sel_i) {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 5:
+                        case 7:
+                            del_clk = false;
+                            new_type += "ACC";
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 } else {
                     if (is_genesis2) {
@@ -176,6 +191,18 @@ struct rsDspIORegs : public Pass {
                         case 2:
                         case 3:
                             del_clk = false;
+                            new_type += "ADD";
+                            break;
+                        default:
+                            break;
+                        }
+                    } else {
+                        switch (out_sel_i) {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 5:
+                        case 7:
                             new_type += "ADD";
                             break;
                         default:
@@ -199,6 +226,11 @@ struct rsDspIORegs : public Pass {
                         break;
                     default:
                         break;
+                    }
+                } else {
+                    if (out_sel_i > 3) {
+                        del_clk = false;
+                        new_type += "_REGOUT";
                     }
                 }
 
@@ -225,6 +257,29 @@ struct rsDspIORegs : public Pass {
                     case 3:
                     case 4:
                     case 5:
+                        if (have_macc) {
+                            ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
+                        } else {
+                            ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
+                        }
+                        break;
+                    }
+                } else {
+                    switch (out_sel_i) {
+                    case 0:
+                    case 4:
+                    case 6:
+                        ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
+                        // Mark for deleton additional configuration ports
+                        if (!use_dsp_cfg_params) {
+                            ports2del.insert(ports2del.end(), ports2del_extension.begin(), ports2del_extension.end());
+                        }
+                        break;
+                    case 1:
+                    case 2:
+                    case 3:
+                    case 5:
+                    case 7:
                         if (have_macc) {
                             ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
                         } else {
