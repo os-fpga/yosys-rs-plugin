@@ -1582,7 +1582,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs");
-                        run("rs_dsp_io_regs");
+                        run("rs_dsp_io_regs -genesis2");
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
