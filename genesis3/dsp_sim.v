@@ -98,6 +98,7 @@ module RS_DSP_MULT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     input  wire [2:0] feedback,
     input  wire       unsigned_a,
@@ -122,6 +123,7 @@ module RS_DSP_MULT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b)
@@ -133,6 +135,7 @@ module RS_DSP_MULT_REGIN (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire       clk,
@@ -161,6 +164,7 @@ module RS_DSP_MULT_REGIN (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
@@ -174,6 +178,7 @@ module RS_DSP_MULT_REGOUT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire       clk,
@@ -202,6 +207,7 @@ module RS_DSP_MULT_REGOUT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
@@ -215,6 +221,7 @@ module RS_DSP_MULT_REGIN_REGOUT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire       clk,
@@ -243,6 +250,7 @@ module RS_DSP_MULT_REGIN_REGOUT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .unsigned_a(unsigned_a),
         .unsigned_b(unsigned_b),
@@ -256,6 +264,7 @@ module RS_DSP_MULTADD (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     input  wire       clk,
     input  wire       lreset,
@@ -290,6 +299,7 @@ module RS_DSP_MULTADD (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
@@ -310,6 +320,7 @@ module RS_DSP_MULTADD_REGIN (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -346,6 +357,7 @@ module RS_DSP_MULTADD_REGIN (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
@@ -366,6 +378,7 @@ module RS_DSP_MULTADD_REGOUT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -400,6 +413,7 @@ module RS_DSP_MULTADD_REGOUT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
@@ -420,6 +434,7 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -455,6 +470,7 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .acc_fir(acc_fir),
         .load_acc(load_acc),
@@ -476,6 +492,7 @@ module RS_DSP_MULTACC (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -508,6 +525,7 @@ module RS_DSP_MULTACC (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .load_acc(load_acc),
         .unsigned_a(unsigned_a),
@@ -526,6 +544,7 @@ module RS_DSP_MULTACC_REGIN (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -560,6 +579,7 @@ module RS_DSP_MULTACC_REGIN (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .load_acc(load_acc),
 
@@ -582,6 +602,7 @@ module RS_DSP_MULTACC_REGOUT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -616,6 +637,7 @@ module RS_DSP_MULTACC_REGOUT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
         .feedback(feedback),
         .load_acc(load_acc),
 
@@ -638,6 +660,7 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
     input  wire [19:0] a,
     input  wire [17:0] b,
     output wire [37:0] z,
+    output wire [17:0] dly_b,
 
     (* clkbuf_sink *)
     input  wire        clk,
@@ -672,6 +695,7 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
         .a(a),
         .b(b),
         .z(z),
+        .dly_b(dly_b),
 
         .feedback(feedback),
         .load_acc(load_acc),
@@ -877,7 +901,7 @@ module dsp_t1_sim_cfg_ports # (
             r_unsigned_b <= unsigned_b_i;
             r_feedback   <= feedback_i;
             r_shift_d1   <= shift_right_i;
-            r_shift_d2   <= r_shift_d1;
+            r_shift_d2   <= shift_d1;       // Fixed Extra Flop Logic
             r_subtract   <= subtract_i;
             r_load_acc   <= load_acc_i;
             r_sat_d1     <= saturate_enable_i;
