@@ -1,8 +1,4 @@
 //Copyright (C) 2022 RapidSilicon
-//
-// In Genesis3, parameters MODE_BITS vectors have been reversed
-// in order to match big endian behavior used by the fabric
-// primitives DSP/BRAM (CASTORIP-121)
 
 module dsp_t1_20x18x64_cfg_ports (
     input  [19:0] a_i,
