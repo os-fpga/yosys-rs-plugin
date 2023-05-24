@@ -624,3 +624,383 @@ input [WIDTH-1:0] A;
 output Y;
 
 endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_AHB_S (
+    output logic  		  S0_HRESETN_I  ,
+    output logic   [        31:0] S0_HADDR     ,
+    output logic   [         2:0] S0_HBURST    ,
+    output logic                  S0_HMASTLOCK ,
+    input  logic                  S0_HREADY    ,
+    output logic   [         3:0] S0_HPROT     ,
+    input  logic   [        31:0] S0_HRDATA    ,
+    input  logic                  S0_HRESP     ,
+    output logic                  S0_HSEL      ,
+    output logic   [         2:0] S0_HSIZE     ,
+    output logic   [         1:0] S0_HTRANS    ,
+    output logic   [         3:0] S0_HWBE      ,
+    output logic   [        31:0] S0_HWDATA    ,
+    output logic                  S0_HWRITE    ,
+    input  logic                  S0_HCLK
+);
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_AXI_M0 (
+    // AXI master 0
+    input  logic [        31:0] M0_ARADDR   ,
+    input  logic [         1:0] M0_ARBURST  ,
+    input  logic [         3:0] M0_ARCACHE  ,
+    input  logic [         3:0] M0_ARID     ,
+    input  logic [         2:0] M0_ARLEN    ,
+    input  logic                M0_ARLOCK   ,
+    input  logic [         2:0] M0_ARPROT   ,
+    output logic                M0_ARREADY  ,
+    input  logic [         2:0] M0_ARSIZE   ,
+    input  logic                M0_ARVALID  ,
+    input  logic [        31:0] M0_AWADDR   ,
+    input  logic [         1:0] M0_AWBURST  ,
+    input  logic [         3:0] M0_AWCACHE  ,
+    input  logic [         3:0] M0_AWID     ,
+    input  logic [         2:0] M0_AWLEN    ,
+    input  logic                M0_AWLOCK   ,
+    input  logic [         2:0] M0_AWPROT   ,
+    output logic                M0_AWREADY  ,
+    input  logic [         2:0] M0_AWSIZE   ,
+    input  logic                M0_AWVALID  ,
+    output logic [         3:0] M0_BID      ,
+    input  logic                M0_BREADY   ,
+    output logic [         1:0] M0_BRESP    ,
+    output logic                M0_BVALID   ,
+    output logic [        63:0] M0_RDATA    ,
+    output logic [         3:0] M0_RID      ,
+    output logic                M0_RLAST    ,
+    input  logic                M0_RREADY   ,
+    output logic [         1:0] M0_RRESP    ,
+    output logic                M0_RVALID   ,
+    input  logic [        63:0] M0_WDATA    ,
+    input  logic                M0_WLAST    ,
+    output logic                M0_WREADY   ,
+    input  logic [         7:0] M0_WSTRB    ,
+    input  logic                M0_WVALID   ,
+    input                  	M0_ACLK     ,
+    output                  	M0_ARESETN_I 
+);
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_AXI_M1 (
+    //AXI master 1
+    input  logic [        31:0] M1_ARADDR   ,
+    input  logic [         1:0] M1_ARBURST  ,
+    input  logic [         3:0] M1_ARCACHE  ,
+    input  logic [         3:0] M1_ARID     ,
+    input  logic [         3:0] M1_ARLEN    ,
+    input  logic                M1_ARLOCK   ,
+    input  logic [         2:0] M1_ARPROT   ,
+    output logic                M1_ARREADY  ,
+    input  logic [         2:0] M1_ARSIZE   ,
+    input  logic                M1_ARVALID  ,
+    input  logic [        31:0] M1_AWADDR   ,
+    input  logic [         1:0] M1_AWBURST  ,
+    input  logic [         3:0] M1_AWCACHE  ,
+    input  logic [         3:0] M1_AWID     ,
+    input  logic [         3:0] M1_AWLEN    ,
+    input  logic                M1_AWLOCK   ,
+    input  logic [         2:0] M1_AWPROT   ,
+    output logic                M1_AWREADY  ,
+    input  logic [         2:0] M1_AWSIZE   ,
+    input  logic                M1_AWVALID  ,
+    output logic [         3:0] M1_BID      ,
+    input  logic                M1_BREADY   ,
+    output logic [         1:0] M1_BRESP    ,
+    output logic                M1_BVALID   ,
+    output logic [        31:0] M1_RDATA    ,
+    output logic [         3:0] M1_RID      ,
+    output logic                M1_RLAST    ,
+    input  logic                M1_RREADY   ,
+    output logic [         1:0] M1_RRESP    ,
+    output logic                M1_RVALID   ,
+    input  logic [        31:0] M1_WDATA    ,
+    input  logic                M1_WLAST    ,
+    output logic                M1_WREADY   ,
+    input  logic [         3:0] M1_WSTRB    ,
+    input  logic                M1_WVALID   ,
+    input                  	M1_ACLK     ,
+    output                  	M1_ARESETN_I        
+);
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_AXI_M0_M1 (
+    // AXI master 0
+    input  logic [        31:0] M0_ARADDR   ,
+    input  logic [         1:0] M0_ARBURST  ,
+    input  logic [         3:0] M0_ARCACHE  ,
+    input  logic [         3:0] M0_ARID     ,
+    input  logic [         2:0] M0_ARLEN    ,
+    input  logic                M0_ARLOCK   ,
+    input  logic [         2:0] M0_ARPROT   ,
+    output logic                M0_ARREADY  ,
+    input  logic [         2:0] M0_ARSIZE   ,
+    input  logic                M0_ARVALID  ,
+    input  logic [        31:0] M0_AWADDR   ,
+    input  logic [         1:0] M0_AWBURST  ,
+    input  logic [         3:0] M0_AWCACHE  ,
+    input  logic [         3:0] M0_AWID     ,
+    input  logic [         2:0] M0_AWLEN    ,
+    input  logic                M0_AWLOCK   ,
+    input  logic [         2:0] M0_AWPROT   ,
+    output logic                M0_AWREADY  ,
+    input  logic [         2:0] M0_AWSIZE   ,
+    input  logic                M0_AWVALID  ,
+    output logic [         3:0] M0_BID      ,
+    input  logic                M0_BREADY   ,
+    output logic [         1:0] M0_BRESP    ,
+    output logic                M0_BVALID   ,
+    output logic [        63:0] M0_RDATA    ,
+    output logic [         3:0] M0_RID      ,
+    output logic                M0_RLAST    ,
+    input  logic                M0_RREADY   ,
+    output logic [         1:0] M0_RRESP    ,
+    output logic                M0_RVALID   ,
+    input  logic [        63:0] M0_WDATA    ,
+    input  logic                M0_WLAST    ,
+    output logic                M0_WREADY   ,
+    input  logic [         7:0] M0_WSTRB    ,
+    input  logic                M0_WVALID   ,
+    //AXI master 1
+    input  logic [        31:0] M1_ARADDR   ,
+    input  logic [         1:0] M1_ARBURST  ,
+    input  logic [         3:0] M1_ARCACHE  ,
+    input  logic [         3:0] M1_ARID     ,
+    input  logic [         3:0] M1_ARLEN    ,
+    input  logic                M1_ARLOCK   ,
+    input  logic [         2:0] M1_ARPROT   ,
+    output logic                M1_ARREADY  ,
+    input  logic [         2:0] M1_ARSIZE   ,
+    input  logic                M1_ARVALID  ,
+    input  logic [        31:0] M1_AWADDR   ,
+    input  logic [         1:0] M1_AWBURST  ,
+    input  logic [         3:0] M1_AWCACHE  ,
+    input  logic [         3:0] M1_AWID     ,
+    input  logic [         3:0] M1_AWLEN    ,
+    input  logic                M1_AWLOCK   ,
+    input  logic [         2:0] M1_AWPROT   ,
+    output logic                M1_AWREADY  ,
+    input  logic [         2:0] M1_AWSIZE   ,
+    input  logic                M1_AWVALID  ,
+    output logic [         3:0] M1_BID      ,
+    input  logic                M1_BREADY   ,
+    output logic [         1:0] M1_BRESP    ,
+    output logic                M1_BVALID   ,
+    output logic [        31:0] M1_RDATA    ,
+    output logic [         3:0] M1_RID      ,
+    output logic                M1_RLAST    ,
+    input  logic                M1_RREADY   ,
+    output logic [         1:0] M1_RRESP    ,
+    output logic                M1_RVALID   ,
+    input  logic [        31:0] M1_WDATA    ,
+    input  logic                M1_WLAST    ,
+    output logic                M1_WREADY   ,
+    input  logic [         3:0] M1_WSTRB    ,
+    input  logic                M1_WVALID   ,
+    input                  	M0_ACLK     ,
+    input                  	M1_ACLK     ,
+    output                  	M0_ARESETN_I, 
+    output                  	M1_ARESETN_I        
+);
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_DMA (
+    // FPGA DMA
+    input  logic [         3:0] DMA_REQ          ,
+    output logic [         3:0] DMA_ACK          ,
+    input  logic                DMA_CLK          ,
+    input  logic                DMA_RST_N     
+
+);
+
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_GPIO (
+    // FPGA GPIO
+    output logic  [        39:0] GPIO_O       ,
+    input  logic  [        39:0] GPIO_I       ,
+    input  logic  [        39:0] GPIO_OEN     ,
+    input  logic                 GPIO_CLK     ,
+    input  logic                 GPIO_RST_N    
+
+);
+
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_IRQ (
+    // FPGA IRQ
+    input  logic [        15:0] IRQ_SRC          ,
+    output logic [        15:0] IRQ_SET          ,
+    input  logic                IRQ_CLK		 ,
+    input  logic                IRQ_RST_N
+
+);
+
+endmodule
+
+(* blackbox *)
+module SOC_FPGA_INTF_JTAG (
+    // JTAG
+    input      logic        BOOT_JTAG_TCK                ,
+    output     logic        BOOT_JTAG_TDI                ,
+    input      logic        BOOT_JTAG_TDO                ,
+    output     logic        BOOT_JTAG_TMS                ,
+    output     logic        BOOT_JTAG_TRSTN              ,
+    input      logic        BOOT_JTAG_EN                 
+);
+
+endmodule
+
+
+(* blackbox *)
+module soc_fpga_intf (
+    // FPGA fabric clocks
+    input  logic                clk_fpga_fabric_irq       ,
+    input  logic                clk_fpga_fabric_dma       ,
+    input  logic                clk_fpga_fabric_gpio       ,
+    input  logic                rst_n_fpga_fabric_irq     ,
+    input  logic                rst_n_fpga_fabric_dma     ,
+    input  logic                rst_n_fpga_fabric_gpio    ,
+    output  logic                rst_n_fpga0             ,
+    output  logic                rst_n_fpga1             ,
+    output  logic                rst_n_fpga_s             ,
+
+
+    input  logic clk_fpga_fabric_m0,
+    input  logic clk_fpga_fabric_m1,
+    input  logic clk_fpga_fabric_s0,
+
+    //
+    //output logic                   global_reset_fpga,
+    //output logic [2:0]             rwm_control_fpga,
+
+    //config controller status
+    //output logic                cfg_done                  ,
+    //output logic                cfg_error                 ,
+    //AHB slave
+    output logic [        31:0] fpga_clk_ahb_s0_haddr     ,
+    output logic [         2:0] fpga_clk_ahb_s0_hburst    ,
+    output logic                fpga_clk_ahb_s0_hmastlock ,
+    input  logic                fpga_clk_ahb_s0_hready    ,
+    output logic [         3:0] fpga_clk_ahb_s0_hprot     ,
+    input  logic [        31:0] fpga_clk_ahb_s0_hrdata    ,
+    input  logic                fpga_clk_ahb_s0_hresp     ,
+    output logic                fpga_clk_ahb_s0_hsel      ,
+    output logic [         2:0] fpga_clk_ahb_s0_hsize     ,
+    output logic [         1:0] fpga_clk_ahb_s0_htrans    ,
+    output logic [         3:0] fpga_clk_ahb_s0_hwbe      ,
+    output logic [        31:0] fpga_clk_ahb_s0_hwdata    ,
+    output logic                fpga_clk_ahb_s0_hwrite    ,
+    // AXI master 0
+    input  logic [        31:0] fpga_clk_axi_m0_ar_addr   ,
+    input  logic [         1:0] fpga_clk_axi_m0_ar_burst  ,
+    input  logic [         3:0] fpga_clk_axi_m0_ar_cache  ,
+    input  logic [         3:0] fpga_clk_axi_m0_ar_id     ,
+    input  logic [         2:0] fpga_clk_axi_m0_ar_len    ,
+    input  logic                fpga_clk_axi_m0_ar_lock   ,
+    input  logic [         2:0] fpga_clk_axi_m0_ar_prot   ,
+    output logic                fpga_clk_axi_m0_ar_ready  ,
+    input  logic [         2:0] fpga_clk_axi_m0_ar_size   ,
+    input  logic                fpga_clk_axi_m0_ar_valid  ,
+    input  logic [        31:0] fpga_clk_axi_m0_aw_addr   ,
+    input  logic [         1:0] fpga_clk_axi_m0_aw_burst  ,
+    input  logic [         3:0] fpga_clk_axi_m0_aw_cache  ,
+    input  logic [         3:0] fpga_clk_axi_m0_aw_id     ,
+    input  logic [         2:0] fpga_clk_axi_m0_aw_len    ,
+    input  logic                fpga_clk_axi_m0_aw_lock   ,
+    input  logic [         2:0] fpga_clk_axi_m0_aw_prot   ,
+    output logic                fpga_clk_axi_m0_aw_ready  ,
+    input  logic [         2:0] fpga_clk_axi_m0_aw_size   ,
+    input  logic                fpga_clk_axi_m0_aw_valid  ,
+    output logic [         3:0] fpga_clk_axi_m0_b_id      ,
+    input  logic                fpga_clk_axi_m0_b_ready   ,
+    output logic [         1:0] fpga_clk_axi_m0_b_resp    ,
+    output logic                fpga_clk_axi_m0_b_valid   ,
+    output logic [        63:0] fpga_clk_axi_m0_r_data    ,
+    output logic [         3:0] fpga_clk_axi_m0_r_id      ,
+    output logic                fpga_clk_axi_m0_r_last    ,
+    input  logic                fpga_clk_axi_m0_r_ready   ,
+    output logic [         1:0] fpga_clk_axi_m0_r_resp    ,
+    output logic                fpga_clk_axi_m0_r_valid   ,
+    input  logic [        63:0] fpga_clk_axi_m0_w_data    ,
+    input  logic                fpga_clk_axi_m0_w_last    ,
+    output logic                fpga_clk_axi_m0_w_ready   ,
+    input  logic [         7:0] fpga_clk_axi_m0_w_strb    ,
+    input  logic                fpga_clk_axi_m0_w_valid   ,
+    //AXI master 1
+    input  logic [        31:0] fpga_clk_axi_m1_ar_addr   ,
+    input  logic [         1:0] fpga_clk_axi_m1_ar_burst  ,
+    input  logic [         3:0] fpga_clk_axi_m1_ar_cache  ,
+    input  logic [         3:0] fpga_clk_axi_m1_ar_id     ,
+    input  logic [         3:0] fpga_clk_axi_m1_ar_len    ,
+    input  logic                fpga_clk_axi_m1_ar_lock   ,
+    input  logic [         2:0] fpga_clk_axi_m1_ar_prot   ,
+    output logic                fpga_clk_axi_m1_ar_ready  ,
+    input  logic [         2:0] fpga_clk_axi_m1_ar_size   ,
+    input  logic                fpga_clk_axi_m1_ar_valid  ,
+    input  logic [        31:0] fpga_clk_axi_m1_aw_addr   ,
+    input  logic [         1:0] fpga_clk_axi_m1_aw_burst  ,
+    input  logic [         3:0] fpga_clk_axi_m1_aw_cache  ,
+    input  logic [         3:0] fpga_clk_axi_m1_aw_id     ,
+    input  logic [         3:0] fpga_clk_axi_m1_aw_len    ,
+    input  logic                fpga_clk_axi_m1_aw_lock   ,
+    input  logic [         2:0] fpga_clk_axi_m1_aw_prot   ,
+    output logic                fpga_clk_axi_m1_aw_ready  ,
+    input  logic [         2:0] fpga_clk_axi_m1_aw_size   ,
+    input  logic                fpga_clk_axi_m1_aw_valid  ,
+    output logic [         3:0] fpga_clk_axi_m1_b_id      ,
+    input  logic                fpga_clk_axi_m1_b_ready   ,
+    output logic [         1:0] fpga_clk_axi_m1_b_resp    ,
+    output logic                fpga_clk_axi_m1_b_valid   ,
+    output logic [        31:0] fpga_clk_axi_m1_r_data    ,
+    output logic [         3:0] fpga_clk_axi_m1_r_id      ,
+    output logic                fpga_clk_axi_m1_r_last    ,
+    input  logic                fpga_clk_axi_m1_r_ready   ,
+    output logic [         1:0] fpga_clk_axi_m1_r_resp    ,
+    output logic                fpga_clk_axi_m1_r_valid   ,
+    input  logic [        31:0] fpga_clk_axi_m1_w_data    ,
+    input  logic                fpga_clk_axi_m1_w_last    ,
+    output logic                fpga_clk_axi_m1_w_ready   ,
+    input  logic [         3:0] fpga_clk_axi_m1_w_strb    ,
+    input  logic                fpga_clk_axi_m1_w_valid   ,
+    // FPGA IRQ
+    input  logic [        15:0] fpga_clk_irq_src          ,
+    output logic [        15:0] fpga_clk_irq_set          ,
+    // FPGA DMA
+    input  logic [         3:0] fpga_clk_dma_req          ,
+    output logic [         3:0] fpga_clk_dma_ack          ,
+
+    // FPGA JTAG
+  input      logic        fpga_jtag_tck                ,
+  output     logic        fpga_jtag_tdi                ,
+  input      logic        fpga_jtag_tdo                ,
+  output     logic        fpga_jtag_tms                ,
+  output     logic        fpga_jtag_trstn              ,
+  input      logic        fpga_jtag_en                 ,
+  input      logic        soc_fpga_jtag_tdi                ,
+  output     logic        soc_fpga_jtag_tdo                ,
+  input      logic        soc_fpga_jtag_tms                ,
+  input      logic        soc_fpga_jtag_trstn              ,
+    // FPGA GPIO
+    output logic  [        39:0] fpga_pad_c       ,
+    input  logic  [        39:0] fpga_pad_i       ,
+    input  logic  [        39:0] fpga_pad_oen     
+    //output  logic 	    sc_enable                 ,
+    //output  logic 	    sc_mode                   ,
+    //input   logic [  311:0] sc_tail                   ,
+   //testmode
+    //input  logic                   testmode 
+
+);
+endmodule
