@@ -18,7 +18,7 @@
 #include <mutex>
 #include "synth_formal.h"
 #include "../../synth_simulation/TBG.h"
-
+#include <boost/process.hpp>
 #include <filesystem>
 
 #define READ   0
@@ -29,6 +29,7 @@ using namespace std;
 vector <string> fv_stages;
 map <string, string> stage_status;
 
+namespace bp = boost::process;
 struct hdl_args{
     string hdl_type;
     string ref_container;
@@ -45,9 +46,6 @@ struct hdl_args{
     string tool;
 };
 
-
-
-
 struct fm_setting{
     bool name_matching;
     bool reg_merg;
@@ -61,10 +59,19 @@ map <string, tuple<string,string,string,string,string,string,int>> fv_results;
 
 tuple<string,string,string,string,string,string,int> fv_results_tp;
 
+// void kill_fv(){
+//     for (auto pid : pid_synthfv){
+//         // if (kill(pid,0)==0){
+//             std::cout<<"Terminating FV thread with ID: "<<pid<<std::endl;
+//             kill(pid,SIGTERM);
+//         // }
+//     }
+// }
+
 int verif_stage = 0;
 string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_time){
-
-    char buffer[256];
+    
+    bp::ipstream pipe_stream;
     onespin_lic_fail = false;
     bool lic_captured = false;
     string result = "", str_buff="";
@@ -75,15 +82,13 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
     regex _fv_failed_ ("(.*designs.*are not equivalent.*?)");
     regex _fv_inconclusive_ ("(.*esign.*equivalence.*inconclusive.*?)");
     string command  = "onespin_sh "+cmd;
-    command.append(" 2>&1");
+    // command.append(" 2>&1");
 
-    // cout<<"PID: "<<getpid()<<endl;
-    
+    std::string pline;
+
     stage_status.insert({stage, ""});
     auto itr = stage_status.find(stage);
 
-    // pid_t child_id;
-    // cout<<"Child ID:" <<child_id<<endl;
     auto start = chrono::high_resolution_clock::now();
     ofstream pipe_out;
     pipe_out.open(stage+".log", ios::out);
@@ -91,17 +96,15 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
     pipe_out.open(stage+".log", ios::app);
     
     FILE* pipe = popen(command.c_str(), "r");
-    if (!pipe) {
-        return "popen failed!";
-    }
-    else{
-        while (!feof(pipe)) {
-            if (fgets(buffer, 256, pipe) != NULL){
-                result.append(buffer);
-                pipe_out<<buffer;
-            }
+    bp::child c(command, bp::std_out > pipe_stream);
+    pid_t pid = c.id();
+
+    try {
+        while (std::getline(pipe_stream, pline)) {
+            result.append(pline);
+            pipe_out<<pline;
             if (!onespin_lic_fail){
-                str_buff = buffer;
+                str_buff = pline;
                 regex_search(str_buff, lic_match, _lic_fail_);
                 regex_search(str_buff, lic_match1, _lic_pass_);
                 if(lic_match[1].str().length()>0){
@@ -124,9 +127,13 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
                 }
             }
         }
+    } catch (const bp::process_error& ex) {
+        std::cerr << "Error executing command: " << ex.what() << std::endl;
+        return "N/A";
     }
     
-    
+    c.terminate();
+    pipe_out.close();
     string fv_status;
     // check for Formal Verification Status
     regex_search(result, fv_pass, _fv_succeeded_);
@@ -162,13 +169,12 @@ string onespin_exe(string cmd, string stage, bool &onespin_lic_fail, int &spent_
         }
         cout<<"Staus Done:  "<<endl;
     }
-   pclose(pipe);
    
    return fv_status;
 }
 
 string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
-    char buffer[256];
+    bp::ipstream pipe_stream;
     bool lic_captured =false;
     fm_lic_fail = false;
     string result = "", str_buff="";
@@ -178,7 +184,7 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
     regex _fv_succeeded_ ("(.*Verification.*SUCCEEDED.*?)");
     regex _fv_failed_ ("(.*Verification.*FAILED.*?)");
     ofstream pipe_out;
-
+    std::string line;
     stage_status.insert({stage, ""});
     auto itr = stage_status.find(stage);
     pipe_out.open(stage+"_"+TCL_TOOL+".log", ios::out);
@@ -186,26 +192,18 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
     pipe_out.open(stage+"_"+TCL_TOOL+".log", ios::app);
 
     string command  = "fm_shell -f "+cmd;
-    command.append(" 2>&1");
+    // command.append(" 2>&1");
 
-    //cout<<"PID: "<<getpid()<<endl;
-    
-    //pid_t child_id;
-    //cout<<"Child ID:" <<child_id<<endl;
     auto start = chrono::high_resolution_clock::now();
-    FILE* pipe = popen(command.c_str(), "r");
-    if (!pipe) {
-        return "popen failed!";
-    }
-    else{
-        while (!feof(pipe)) {
-            if (fgets(buffer, 256, pipe) != NULL){
-                result.append(buffer);
-                // cout<<buffer;
-                pipe_out<<buffer;
-            }
+    bp::child c(command, bp::std_out > pipe_stream);
+    pid_t pid = c.id();
+
+    try {
+        while (std::getline(pipe_stream, line)) {
+            result.append(line);
+            pipe_out<<line;
             if (!fm_lic_fail){
-                str_buff = buffer;
+                str_buff = line;
                 regex_search(str_buff, lic_match, _lic_fail_);
                 regex_search(str_buff, lic_match1, _lic_pass_);
                 if(lic_match[1].str().length()>0){
@@ -217,6 +215,7 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
                 }
                 else if(lic_match1[1].str().length()>0){
                     std::cout<<"Succeeded to get the Formality License "<<stage<<endl;
+                    // yosys::fv_pid.push_back(pid);
                     fm_lic_fail=false;
                     if (!lic_captured){
                         if (itr != stage_status.end()){
@@ -228,10 +227,12 @@ string fm_exe(string cmd, string stage, bool &fm_lic_fail, int &spent_time){
                 }
             }
         }
+    } catch (const bp::process_error& ex) {
+        std::cerr << "Error executing command: " << ex.what() << std::endl;
+        return "N/A";
     }
-    
 
-   pclose(pipe);
+   c.terminate();
    pipe_out.close();
 
    string fv_status;
@@ -483,7 +484,7 @@ void fm_design_setup(ofstream& fv_script, struct fm_setting fmset){
     if (fmset.reg_init)fv_script<<"set verification_assume_reg_init "+fmset.init+"\n";
 }
 
-void elaboration (std::ofstream& fv_script,struct hdl_args hdlarg){
+void onespin_elab (std::ofstream& fv_script,struct hdl_args hdlarg){
     if (regex_match (hdlarg.golden[0], regex("(.*..*vh)") ) | regex_match (hdlarg.golden[0], regex("(.*.v)") ) | regex_match (hdlarg.golden[0], regex("(.*.sv)") ))
         fv_script<<"\nset_elaborate_option -both -top {Verilog!work."<<hdlarg.top<<"}\n";
     else if (regex_match (hdlarg.golden[0], regex("(.*.vhd)") ) | regex_match (hdlarg.golden[0], regex("(.*.vhdl)") ))
@@ -531,7 +532,7 @@ void compare(std::ofstream& fv_script,struct hdl_args hdlarg,std::string *out_pa
 
 void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path ,string *w_dir_){
     std::ofstream fv_script;
-    cout<<"TCL Path: "<<*tclout_path<<endl;
+    // cout<<"TCL Path: "<<*tclout_path<<endl;
     struct fm_setting fm_set;
     fm_set.name_matching = true;
     fv_script.open(*tclout_path,ios::out);
@@ -543,7 +544,7 @@ void gen_tcl(struct hdl_args hdlarg, std::string *tclout_path ,string *w_dir_){
         fm_design_setup(fv_script,fm_set);
     }
     else if (TCL_TOOL=="onespin"){
-        elaboration(fv_script,hdlarg);
+        onespin_elab(fv_script,hdlarg);
         compile(fv_script);
     }
     mapping(fv_script, false);
@@ -663,6 +664,11 @@ void *run_fv(void* flow) {
     istringstream ss(*fvargs->top_module);
     string word{};
     string top_mod{};
+    // RTLIL::Design *_design;
+
+    // auto *top = _design->top_module();
+
+    // log("Top Module_FV = %s\n",log_id(top));
     while (ss>>word){
         top_mod=word;
     }
@@ -677,7 +683,9 @@ void *run_fv(void* flow) {
     fv_results.insert(make_pair(("stage"+to_string(verif_stage)),fv_results_tp));
     mtx.unlock();
     // cout<<*fvargs->fv<<endl;
+    
     if (*fvargs->fv == "formal_inc" || *fvargs->fv == "formal_noinc"){
+        // log("Printing something random\n");
         string result = exec_pipe(hdlarg,*fvargs->fv_tool,*fvargs->stage2,"stage"+to_string(verif_stage),synth_dir_);
     }
     else if (*fvargs->fv == "simulation"){

@@ -16,6 +16,9 @@ LDLIBS ?= $(shell $(YOSYS_CONFIG) --ldlibs)
 PLUGINS_DIR ?= $(shell $(YOSYS_CONFIG) --datdir)/plugins
 DATA_DIR ?= $(shell $(YOSYS_CONFIG) --datdir)
 EXTRA_FLAGS ?=
+CXXFLAGS += -Isrc/include/boost_lib/
+LDFLAGS += -Lsrc/include/boost_lib/
+CXXFLAGS += -std=c++17
 
 COMMON			= common
 GENESIS			= genesis
@@ -88,8 +91,8 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/TDP18K_FIFO.v \
 				  $(GENESIS3)/sram1024x18.v \
 				  $(GENESIS3)/ufifo_ctl.v \
-				  $(GENESIS3)/cell_sim_blackbox.v
-			          sim_models.v
+				  $(GENESIS3)/cell_sim_blackbox.v \
+			      sim_models.v
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
@@ -100,12 +103,26 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-dffsr-conv.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc \
-		  src/rs-pack-dsp-regs.cc
+		  src/rs-pack-dsp-regs.cc \
+		  src/synth_validation/synth_formal/src/synth_formal.cc \
+		  src/synth_validation/synth_formal/src/test_report.cc \
+		  src/synth_validation/synth_simulation/TBG.cc \
+		  src/synth_validation/synth_simulation/run_verilator.cc
+
+
+
+simulation_model = src/synth_validation/synth_formal/src/sim_par.cc
+execute_Sim_parse:
+	g++  -lstdc++fs -std=c++17  $(simulation_model)  -o sim_par 
+	./sim_par
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
 	   pmgen/rs-bram-asymmetric-wider-write.h \
-	   pmgen/rs-bram-asymmetric-wider-read.h
+	   pmgen/rs-bram-asymmetric-wider-read.h \
+	   src/synth_validation/synth_formal/src/synth_formal.h \
+	   src/synth_validation/synth_formal/src/report_fv.h \
+	   src/synth_validation/synth_simulation/TBG.h
 pmgen:
 	mkdir -p pmgen
 
@@ -136,15 +153,6 @@ $(OBJS): %.o: %.cc $(DEPS)
 $(NAME).so: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
 
-# FV flow
-FVFLAG 	+= -std=c++17
-$(fv_srcs_obj): %.o: %.cc $(fv_deps)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) $(FVFLAG) -c -o $@ $(filter %.cc, $^)
-
-$(NAME).so: $(fv_srcs_obj)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(FVFLAG) -shared -o $@ $^ $(LDLIBS) 
-
-
 install_plugin: $(NAME).so
 	install -D $< $(PLUGINS_DIR)/$<
 
@@ -167,7 +175,7 @@ test:
 	$(MAKE) -C tests tests_gen2 YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
-	rm -rf src/*.d src/*.o *.so pmgen* src/synth_validation/synth_formal/src/*.o src/synth_validation/synth_formal/src/*.d src/synth_validation/synth_simulation/*.o src/synth_validation/synth_simulation/*.d
+	rm -rf src/*.d src/*.o *.so pmgen/ src/synth_validation/synth_formal/src/*.o src/synth_validation/synth_formal/src/*.d src/synth_validation/synth_simulation/*.o src/synth_validation/synth_simulation/*.d
 	$(MAKE) -C tests clean_tests YOSYS_PATH=$(YOSYS_PATH)
 
 clean_test:
