@@ -71,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 158
+#define VERSION_PATCH 159
 
 enum Strategy {
     AREA,
@@ -1514,7 +1514,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             // specific Rapid Silicon logic with -rs_logic option
             //
-            run("tribuf -rs_logic");
+            run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
 
             if (cec)
                run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
