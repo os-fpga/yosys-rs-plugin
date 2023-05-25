@@ -71,7 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 157
+#define VERSION_PATCH 158
 
 enum Strategy {
     AREA,
@@ -1373,28 +1373,28 @@ struct SynthRapidSiliconPass : public ScriptPass {
             continue;
 
             if (cell->type.in(ID($_DLATCH_N_),
-		                    ID($_DLATCH_P_),
-		                    ID($_DLATCH_NN0_),
-		                    ID($_DLATCH_NN1_),
-		                    ID($_DLATCH_NP0_),
-		                    ID($_DLATCH_NP1_),
-		                    ID($_DLATCH_PN0_),
-		                    ID($_DLATCH_PN1_),
-		                    ID($_DLATCH_PP0_),
-		                    ID($_DLATCH_PP1_),
-		                    ID($_DLATCHSR_NNN_),
-		                    ID($_DLATCHSR_NNP_),
-		                    ID($_DLATCHSR_NPN_),
-		                    ID($_DLATCHSR_NPP_),
-		                    ID($_DLATCHSR_PNN_),
-		                    ID($_DLATCHSR_PNP_),
-		                    ID($_DLATCHSR_PPN_),
-		                    ID($_DLATCHSR_PPP_))){
+                            ID($_DLATCH_P_),
+                            ID($_DLATCH_NN0_),
+                            ID($_DLATCH_NN1_),
+                            ID($_DLATCH_NP0_),
+                            ID($_DLATCH_NP1_),
+                            ID($_DLATCH_PN0_),
+                            ID($_DLATCH_PN1_),
+                            ID($_DLATCH_PP0_),
+                            ID($_DLATCH_PP1_),
+                            ID($_DLATCHSR_NNN_),
+                            ID($_DLATCHSR_NNP_),
+                            ID($_DLATCHSR_NPN_),
+                            ID($_DLATCHSR_NPP_),
+                            ID($_DLATCHSR_PNN_),
+                            ID($_DLATCHSR_PNP_),
+                            ID($_DLATCHSR_PPN_),
+                            ID($_DLATCHSR_PPP_))){
                                 string instName = log_id(cell->name);
                                 std::stringstream buf;
                                 for (auto &it : cell->attributes) {
-	            	                RTLIL_BACKEND::dump_const(buf, it.second);
-	                            }
+                                    RTLIL_BACKEND::dump_const(buf, it.second);
+                                }
                                 if(nError < maxDL){
                                     log_warning("Generic DLATCH '%s' (type %s) is not supported by the architecture. Please rewrite the RTL at %s to avoid a LATCH behavior.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
                                 }
@@ -1433,8 +1433,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
               string instName = log_id(ff.name);
               std::stringstream buf;
               for (auto &it : cell->attributes) {
-	            	RTLIL_BACKEND::dump_const(buf, it.second);
-	            }
+                    RTLIL_BACKEND::dump_const(buf, it.second);
+                }
               if (nbErrors < maxPrintOut) {
 
                  log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
@@ -1639,7 +1639,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs");
-                        run("rs_dsp_io_regs");
+                        if (tech == Technologies::GENESIS)
+                            run("rs_dsp_io_regs");
+                        else
+                            run("rs_dsp_io_regs -tech genesis2");
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
@@ -1683,8 +1686,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
-                        run("rs-pack-dsp-regs");
-                        run("rs_dsp_io_regs");
+                        run("rs-pack-dsp-regs -genesis3");
+                        run("rs_dsp_io_regs -tech genesis3");
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
