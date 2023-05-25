@@ -12,16 +12,28 @@ PRIVATE_NAMESPACE_BEGIN
 // MODE_BITS are stored in Big Endian order, so we have to 
 // use reverse of the bit indecies for the access:
 // actual bit idx = 83 --> access idx = 0
+#define MODE_BITS_GENESIS2_START 4
+#define MODE_BITS_GENESIS2_WIDTH 80
 #define MODE_BITS_GENESIS2_ACCESS_REGISTER_INPUTS_ID 0 
 #define MODE_BITS_GENESIS2_ACCESS_OUTPUT_SELECT_END_ID 1
 #define MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH 3
+
+#define MODE_BITS_GENESIS3_START 0
+#define MODE_BITS_GENESIS3_WIDTH 80
+#define MODE_BITS_GENESIS3_OUTPUT_SELECT_WIDTH 3
+#define MODE_BITS_GENESIS3_ACCESS_REGISTER_INPUTS_ID 83
+#define MODE_BITS_GENESIS3_ACCESS_OUTPUT_SELECT_START_ID 80
+bool is_genesis2 = false;
+bool is_genesis3 = false;
 
 // ============================================================================
 
 struct rsDspIORegs : public Pass {
 
-    const std::vector<std::string> ports2del_mult = {"load_acc", "subtract", "acc_fir", "dly_b"};
-    const std::vector<std::string> ports2del_mult_acc = {"acc_fir", "dly_b"};
+    const std::vector<std::string> ports2del_mult_genesis = {"load_acc", "subtract", "acc_fir", "dly_b"};
+    const std::vector<std::string> ports2del_mult = {"load_acc", "subtract", "acc_fir"};
+    const std::vector<std::string> ports2del_mult_acc_genesis = {"acc_fir", "dly_b"};
+    const std::vector<std::string> ports2del_mult_acc = {"acc_fir"};
     const std::vector<std::string> ports2del_mult_add = {"dly_b"};
     const std::vector<std::string> ports2del_extension = {"saturate_enable", "shift_right", "round"};
 
@@ -47,7 +59,15 @@ struct rsDspIORegs : public Pass {
 
         size_t argidx;
         for (argidx = 1; argidx < a_Args.size(); argidx++) {
-            break;
+            if (a_Args[argidx] == "-tech" && argidx + 1 < a_Args.size()) {
+                argidx++;
+                if(a_Args[argidx] == "genesis2")
+                    is_genesis2 = true;
+                else if (a_Args[argidx] == "genesis3")
+                    is_genesis3 = true;
+                else
+                    log_error("Wrong argument specified for tech option");
+            }
         }
         extra_args(a_Args, argidx, a_Design);
 
@@ -99,7 +119,6 @@ struct rsDspIORegs : public Pass {
 
                 bool del_clk = true;
                 bool use_dsp_cfg_params = (cell_type == RTLIL::escape_id("RS_DSP3"));
-                bool is_genesis2 = (cell_type == RTLIL::escape_id("RS_DSP"));
 
                 int reg_in_i;
                 int out_sel_i;
@@ -125,6 +144,24 @@ struct rsDspIORegs : public Pass {
                     RTLIL::Const output_select;
                     output_select = mode_bits->extract(MODE_BITS_GENESIS2_ACCESS_OUTPUT_SELECT_END_ID, MODE_BITS_GENESIS2_OUTPUT_SELECT_WIDTH);
                     out_sel_i = output_select.as_int();
+
+                    RTLIL::Const new_modebits;
+                    new_modebits = mode_bits->extract(MODE_BITS_GENESIS2_START, MODE_BITS_GENESIS2_WIDTH);
+                    dsp->setParam(RTLIL::escape_id("MODE_BITS"), new_modebits);
+                } else if (is_genesis3) {
+                    // Read MODE_BITS at correct indexes
+                    auto mode_bits = &dsp->getParam(RTLIL::escape_id("MODE_BITS"));
+                    RTLIL::Const register_inputs;
+                    register_inputs = mode_bits->bits.at(MODE_BITS_GENESIS3_ACCESS_REGISTER_INPUTS_ID);
+                    reg_in_i = register_inputs.as_int();
+
+                    RTLIL::Const output_select;
+                    output_select = mode_bits->extract(MODE_BITS_GENESIS3_ACCESS_OUTPUT_SELECT_START_ID, MODE_BITS_GENESIS3_OUTPUT_SELECT_WIDTH);
+                    out_sel_i = output_select.as_int();
+
+                    RTLIL::Const new_modebits;
+                    new_modebits = mode_bits->extract(MODE_BITS_GENESIS3_START, MODE_BITS_GENESIS3_WIDTH);
+                    dsp->setParam(RTLIL::escape_id("MODE_BITS"), new_modebits);
                 } else {
                     // Read dedicated configuration ports
                     const RTLIL::SigSpec *register_inputs;
@@ -239,8 +276,9 @@ struct rsDspIORegs : public Pass {
 
                 if (del_clk) {
                     ports2del.push_back("clk");
-                    if (is_genesis2)
+                    if (is_genesis2 || is_genesis3){
                         ports2del.push_back("lreset");
+                    }
 
                 }
 
@@ -257,17 +295,31 @@ struct rsDspIORegs : public Pass {
                     case 5:
                         if (have_macc) {
                             ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
-                        } else {
-                            ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
                         }
                         break;
+                    }
+                } else if (is_genesis3) {
+                    switch (out_sel_i) {
+                        case 0:
+                        case 4:
+                            ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
+                            ports2del.insert(ports2del.end(), ports2del_extension.begin(), ports2del_extension.end());
+                            break;
+                        case 2:
+                        case 6:
+                        case 1:
+                        case 5:
+                            if (have_macc) {
+                                ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
+                            }
+                            break;
                     }
                 } else {
                     switch (out_sel_i) {
                     case 0:
                     case 4:
                     case 6:
-                        ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
+                        ports2del.insert(ports2del.end(), ports2del_mult_genesis.begin(), ports2del_mult_genesis.end());
                         // Mark for deleton additional configuration ports
                         if (!use_dsp_cfg_params) {
                             ports2del.insert(ports2del.end(), ports2del_extension.begin(), ports2del_extension.end());
@@ -279,7 +331,7 @@ struct rsDspIORegs : public Pass {
                     case 5:
                     case 7:
                         if (have_macc) {
-                            ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
+                            ports2del.insert(ports2del.end(), ports2del_mult_acc_genesis.begin(), ports2del_mult_acc_genesis.end());
                         } else {
                             ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
                         }
