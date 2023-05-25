@@ -1514,7 +1514,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             // specific Rapid Silicon logic with -rs_logic option
             //
-            run("tribuf -rs_logic");
+            run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
 
             if (cec)
                run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
