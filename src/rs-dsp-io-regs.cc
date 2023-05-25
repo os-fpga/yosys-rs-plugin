@@ -30,10 +30,8 @@ bool is_genesis3 = false;
 
 struct rsDspIORegs : public Pass {
 
-    const std::vector<std::string> ports2del_mult_genesis = {"load_acc", "subtract", "acc_fir", "dly_b"};
-    const std::vector<std::string> ports2del_mult = {"load_acc", "subtract", "acc_fir"};
-    const std::vector<std::string> ports2del_mult_acc_genesis = {"acc_fir", "dly_b"};
-    const std::vector<std::string> ports2del_mult_acc = {"acc_fir"};
+    const std::vector<std::string> ports2del_mult = {"load_acc", "subtract", "acc_fir", "dly_b"};
+    const std::vector<std::string> ports2del_mult_acc = {"acc_fir", "dly_b"};
     const std::vector<std::string> ports2del_mult_add = {"dly_b"};
     const std::vector<std::string> ports2del_extension = {"saturate_enable", "shift_right", "round"};
 
@@ -206,6 +204,16 @@ struct rsDspIORegs : public Pass {
                         default:
                             break;
                         }
+                    } else if (is_genesis3) {
+                        switch (out_sel_i) {
+                        case 1:
+                        case 5:
+                            del_clk = false;
+                            new_type += "ACC";
+                            break;
+                        default:
+                            break;
+                        }
                     } else {
                         switch (out_sel_i) {
                         case 1:
@@ -225,6 +233,16 @@ struct rsDspIORegs : public Pass {
                         switch (out_sel_i) {
                         case 2:
                         case 3:
+                            del_clk = false;
+                            new_type += "ADD";
+                            break;
+                        default:
+                            break;
+                        }
+                    } else if (is_genesis3) {
+                        switch (out_sel_i) {
+                        case 2:
+                        case 6:
                             del_clk = false;
                             new_type += "ADD";
                             break;
@@ -319,7 +337,7 @@ struct rsDspIORegs : public Pass {
                     case 0:
                     case 4:
                     case 6:
-                        ports2del.insert(ports2del.end(), ports2del_mult_genesis.begin(), ports2del_mult_genesis.end());
+                        ports2del.insert(ports2del.end(), ports2del_mult.begin(), ports2del_mult.end());
                         // Mark for deleton additional configuration ports
                         if (!use_dsp_cfg_params) {
                             ports2del.insert(ports2del.end(), ports2del_extension.begin(), ports2del_extension.end());
@@ -331,7 +349,7 @@ struct rsDspIORegs : public Pass {
                     case 5:
                     case 7:
                         if (have_macc) {
-                            ports2del.insert(ports2del.end(), ports2del_mult_acc_genesis.begin(), ports2del_mult_acc_genesis.end());
+                            ports2del.insert(ports2del.end(), ports2del_mult_acc.begin(), ports2del_mult_acc.end());
                         } else {
                             ports2del.insert(ports2del.end(), ports2del_mult_add.begin(), ports2del_mult_add.end());
                         }
