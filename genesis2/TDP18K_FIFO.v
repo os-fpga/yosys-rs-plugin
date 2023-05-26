@@ -128,15 +128,9 @@ module TDP18K_FIFO (
 	wire ADDR_A_i_new,ADDR_B_i_new;
 	assign ADDR_A_i_new=REN_A_i?ADDR_A_i[3]: addr_a_d[3]; //
     assign ADDR_B_i_new=REN_B_i?ADDR_B_i[3]: addr_b_d[3]; //
-    reg ren_b_new, ren_a_new;
-	always @(posedge CLK_A_i) begin
-	   addr_a_d[3:0] <= {ADDR_A_i_new,ADDR_A_i[2:0]}; // 
-	   ren_a_new <= REN_A_i; // Change: Awais, pipeline the RED_EN
-	end
-	always @(posedge CLK_B_i) begin 
-	   addr_b_d[3:0] <= {ADDR_B_i_new,ADDR_B_i[2:0]};
-	   ren_b_new <= REN_B_i;  // Change: Awais, pipeline the RED_EN
-	end // 
+    
+	always @(posedge CLK_A_i) addr_a_d[3:0] <= {ADDR_A_i_new,ADDR_A_i[2:0]}; // 
+	always @(posedge CLK_B_i) addr_b_d[3:0] <= {ADDR_B_i_new,ADDR_B_i[2:0]}; // 
 	assign cen_a_n = ~cen_a;
 	assign ram_wen_a_n = ~ram_wen_a;
 	assign cen_b_n = ~cen_b;
@@ -274,101 +268,69 @@ module TDP18K_FIFO (
 			wmsk_b = 18'h3ffff;
 		end
 	end
-	
-	reg ram_ren_a_ff;
-	always @(posedge CLK_A_i)begin : RAM_REN_A_FF
-		ram_ren_a_ff <= ram_ren_a;
-	end
-
 	always @(*) begin : RDATA_A_MODE_SEL
-		if(ram_ren_a | ram_ren_a_ff) begin
-			case (RMODE_A_i)
-				default: RDATA_A_o = 18'h00000;
-				MODE_18: RDATA_A_o = ram_rdata_a;
-				MODE_9: begin
-					{RDATA_A_o[17], RDATA_A_o[15:8]} = 9'h000;
-					{RDATA_A_o[16], RDATA_A_o[7:0]} = (ram_addr_a[3] ? {ram_rdata_a[17], ram_rdata_a[15:8]} : {ram_rdata_a[16], ram_rdata_a[7:0]});
-				end
-				MODE_4: begin
-					RDATA_A_o[17:4] = 14'h0000;
-					if (ren_a_new)begin
-						case (ram_addr_a[3:2])
-							3: RDATA_A_o[3:0] = ram_rdata_a[15:12];
-							2: RDATA_A_o[3:0] = ram_rdata_a[11:8];
-							1: RDATA_A_o[3:0] = ram_rdata_a[7:4];
-							0: RDATA_A_o[3:0] = ram_rdata_a[3:0];
-						endcase
-					end
-					else
-						RDATA_A_o = RDATA_A_o;
-				end
-				MODE_2: begin
-					RDATA_A_o[17:2] = 16'h0000;
-					case (ram_addr_a[3:1])
-						7: RDATA_A_o[1:0] = ram_rdata_a[15:14];
-						6: RDATA_A_o[1:0] = ram_rdata_a[13:12];
-						5: RDATA_A_o[1:0] = ram_rdata_a[11:10];
-						4: RDATA_A_o[1:0] = ram_rdata_a[9:8];
-						3: RDATA_A_o[1:0] = ram_rdata_a[7:6];
-						2: RDATA_A_o[1:0] = ram_rdata_a[5:4];
-						1: RDATA_A_o[1:0] = ram_rdata_a[3:2];
-						0: RDATA_A_o[1:0] = ram_rdata_a[1:0];
-					endcase
-				end
-				MODE_1: begin
-					RDATA_A_o[17:1] = 17'h00000;
-					RDATA_A_o[0] = ram_rdata_a[ram_addr_a[3:0]];
-				end
-			endcase
-		end 
-		else begin
-			RDATA_A_o = 18'bxxxx_xxxx_xxxx_xxxx;
-		end
+		case (RMODE_A_i)
+			default: RDATA_A_o = 18'h00000;
+			MODE_18: RDATA_A_o = ram_rdata_a;
+			MODE_9: begin
+				{RDATA_A_o[17], RDATA_A_o[15:8]} = 9'h000;
+				{RDATA_A_o[16], RDATA_A_o[7:0]} = (ram_addr_a[3] ? {ram_rdata_a[17], ram_rdata_a[15:8]} : {ram_rdata_a[16], ram_rdata_a[7:0]});
+			end
+			MODE_4: begin
+				RDATA_A_o[17:4] = 14'h0000;
+				case (ram_addr_a[3:2])
+					3: RDATA_A_o[3:0] = ram_rdata_a[15:12];
+					2: RDATA_A_o[3:0] = ram_rdata_a[11:8];
+					1: RDATA_A_o[3:0] = ram_rdata_a[7:4];
+					0: RDATA_A_o[3:0] = ram_rdata_a[3:0];
+				endcase
+			end
+			MODE_2: begin
+				RDATA_A_o[17:2] = 16'h0000;
+				case (ram_addr_a[3:1])
+					7: RDATA_A_o[1:0] = ram_rdata_a[15:14];
+					6: RDATA_A_o[1:0] = ram_rdata_a[13:12];
+					5: RDATA_A_o[1:0] = ram_rdata_a[11:10];
+					4: RDATA_A_o[1:0] = ram_rdata_a[9:8];
+					3: RDATA_A_o[1:0] = ram_rdata_a[7:6];
+					2: RDATA_A_o[1:0] = ram_rdata_a[5:4];
+					1: RDATA_A_o[1:0] = ram_rdata_a[3:2];
+					0: RDATA_A_o[1:0] = ram_rdata_a[1:0];
+				endcase
+			end
+			MODE_1: begin
+				RDATA_A_o[17:1] = 17'h00000;
+				RDATA_A_o[0] = ram_rdata_a[ram_addr_a[3:0]];
+			end
+		endcase
 	end
-	
-	reg ram_ren_b_ff;
-	always @(posedge CLK_B_i)begin : RAM_REN_B_FF
-		ram_ren_b_ff <= ram_ren_b;
-	end
-
-	always @(*) begin
-		if(ram_ren_b | ram_ren_b_ff) begin
-			case (RMODE_B_i)
-				default: RDATA_B_o = 18'h15566;
-				MODE_18: RDATA_B_o = ram_rdata_b;
-				MODE_9: begin
-					{RDATA_B_o[17], RDATA_B_o[15:8]} = 9'b000000000;
-					{RDATA_B_o[16], RDATA_B_o[7:0]} = (ram_addr_b[3] ? {ram_rdata_b[17], ram_rdata_b[15:8]} : {ram_rdata_b[16], ram_rdata_b[7:0]});
-				end
-				MODE_4:
-				if (ren_b_new) begin
-					case (ram_addr_b[3:2])
-						3: RDATA_B_o[3:0] = ram_rdata_b[15:12];
-						2: RDATA_B_o[3:0] = ram_rdata_b[11:8];
-						1: RDATA_B_o[3:0] = ram_rdata_b[7:4];
-						0: RDATA_B_o[3:0] = ram_rdata_b[3:0];
-					endcase
-				end
-				else
-					RDATA_B_o = RDATA_B_o;
-				MODE_2:
-					case (ram_addr_b[3:1])
-						7: RDATA_B_o[1:0] = ram_rdata_b[15:14];
-						6: RDATA_B_o[1:0] = ram_rdata_b[13:12];
-						5: RDATA_B_o[1:0] = ram_rdata_b[11:10];
-						4: RDATA_B_o[1:0] = ram_rdata_b[9:8];
-						3: RDATA_B_o[1:0] = ram_rdata_b[7:6];
-						2: RDATA_B_o[1:0] = ram_rdata_b[5:4];
-						1: RDATA_B_o[1:0] = ram_rdata_b[3:2];
-						0: RDATA_B_o[1:0] = ram_rdata_b[1:0];
-					endcase
-				MODE_1: RDATA_B_o[0] = ram_rdata_b[{1'b0, ram_addr_b[3:0]}];
-			endcase
-		end 
-		else begin
-			RDATA_B_o = 18'bxxxx_xxxx_xxxx_xxxx;
-		end
-
-	end
+	always @(*)
+		case (RMODE_B_i)
+			default: RDATA_B_o = 18'h15566;
+			MODE_18: RDATA_B_o = ram_rdata_b;
+			MODE_9: begin
+				{RDATA_B_o[17], RDATA_B_o[15:8]} = 9'b000000000;
+				{RDATA_B_o[16], RDATA_B_o[7:0]} = (ram_addr_b[3] ? {ram_rdata_b[17], ram_rdata_b[15:8]} : {ram_rdata_b[16], ram_rdata_b[7:0]});
+			end
+			MODE_4:
+				case (ram_addr_b[3:2])
+					3: RDATA_B_o[3:0] = ram_rdata_b[15:12];
+					2: RDATA_B_o[3:0] = ram_rdata_b[11:8];
+					1: RDATA_B_o[3:0] = ram_rdata_b[7:4];
+					0: RDATA_B_o[3:0] = ram_rdata_b[3:0];
+				endcase
+			MODE_2:
+				case (ram_addr_b[3:1])
+					7: RDATA_B_o[1:0] = ram_rdata_b[15:14];
+					6: RDATA_B_o[1:0] = ram_rdata_b[13:12];
+					5: RDATA_B_o[1:0] = ram_rdata_b[11:10];
+					4: RDATA_B_o[1:0] = ram_rdata_b[9:8];
+					3: RDATA_B_o[1:0] = ram_rdata_b[7:6];
+					2: RDATA_B_o[1:0] = ram_rdata_b[5:4];
+					1: RDATA_B_o[1:0] = ram_rdata_b[3:2];
+					0: RDATA_B_o[1:0] = ram_rdata_b[1:0];
+				endcase
+			MODE_1: RDATA_B_o[0] = ram_rdata_b[{1'b0, ram_addr_b[3:0]}];
+		endcase
 endmodule
 `default_nettype none
