@@ -101,12 +101,12 @@ module RS_DSP_MULT (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
     //Avinash// RS_DSP_MULT
     localparam [2:0] output_select = 3'b000;
@@ -140,12 +140,12 @@ module RS_DSP_MULT_REGIN (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
     //Avinash// RS_DSP_MULT_REGIN
     localparam [2:0] output_select = 3'b000;
@@ -181,12 +181,12 @@ module RS_DSP_MULT_REGOUT (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
    //Avinash// RS_DSP_MULT_REGOUT
     localparam [2:0] output_select = 3'b100;
@@ -222,12 +222,12 @@ module RS_DSP_MULT_REGIN_REGOUT (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
     //Avinash// RS_DSP_MULT_REGIN_REGOUT
     localparam [2:0] output_select = 3'b100;
@@ -270,12 +270,12 @@ module RS_DSP_MULTADD (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
 
     //Avinash// RS_DSP_MULTADD
@@ -328,12 +328,12 @@ module RS_DSP_MULTADD_REGIN (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
   //Avinash// RS_DSP_MULTADD_REGIN
      localparam [2:0] output_select = 3'b010;
@@ -385,12 +385,12 @@ module RS_DSP_MULTADD_REGOUT (
     input  wire        subtract
 );
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
  //Avinash// RS_DSP_MULTADD_REGOUT
     localparam [2:0] output_select = 3'b110;
@@ -442,12 +442,12 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
     //Avinash// RS_DSP_MULTADD_REGIN_REGOUT
     localparam [2:0] output_select = 3'b110;
@@ -496,12 +496,12 @@ module RS_DSP_MULTACC (
     input  wire        round,
     input  wire        subtract
 );
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
     //Avinash// RS_DSP_MULTACC
     localparam [2:0] output_select = 3'b001;
@@ -548,12 +548,12 @@ module RS_DSP_MULTACC_REGIN (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
     //Avinash// RS_DSP_MULTACC_REGIN
     localparam [2:0] output_select = 3'b001;
@@ -604,12 +604,12 @@ module RS_DSP_MULTACC_REGOUT (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
    //Avinash// RS_DSP_MULTACC_REGOUT
     localparam [2:0] output_select = 3'b101;
@@ -660,12 +660,12 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
 );
 
 
-    parameter [79:0] MODE_BITS = 80'd0;
+    parameter [0:79] MODE_BITS = 80'd0;
 
-    localparam [19:0] COEFF_0 = MODE_BITS[19:0];
-    localparam [19:0] COEFF_1 = MODE_BITS[39:20];
-    localparam [19:0] COEFF_2 = MODE_BITS[59:40];
-    localparam [19:0] COEFF_3 = MODE_BITS[79:60];
+    localparam [0:19] COEFF_0 = MODE_BITS[0:19];
+    localparam [0:19] COEFF_1 = MODE_BITS[20:39];
+    localparam [0:19] COEFF_2 = MODE_BITS[40:59];
+    localparam [0:19] COEFF_3 = MODE_BITS[60:79];
 
    //Avinash// RS_DSP_MULTACC_REGIN_REGOUT
     localparam [2:0] output_select = 3'b101;
