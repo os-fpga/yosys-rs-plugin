@@ -1012,3 +1012,73 @@ module soc_fpga_intf (
 
 );
 endmodule
+// --------------------------------------------------------------------------
+// ---------------- Copyright (C) 2023 RapidSilicon -------------------------
+// --------------------------------------------------------------------------
+// ------------------- FIFO18K Primitive Blackbox----------------------------
+// --------------------------------------------------------------------------
+
+(* blackbox *)
+
+module FIFO18K #(
+// Parameters
+parameter   DATA_WIDTH          = 5'd18,
+parameter   SYNC_FIFO           = 1'b1,
+parameter   PROG_FULL_THRESH    = 12'b100000000000,
+parameter   PROG_EMPTY_THRESH   = 12'b111111111100
+)
+(
+// Input/Output
+input wire  [DATA_WIDTH-1:0] WR_DATA,
+output wire [DATA_WIDTH-1:0] RD_DATA,
+output wire EMPTY,
+output wire FULL,
+output wire OVERFLOW,
+output wire UNDERFLOW,
+input wire  RDEN,
+input wire  WREN,
+output wire ALMOST_EMPTY,
+output wire ALMOST_FULL,
+output wire PROG_EMPTY,
+output wire PROG_FULL,
+input wire  WRCLK,
+input wire  RDCLK,
+input wire  RESET
+);
+
+endmodule
+// --------------------------------------------------------------------------
+// ---------------- Copyright (C) 2023 RapidSilicon -------------------------
+// --------------------------------------------------------------------------
+// ------------------- FIFO36K Primitive Blackbox----------------------------
+// --------------------------------------------------------------------------
+
+(* blackbox *)
+
+module FIFO36K #(
+// Parameters
+parameter   DATA_WIDTH          = 6'd36,
+parameter   SYNC_FIFO           = 1'b1,
+parameter   PROG_FULL_THRESH    = 12'b100000000000,
+parameter   PROG_EMPTY_THRESH   = 12'b111111111100
+)
+(
+// Input/Output
+input wire  [DATA_WIDTH-1:0] WR_DATA,
+output wire [DATA_WIDTH-1:0] RD_DATA,
+output wire EMPTY,
+output wire FULL,
+output wire OVERFLOW,
+output wire UNDERFLOW,
+input wire  RDEN,
+input wire  WREN,
+output wire ALMOST_EMPTY,
+output wire ALMOST_FULL,
+output wire PROG_EMPTY,
+output wire PROG_FULL,
+input wire  WRCLK,
+input wire  RDCLK,
+input wire  RESET
+);
+
+endmodule
