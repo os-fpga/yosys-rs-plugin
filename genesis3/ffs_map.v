@@ -631,3 +631,110 @@ module \$_SDFF_NN1_ (D, C, R, Q);
     //dffre _TECHMAP_REPLACE_ (.Q(Q), .D(d), .C(!C), .E(1'b1), .R(1'b1));
     dffnre _TECHMAP_REPLACE_ (.Q(Q), .D(d), .C(C), .E(1'b1), .R(1'b1));
 endmodule
+
+// simple latch
+//
+module \$_DLATCH_P_ (D, E, Q);
+    input D;
+    input E;
+    output Q;
+
+    llatch _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E));
+endmodule
+
+module \$_DLATCH_N_ (D, E, Q);
+    input D;
+    input E;
+    output Q;
+
+    llatchn _TECHMAP_REPLACE_ (.Q(Q), .D(D), .G(E));
+endmodule
+
+// latch with reset
+//
+module \$_DLATCH_PP0_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(R), .G(E));
+endmodule
+
+module \$_DLATCH_PN0_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(!R), .G(E));
+endmodule
+
+module \$_DLATCH_NP0_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchnr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(R), .G(E));
+endmodule
+
+module \$_DLATCH_NN0_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchnr _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(!R), .G(E));
+endmodule
+
+// latch with set 
+//
+module \$_DLATCH_PP1_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchs _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(R), .G(E));
+endmodule
+
+module \$_DLATCH_PN1_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchs _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(!R), .G(E));
+endmodule
+
+module \$_DLATCH_NP1_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchns _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(R), .G(E));
+endmodule
+
+module \$_DLATCH_NN1_ (D, R, E, Q);
+    input D;
+    input E;
+    input R;
+    output Q;
+
+    llatchns _TECHMAP_REPLACE_ (.Q(Q), .D(D), .R(!R), .G(E));
+endmodule
+
+// Do not support complex Latch for now
+//
+//module  \$_DLATCHSR_PPP_ (input E, S, R, D, output Q);
+
+//    llatchsre _TECHMAP_REPLACE_ (.D(D), .Q(Q), .E(1'b1), .G(E),  .R(!R), .S(!S));
+//endmodule
+
+//module  \$_DLATCHSR_NPP_ (input E, S, R, D, output Q);
+
+//    llatchnsre _TECHMAP_REPLACE_ (.D(D), .Q(Q), .E(1'b1), .G(E),  .R(!R), .S(!S));
+//endmodule
+
