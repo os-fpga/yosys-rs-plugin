@@ -37,7 +37,6 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
-#define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
@@ -72,11 +71,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-<<<<<<< HEAD
-#define VERSION_PATCH 160
-=======
-#define VERSION_PATCH 164
->>>>>>> origin/main
+#define VERSION_PATCH 157
 
 enum Strategy {
     AREA,
@@ -1099,11 +1094,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
                 //For $__RS_FACTOR_BRAM36_SDP, 
-               else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36)) ||
-                        ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_18))
-                        ) {      
+               else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36)) {      
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_value2;
@@ -1380,32 +1372,29 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (!RTLIL::builtin_ff_cell_types().count(cell->type))
             continue;
 
-            if (cell->type.in(
-#if 0
-                            ID($_DLATCH_N_),
-                            ID($_DLATCH_P_),
-                            ID($_DLATCH_NN0_),
-                            ID($_DLATCH_NN1_),
-                            ID($_DLATCH_NP0_),
-                            ID($_DLATCH_NP1_),
-                            ID($_DLATCH_PN0_),
-                            ID($_DLATCH_PN1_),
-                            ID($_DLATCH_PP0_),
-                            ID($_DLATCH_PP1_),
-#endif
-                            ID($_DLATCHSR_NNN_),
-                            ID($_DLATCHSR_NNP_),
-                            ID($_DLATCHSR_NPN_),
-                            ID($_DLATCHSR_NPP_),
-                            ID($_DLATCHSR_PNN_),
-                            ID($_DLATCHSR_PNP_),
-                            ID($_DLATCHSR_PPN_),
-                            ID($_DLATCHSR_PPP_))){
+            if (cell->type.in(ID($_DLATCH_N_),
+		                    ID($_DLATCH_P_),
+		                    ID($_DLATCH_NN0_),
+		                    ID($_DLATCH_NN1_),
+		                    ID($_DLATCH_NP0_),
+		                    ID($_DLATCH_NP1_),
+		                    ID($_DLATCH_PN0_),
+		                    ID($_DLATCH_PN1_),
+		                    ID($_DLATCH_PP0_),
+		                    ID($_DLATCH_PP1_),
+		                    ID($_DLATCHSR_NNN_),
+		                    ID($_DLATCHSR_NNP_),
+		                    ID($_DLATCHSR_NPN_),
+		                    ID($_DLATCHSR_NPP_),
+		                    ID($_DLATCHSR_PNN_),
+		                    ID($_DLATCHSR_PNP_),
+		                    ID($_DLATCHSR_PPN_),
+		                    ID($_DLATCHSR_PPP_))){
                                 string instName = log_id(cell->name);
                                 std::stringstream buf;
                                 for (auto &it : cell->attributes) {
-                                    RTLIL_BACKEND::dump_const(buf, it.second);
-                                }
+	            	                RTLIL_BACKEND::dump_const(buf, it.second);
+	                            }
                                 if(nError < maxDL){
                                     log_warning("Generic DLATCH '%s' (type %s) is not supported by the architecture. Please rewrite the RTL at %s to avoid a LATCH behavior.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
                                 }
@@ -1444,8 +1433,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
               string instName = log_id(ff.name);
               std::stringstream buf;
               for (auto &it : cell->attributes) {
-                    RTLIL_BACKEND::dump_const(buf, it.second);
-                }
+	            	RTLIL_BACKEND::dump_const(buf, it.second);
+	            }
               if (nbErrors < maxPrintOut) {
 
                  log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
@@ -1465,9 +1454,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void script() override
     {
-        string readArgs;
-
         if (check_label("begin") && tech != Technologies::GENERIC) {
+            string readArgs;
             switch (tech) {
                 case Technologies::GENESIS: {
                     readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) 
@@ -1482,7 +1470,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 }    
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
-                                GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
@@ -1527,7 +1514,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             // specific Rapid Silicon logic with -rs_logic option
             //
-            run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
+            run("tribuf -rs_logic");
 
             if (cec)
                run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
@@ -1652,10 +1639,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs");
-                        if (tech == Technologies::GENESIS)
-                            run("rs_dsp_io_regs");
-                        else
-                            run("rs_dsp_io_regs -tech genesis2");
+                        run("rs_dsp_io_regs");
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
@@ -1699,8 +1683,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
-                        run("rs-pack-dsp-regs -genesis3");
-                        run("rs_dsp_io_regs -tech genesis3");
+                        run("rs-pack-dsp-regs");
+                        run("rs_dsp_io_regs");
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
@@ -1954,13 +1938,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH 
-                                         // support has not been added to genesis3 architecture.
-                                         // Error out if it is the case. 
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
                          run(
                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
+                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
                             );
                         run("rs_dffsr_conv");
                         if (cec)
@@ -1970,6 +1951,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                                        
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH 
+                                         // support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
+
                         check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
 
@@ -2014,26 +1999,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (check_label("check")) {
             run("hierarchy -check");
+            run("stat");
         }
 
         if (check_label("finalize")) {
             run("opt_clean -purge");
-        }
-
-        // In genesis3 eventually replace and expanse LLatch primitives if any in 
-        // the final netlist.
-        //
-        if (tech == Technologies::GENESIS_3) {
-
-           run("stat");
-
-           run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
-
-           run("flatten");
-
-           // remove the dangling LLatch primitives.
-           //
-           run("opt_clean -purge");
         }
 
         if (check_label("blif")) {
@@ -2054,7 +2024,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
         }
 
-        run("stat");
     }
 
 } SynthRapidSiliconPass;
