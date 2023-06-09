@@ -93,6 +93,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/FIFO36K.v \
 				  $(GENESIS3)/io_cells_sims.sv \
 				  $(GENESIS3)/io_cells_primitives.sv \
+				  $(GENESIS3)/llatches_sim.v
 
 NAME = synth-rs
 SOURCES = src/rs-dsp.cc \
