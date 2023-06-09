@@ -1,4 +1,230 @@
-//
+// ---------------------------------------- //
+// --------------- IO MODEL --------------- //
+// -------------- BLACK BOXES ------------- //
+// ---------------------------------------- //
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module CLK_BUF (
+    input  logic I,             
+    output logic O              
+    );
+
+endmodule
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module IO_BUF
+  (
+    input  logic I,     
+    input  logic T,
+    inout  wire  IO,
+    output logic O
+  );
+  
+endmodule 
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module IO_BUF_DS
+  (
+    input  logic I,     
+    input  logic T,
+    inout  wire IOP,
+    inout  wire ION,
+    output logic O
+  );
+
+endmodule 
+// ---------------------------------------- 
+
+(* blackbox *)
+module I_BUF #(
+    parameter PULL_UP_DOWN = "NONE",
+    parameter SLEW_RATE = "SLOW",
+    parameter REG_EN = "TRUE",
+    parameter DELAY = 0
+    )(
+        input  logic I, 
+        input  logic C,            
+        output logic O             
+    );
+endmodule 
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module I_BUF_DS #(
+    parameter SLEW_RATE = "SLOW",
+    parameter DELAY = 0
+  )( 
+    input  logic OE,    
+    input  logic C,
+    input  logic I_N,
+    input  logic I_P,             
+    output logic O    
+  );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module I_DDR #(
+    parameter SLEW_RATE = "SLOW",
+    parameter DELAY = 0
+  )(
+    input  logic D, 
+    input  logic R,
+    input  logic DLY_ADJ,
+    input  logic DLY_LD,     
+    input  logic DLY_INC,
+    input  logic C,          
+    output logic [1:0] Q              
+  );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module O_BUF #(
+    parameter PULL_UP_DOWN = "NONE",
+    parameter SLEW_RATE = "SLOW",
+    parameter REG_EN = "TRUE",
+    parameter DELAY = 0
+)(
+    input  logic I,     
+    input  logic C,    
+    output logic O          
+);
+
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module O_BUFT_DS #(
+    parameter SLEW_RATE =  "SLOW" ,
+    parameter DELAY = 0
+  )(
+    input  logic OE,    // Output enable
+    input  logic I,     // Input
+    input  logic C,     // Clock      
+    output logic O_N,   // Output N
+    output logic O_P    // Output P
+              
+  );
+
+endmodule
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module O_BUFT  #(
+    parameter SLEW_RATE = "SLOW",
+    parameter DELAY = 0
+  )(
+    input  logic I,             
+    input  logic OE,
+    output logic O              
+  );
+    
+endmodule  
+
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module O_DDR #(
+    parameter SLEW_RATE =  "SLOW" ,
+    parameter DELAY = 0
+  )(
+    input  logic [1:0] D,
+    input  logic R,             
+    input  logic E,
+    input  logic DLY_ADJ,
+    input  logic DLY_LD,
+    input  logic DLY_INC,             
+    input  logic C,                      
+    output logic Q              
+  );
+
+endmodule
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module O_SERDES #(
+  parameter DATA_RATE="DDR",          // SDR,DDR
+            CLOCK_PHASE = 0,           // 0,90,180,270
+            WIDTH = 4,                // 3,4,6,7,8,9,10
+            DELAY = 0                 // 0-31 to WIDTH<=5, 0-63 for WIDTH>5
+  )(
+     input logic [WIDTH-1:0] D,       // Parallel data
+     input logic RST,                 // Active low reset
+     input logic LOAD_WORD,           // Input to load parallel data into register
+     input logic DLY_LOAD,            // Load delay
+     input logic DLY_ADJ,             // Adjust delay
+     input logic DLY_INCDEC,          // Increment or decerement delay
+     input logic CLK_EN,
+     input logic CLK_IN,              // Core clock coming from fabric
+     input logic PLL_LOCK,            // PLL lock signal
+     input logic PLL_FAST_CLK,        // Fast clock coming from PLL (Max 2.5GHz)
+     input logic [3:0] FAST_PHASE_CLK,// Four differnt phases fast clock (0, 90, 180, 270)
+     input logic OE,                  // Output enable
+     output logic CLK_OUT,            // Core clock coming from gearbox to fabric
+     output logic Q,                  // Serial data out
+     output logic [5:0] DLY_TAP_VALUE,// Delay tap values
+     input logic CHANNEL_BOND_SYNC_IN,
+     output logic CHANNEL_BOND_SYNC_OUT
+    );
+
+endmodule
+
+// ---------------------------------------- 
+
+(* blackbox *)
+module I_SERDES #(
+  parameter DATA_RATE = "SDR",         // SDR,DDR
+            WIDTH = 4,                 // 3,4,6,7,8,9,10
+            DPA_MODE = "NONE",         // NONE, DPA, CDR
+            DELAY = 0                  // 0-31 to WIDTH<=5, 0-63 for WIDTH>5
+
+  )(
+      input logic D,                   // Serila data in
+      input logic RST,                 // Active low reset
+      input logic DPA_RST,             // Reset DPA block
+      input logic FIFO_RST,            // Reset synchronous FIFO
+      input logic DLY_LOAD,            // Load delay  (assert for 2 clock cycles)
+      input logic DLY_ADJ,             // Adjust delay (should remain high for 2 clock cycles)
+      input logic DLY_INCDEC,          // Increment or decrement delay (should remain high for 2 clock cycles)
+      input logic BITSLIP_ADJ,         // To adjust bit slip. (Need to stable for at least 2 core clock cycles)
+      input logic EN,
+      input logic CLK_IN,              // Core clock coming from fabric
+      input logic PLL_FAST_CLK,        // Fast clock coming from PLL (Max 2.5 GHz)
+      input logic [3:0] FAST_PHASE_CLK,// Four differnt phases fast clock (0, 90, 180, 270)
+      input logic PLL_LOCK,            // PLL lock signal
+      output logic CLK_OUT,            // Core clock coming from gearbox to fabric
+      output logic CDR_CORE_CLK,            // Core clock coming from gearbox to fabrc in CDR mode only
+      output logic [WIDTH-1 : 0] Q,    // parallel data out
+      output logic DATA_VALID,         // Data valid signal
+      output logic [5:0] DLY_TAP_VALUE,// Delay tap values
+      output logic DPA_LOCK,           // DPA lock signal goes high when DPA block lock the most alligned phase
+      output logic DPA_ERROR           // DPA error if DPA does not find any closest alligned phase
+    );
+
+endmodule
+//------------------------------------------------------------------------------
 // Copyright (C) 2022 RapidSilicon
 // genesis3 DFFs and LATChes
 //
