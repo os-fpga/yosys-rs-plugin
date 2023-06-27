@@ -12,6 +12,7 @@ module dffre(
     input D,
     input R,
     input E,
+    (* clkbuf_sink *)
     input C,
     output reg Q
 );
@@ -37,6 +38,7 @@ module dffnre(
     input D,
     input R,
     input E,
+    (* clkbuf_sink *)
     input C,
     output reg Q
 );
