@@ -54,6 +54,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+#define IO_cells_FILE io_cells_primitives_new.sv
+#define IO_MODEL_FILE io_model_map_new.v
+#define GET_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/IO/" STR(file)
+#define GET_TECHMAP_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/TECHMAP/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
 #define BRAM_WIDTH_9 9
@@ -72,7 +76,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 165
+#define VERSION_PATCH 166
 
 enum Strategy {
     AREA,
@@ -290,6 +294,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool de;
     bool fast;
     bool no_flatten;
+    bool no_iobuf;
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
@@ -318,6 +323,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         cec = false;
         fast = false;
         no_flatten = false;
+        no_iobuf= false;
         nobram = false;
         max_bram = -1;
         max_carry_length = -1;
@@ -397,6 +403,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 fast = true;
                 continue;
             }
+            if (args[argidx] == "-no_iobuf") {
+				no_iobuf = true;
+				continue;
+			}
 #ifdef DEV_BUILD
             if (args[argidx] == "-abc" && argidx + 1 < args.size()) {
                 abc_script = args[++argidx];
@@ -2030,6 +2040,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
            // remove the dangling LLatch primitives.
            //
            run("opt_clean -purge");
+           string readIOArgs;
+           readIOArgs=GET_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_cells_FILE);// RS_IO_BUF_Primitives
+           
+           if (!no_iobuf){
+                run("read_verilog -sv -lib "+readIOArgs);
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -tinoutpad rs__IOBUF ~T:O:I:IO");
+                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("clkbufmap -buf rs__CLK_BUF O:I");
+                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+           }
+
+
         }
 
         if (check_label("blif")) {
