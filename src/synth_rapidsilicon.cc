@@ -300,6 +300,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nosimplify;
     bool keep_tribuf;
     bool nolibmap;
+    bool preserve_ip;
     int de_max_threads;
     int max_bram;
     int max_carry_length;
@@ -340,6 +341,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
+        preserve_ip = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -490,7 +492,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 clke_strategy_str = args[++argidx];
                 continue;
             }
-
+            if (args[argidx] == "-preserve_ip") {
+                preserve_ip = true;
+                continue;
+            }
             break;
         }
         extra_args(args, argidx, design);
@@ -1472,6 +1477,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void script() override
     {
         string readArgs;
+
+        if (preserve_ip){
+            RTLIL::IdString protectId("$rs_protected");
+            for (auto &module : _design->selected_modules()) {
+                if (module->get_bool_attribute(protectId)) {
+                    run("blackbox %s", module->name.c_str());
+                    _design->unset_protcted_rtl();
+                }
+            }
+        }
 
         if (check_label("begin") && tech != Technologies::GENERIC) {
             switch (tech) {
