@@ -172,6 +172,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Do not flatten design to preserve hierarchy.\n");
         log("        Disabled, design is flattened by default.\n");
         log("\n");
+        log("    -no_iobuf\n");
+        log("        Do not adds IO and CLK Buffers.\n");
+        log("        Disabled, IO-Buffers are added by default.\n");
+        log("\n");
+        log("    -preserve_ip\n");
+        log("        It preserves the encrypted IP instance during synthesis.\n");
+        log("        Disabled, do not preserve the encrypted IP instance by default.\n");
+        log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
         log("        Disabled by default.\n");
@@ -1482,7 +1490,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             RTLIL::IdString protectId("$rs_protected");
             for (auto &module : _design->selected_modules()) {
                 if (module->get_bool_attribute(protectId)) {
-                    run("blackbox %s", module->name.c_str());
+                    run(stringf("blackbox %s", module->name.c_str()));
                     _design->unset_protcted_rtl();
                 }
             }
