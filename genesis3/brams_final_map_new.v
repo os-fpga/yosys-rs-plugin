@@ -33,8 +33,8 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
-	parameter [18431:0] INIT0 = 18432'bx;
-	parameter [18431:0] INIT1 = 18432'bx;
+	parameter [18431:0] INIT0 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+	parameter [18431:0] INIT1 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
 
 	localparam CFG_ABITS = 14;    
 
@@ -374,8 +374,8 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
-	parameter [18431:0] INIT0 = 18432'bx;
-	parameter [18431:0] INIT1 = 18432'bx;
+	parameter [18431:0] INIT0 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+	parameter [18431:0] INIT1 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
 	
 	localparam CFG_ABITS = 14;
 
