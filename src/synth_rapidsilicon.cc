@@ -76,7 +76,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 171
+#define VERSION_PATCH 172
 
 enum Strategy {
     AREA,
@@ -635,7 +635,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return (_design->top_module()->cells_.size());
     }
 
-    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter) {
+    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
 
         string nodffe_str = "";
         string sat_str = "";
@@ -668,7 +668,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (nosdff) {
                run("opt_dff -nosdff " + nodffe_str + sat_str);
             } else {
-               run("opt_dff " + nosdff_str + nodffe_str + sat_str);
+                if (no_sdff_temp)
+                    run("opt_dff "  + nodffe_str + sat_str);
+                else
+                    run("opt_dff " + nosdff_str + nodffe_str + sat_str);
             }
             run("opt_clean");
             run("opt_expr");
@@ -778,7 +781,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!fast)
-            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -826,7 +829,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         // Do not extract DFFE before simplify : it may have been done earlier
         //
-        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10);
+        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10, 0);
 
         int maxLoop = 4;
 
@@ -850,7 +853,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         run("opt_ffinv");
 
-        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
+        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
     }
 
     void transform(int bmuxmap)
@@ -1580,7 +1583,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
 
             run("check");
-            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
+            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
 
             if (fsm_encoding == Encoding::BINARY)
                 run("fsm -encoding binary");
@@ -1593,9 +1596,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (fast)
                 run("opt -fast");
             else if (clke_strategy == ClockEnableStrategy::EARLY) {
-                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
             } else {
-                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
             }
 
             run("wreduce -keepdc");
@@ -1749,7 +1752,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
             }
 
 #ifdef DEV_BUILD
@@ -1772,6 +1775,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
             mapBrams();
         }
 
+#if 1
+        // In Genesis3 we do not support DFF with sync set/reset so we need to unmap them. We do this
+        // right after "mapBrams" because it may screw up Map inference if we dissolve the sync set/reset
+        // logic before.
+        // This is also the place where we noticed the minimum QoR diff on the Golden suite (Thierry).
+        //
+        if (tech == GENESIS_3) {
+          run("dffunmap -srst-only");
+          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+        }
+#endif
+
         run("pmuxtree");
 
         run("muxpack");
@@ -1779,6 +1794,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("memory_map");
 
         postProcessBrams();
+
+#if 0
+        if (tech == GENESIS_3) {
+          run("dffunmap -srst-only");
+          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+        }
+#endif
 
         if (check_label("map_gates")) {
             std::string arithMapFile;
@@ -1856,7 +1878,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
             }
 
             run("opt_expr -full");
@@ -2027,7 +2049,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
             if (!fast)
-                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
         }
 
         // Map left over cells like $mux (EDA-1441)
