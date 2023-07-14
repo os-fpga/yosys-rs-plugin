@@ -860,12 +860,13 @@ output Y;
 endmodule
 
 (* blackbox *)
-<<<<<<< HEAD
 module LUT1 (A, Y);
     parameter INIT_VALUE = 2'h0;
     input wire A;
     output wire Y;
-=======
+
+endmodule
+(* blackbox *)
 module SOC_FPGA_INTF_AHB_S (
     output logic  		  S0_HRESETN_I  ,
     output logic   [        31:0] S0_HADDR     ,
@@ -1061,17 +1062,17 @@ module SOC_FPGA_INTF_DMA (
     input  logic                DMA_RST_N     
 
 );
->>>>>>> main
 
 endmodule
 
 (* blackbox *)
-<<<<<<< HEAD
 module LUT2 (A, Y);
     parameter INIT_VALUE = 4'h0;
     input wire [1:0] A;
     output wire Y;
-=======
+endmodule 
+
+(* blackbox *)
 module SOC_FPGA_INTF_GPIO (
     // FPGA GPIO
     output logic  [        39:0] GPIO_O       ,
@@ -1081,17 +1082,17 @@ module SOC_FPGA_INTF_GPIO (
     input  logic                 GPIO_RST_N    
 
 );
->>>>>>> main
 
 endmodule
 
 (* blackbox *)
-<<<<<<< HEAD
 module LUT3 (A, Y);
     parameter INIT_VALUE = 8'h0;
     input wire [2:0] A;
     output wire Y;
-=======
+
+endmodule
+(* blackbox *)
 module SOC_FPGA_INTF_IRQ (
     // FPGA IRQ
     input  logic [        15:0] IRQ_SRC          ,
@@ -1100,12 +1101,10 @@ module SOC_FPGA_INTF_IRQ (
     input  logic                IRQ_RST_N
 
 );
->>>>>>> main
 
 endmodule
 
 (* blackbox *)
-<<<<<<< HEAD
 module LUT4 (A, Y);
     parameter INIT_VALUE = 16'h0;
     input wire [3:0] A;
@@ -1159,8 +1158,8 @@ module DSP38 (A, B, ACC_FIR, Z, CLK, LRESET, FEEDBACK, LOAD_ACC, DLY_B,
     parameter        INPUT_REG   = 1'h0;
     parameter        ACCUMULATOR = 1'h0;
     parameter        ADDER       = 1'h0;
-    
-=======
+endmodule
+(* blackbox *)
 module SOC_FPGA_INTF_JTAG (
     // JTAG
     input      logic        BOOT_JTAG_TCK                ,
@@ -1384,5 +1383,4 @@ input wire  RDCLK,
 input wire  RESET
 );
 
->>>>>>> main
 endmodule
