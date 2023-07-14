@@ -37,6 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
+#define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
@@ -59,6 +60,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define LUT_MAP_FILE LUT.v
 #define LUT_FINAL_MAP_FILE lut_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+#define IO_cells_FILE io_cells_primitives_new.sv
+#define IO_MODEL_FILE io_model_map_new.v
+#define GET_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/IO/" STR(file)
+#define GET_TECHMAP_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/TECHMAP/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
 #define BRAM_WIDTH_9 9
@@ -77,8 +82,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 152
-
+#define VERSION_PATCH 172
 
 enum Strategy {
     AREA,
@@ -174,6 +178,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Do not flatten design to preserve hierarchy.\n");
         log("        Disabled, design is flattened by default.\n");
         log("\n");
+        log("    -no_iobuf\n");
+        log("        Do not adds IO and CLK Buffers.\n");
+        log("        Disabled, IO-Buffers are added by default.\n");
+        log("\n");
+        log("    -preserve_ip\n");
+        log("        It preserves the encrypted IP instance during synthesis.\n");
+        log("        Disabled, do not preserve the encrypted IP instance by default.\n");
+        log("\n");
         log("    -de\n");
         log("        Use Design Explorer for logic optimiztion and LUT mapping.\n");
         log("        Disabled by default.\n");
@@ -200,6 +212,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - auto     : Infer carries based on internal heuristics.\n");
         log("        - no       : Do not infer any carries.\n");
         log("        By default 'auto' mode is used.\n");
+        log("\n");
+        log("    -max_carry_length <num>\n");
+        log("        Specify the maximum length of carry chain.\n");
+        log("        Specify a value >= 1, which should not\n");
+        log("        exceed the available carry lenght on the target device. \n");
+        log("        The flag should be used with -max_device_carry_length. \n");
+        log("        By default synthesis tool will not limit carry chain length. \n");
+        log("\n");
+        log("    -max_device_carry_length <num>\n");
+        log("        Specify the number of available carry resources for the target device.\n");
         log("\n");
 #ifdef DEV_BUILD
         log("    -sdffr\n");
@@ -286,13 +308,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool de;
     bool fast;
     bool no_flatten;
+    bool no_iobuf;
     CarryMode infer_carry;
     bool sdffr;
     bool nosimplify;
     bool keep_tribuf;
     bool nolibmap;
+    bool preserve_ip;
     int de_max_threads;
     int max_bram;
+    int max_carry_length;
     int max_dsp;
     RTLIL::Design *_design;
     string nosdff_str;
@@ -313,8 +338,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         cec = false;
         fast = false;
         no_flatten = false;
+        no_iobuf= false;
         nobram = false;
         max_bram = -1;
+        max_carry_length = -1;
         max_dsp = -1;
         DSP_COUNTER = 0;
         nodsp = false;
@@ -328,6 +355,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         nosdff_str = " -nosdff";
         clke_strategy = ClockEnableStrategy::EARLY;
         use_dsp_cfg_params = "";
+        preserve_ip = false;
     }
 
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
@@ -346,6 +374,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         clear_flags();
         int max_device_bram = -1;
         int max_device_dsp = -1;
+        int max_device_carry_length = -1;
         _design = design;
 
         size_t argidx;
@@ -390,6 +419,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 fast = true;
                 continue;
             }
+            if (args[argidx] == "-no_iobuf") {
+				no_iobuf = true;
+				continue;
+			}
 #ifdef DEV_BUILD
             if (args[argidx] == "-abc" && argidx + 1 < args.size()) {
                 abc_script = args[++argidx];
@@ -421,6 +454,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-max_device_dsp" && argidx + 1 < args.size()) {
                 max_device_dsp = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_carry_length" && argidx + 1 < args.size()) {
+                max_carry_length = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_carry_length" && argidx + 1 < args.size()) {
+                max_device_carry_length = stoi(args[++argidx]);
                 continue;
             }
 #ifdef DEV_BUILD
@@ -465,7 +506,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 clke_strategy_str = args[++argidx];
                 continue;
             }
-
+            if (args[argidx] == "-preserve_ip") {
+                preserve_ip = true;
+                continue;
+            }
             break;
         }
         extra_args(args, argidx, design);
@@ -477,6 +521,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         } else if (max_bram == -1){
             max_bram = max_device_bram;
         }
+
         if (max_device_dsp == -1 && max_dsp != -1) {
                 log_cmd_error("Invalid use of max_dsp flag. Please see help.\n");
         } else if (max_dsp > max_device_dsp){
@@ -484,6 +529,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         } else if (max_dsp == -1){
             max_dsp = max_device_dsp; 
         }
+
+        if (max_device_carry_length == -1 && max_carry_length != -1) {
+                log_cmd_error("Invalid use of max_carry_length flag. Please see help.\n");
+        } else if (max_carry_length > max_device_carry_length){
+                log_cmd_error("Invalid value of max_carry_length is specified. The available carry length is %d.\n", max_device_carry_length);
+        } else if (max_carry_length == -1){
+            max_carry_length = max_device_carry_length;
+        }
+
         if (!design->full_selection())
             log_cmd_error("This command only operates on fully selected designs!\n");
 
@@ -587,7 +641,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return (_design->top_module()->cells_.size());
     }
 
-    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter) {
+    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
 
         string nodffe_str = "";
         string sat_str = "";
@@ -620,7 +674,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (nosdff) {
                run("opt_dff -nosdff " + nodffe_str + sat_str);
             } else {
-               run("opt_dff " + nosdff_str + nodffe_str + sat_str);
+                if (no_sdff_temp)
+                    run("opt_dff "  + nodffe_str + sat_str);
+                else
+                    run("opt_dff " + nosdff_str + nodffe_str + sat_str);
             }
             run("opt_clean");
             run("opt_expr");
@@ -730,7 +787,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!fast)
-            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
 
         if (cec)
             run("write_verilog -noexpr -nodec after_lut_map" + std::to_string(index) + ".v");
@@ -778,7 +835,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         // Do not extract DFFE before simplify : it may have been done earlier
         //
-        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10);
+        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10, 0);
 
         int maxLoop = 4;
 
@@ -802,7 +859,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         run("opt_ffinv");
 
-        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
+        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
     }
 
     void transform(int bmuxmap)
@@ -999,12 +1056,59 @@ struct SynthRapidSiliconPass : public ScriptPass {
                            (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
                           ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
                            (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1))))) {
+                            
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_value2;
+                    std::vector<RTLIL::State> init_temp;
+                    std::vector<RTLIL::State> init_temp2;
+
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+
+                        if (i % 2 == 0){
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                                init_value1.push_back(init_temp[k]);
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
+                            init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                            init_temp.clear();
+                        }
+                        else
+                        {
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                                init_temp2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                                init_value2.push_back(init_temp2[k]);
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value2.push_back(init_temp2[m]);
+                            init_value2.push_back(init_temp2[BRAM_first_byte_parity_bit]);//placed at location [16]
+                            init_value2.push_back(init_temp2[BRAM_second_byte_parity_bit]);
+                            init_temp2.clear();
+                        }
+                    }
+                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+
+                }
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_TDP
+                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) && 
+                        ((((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_9))||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_4)) ||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
+                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
+                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1)))
+                        )) {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
                     int width_size = 0;
-                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
-                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
+                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP")))
                         width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
                     else
                         width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
@@ -1023,8 +1127,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
                 //For $__RS_FACTOR_BRAM36_SDP, 
-               else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36)) {      
+               else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36)) ||
+                        ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
+                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_18))
+                        ) {      
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_value2;
@@ -1043,57 +1150,68 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_TDP
-                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) && 
-                        ((((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_9))||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_4)) ||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1)))
-                        )) {
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_SDP
+                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))) && 
+                        ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
+
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_value2;
                     std::vector<RTLIL::State> init_temp;
-                    int width_size = 0;
-                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
-                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
-                        width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
-                    else
-                        width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
+                    std::vector<RTLIL::State> init_temp2;
 
-                    for (int i = 0; i < width_size; ++i) {
-                        for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                            init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                            init_value1.push_back(init_temp[k]);
-                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
-                            init_value1.push_back(init_temp[m]);
-                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
-                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
-                        init_temp.clear();
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+
+                        if (i % 2 == 0){
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                                init_value1.push_back(init_temp[k]);
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
+                            init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                            init_temp.clear();
+                        }
+                        else
+                        {
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                                init_temp2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
+                                init_value2.push_back(init_temp2[k]);
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value2.push_back(init_temp2[m]);
+                            init_value2.push_back(init_temp2[BRAM_first_byte_parity_bit]);//placed at location [16]
+                            init_value2.push_back(init_temp2[BRAM_second_byte_parity_bit]);
+                            init_temp2.clear();
+                        }
                     }
+                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                 }
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_SDP and $__RS_FACTOR_BRAM18_SDP
-                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))||
-                        (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
+                
+                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_SDP
+                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
                         ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
                          (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
                          (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) ||
+                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
                     
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
-                    int width_size = 0;
-                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))  ||
-                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
-                        width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
-                    else
-                        width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
+                    int width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
 
                     for (int i = 0; i < width_size; ++i) {
                         for (int j = 0; j <BRAM_WIDTH_18; ++j)
@@ -1290,29 +1408,32 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (!RTLIL::builtin_ff_cell_types().count(cell->type))
             continue;
 
-            if (cell->type.in(ID($_DLATCH_N_),
-		                    ID($_DLATCH_P_),
-		                    ID($_DLATCH_NN0_),
-		                    ID($_DLATCH_NN1_),
-		                    ID($_DLATCH_NP0_),
-		                    ID($_DLATCH_NP1_),
-		                    ID($_DLATCH_PN0_),
-		                    ID($_DLATCH_PN1_),
-		                    ID($_DLATCH_PP0_),
-		                    ID($_DLATCH_PP1_),
-		                    ID($_DLATCHSR_NNN_),
-		                    ID($_DLATCHSR_NNP_),
-		                    ID($_DLATCHSR_NPN_),
-		                    ID($_DLATCHSR_NPP_),
-		                    ID($_DLATCHSR_PNN_),
-		                    ID($_DLATCHSR_PNP_),
-		                    ID($_DLATCHSR_PPN_),
-		                    ID($_DLATCHSR_PPP_))){
+            if (cell->type.in(
+#if 0
+                            ID($_DLATCH_N_),
+                            ID($_DLATCH_P_),
+                            ID($_DLATCH_NN0_),
+                            ID($_DLATCH_NN1_),
+                            ID($_DLATCH_NP0_),
+                            ID($_DLATCH_NP1_),
+                            ID($_DLATCH_PN0_),
+                            ID($_DLATCH_PN1_),
+                            ID($_DLATCH_PP0_),
+                            ID($_DLATCH_PP1_),
+#endif
+                            ID($_DLATCHSR_NNN_),
+                            ID($_DLATCHSR_NNP_),
+                            ID($_DLATCHSR_NPN_),
+                            ID($_DLATCHSR_NPP_),
+                            ID($_DLATCHSR_PNN_),
+                            ID($_DLATCHSR_PNP_),
+                            ID($_DLATCHSR_PPN_),
+                            ID($_DLATCHSR_PPP_))){
                                 string instName = log_id(cell->name);
                                 std::stringstream buf;
                                 for (auto &it : cell->attributes) {
-	            	                RTLIL_BACKEND::dump_const(buf, it.second);
-	                            }
+                                    RTLIL_BACKEND::dump_const(buf, it.second);
+                                }
                                 if(nError < maxDL){
                                     log_warning("Generic DLATCH '%s' (type %s) is not supported by the architecture. Please rewrite the RTL at %s to avoid a LATCH behavior.\n", instName.c_str(),log_id(cell->type),buf.str().c_str());
                                 }
@@ -1351,8 +1472,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
               string instName = log_id(ff.name);
               std::stringstream buf;
               for (auto &it : cell->attributes) {
-	            	RTLIL_BACKEND::dump_const(buf, it.second);
-	            }
+                    RTLIL_BACKEND::dump_const(buf, it.second);
+                }
               if (nbErrors < maxPrintOut) {
 
                  log_warning("Synchronous register element Generic DFF '%s' (type %s) describes both asynchrnous set and reset function and not supported by the architecture. Please update the RTL at %s to either change the description to synchronous set/reset or a static 0 or 1 value.\n", instName.c_str(),log_id(ff.cell->type),buf.str().c_str());
@@ -1372,8 +1493,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void script() override
     {
+        string readArgs;
+
+        if (preserve_ip){
+            RTLIL::IdString protectId("$rs_protected");
+            for (auto &module : _design->selected_modules()) {
+                if (module->get_bool_attribute(protectId)) {
+                    run(stringf("blackbox %s", module->name.c_str()));
+                    _design->unset_protcted_rtl();
+                }
+            }
+        }
+
         if (check_label("begin") && tech != Technologies::GENERIC) {
-            string readArgs;
             switch (tech) {
                 case Technologies::GENESIS: {
                     readArgs = GET_FILE_PATH(GENESIS_DIR, SIM_LIB_FILE) 
@@ -1388,6 +1520,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 }    
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, CARRY_CHAIN_MAP_FILE)
@@ -1435,7 +1568,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             // specific Rapid Silicon logic with -rs_logic option
             //
-            run("tribuf -rs_logic");
+            run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
 
             if (cec)
                run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
@@ -1459,7 +1592,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
 
             run("check");
-            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
+            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
 
             if (fsm_encoding == Encoding::BINARY)
                 run("fsm -encoding binary");
@@ -1472,9 +1605,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (fast)
                 run("opt -fast");
             else if (clke_strategy == ClockEnableStrategy::EARLY) {
-                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
             } else {
-                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
             }
 
             run("wreduce -keepdc");
@@ -1562,7 +1695,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs");
-                        run("rs_dsp_io_regs");
+                        if (tech == Technologies::GENESIS)
+                            run("rs_dsp_io_regs");
+                        else
+                            run("rs_dsp_io_regs -tech genesis2");
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
@@ -1606,10 +1742,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
+<<<<<<< HEAD
                         run("rs-pack-dsp-regs");
                         run("stat");
                         run("rs_dsp_io_regs");
                         run("stat");
+=======
+                        run("rs-pack-dsp-regs -genesis3");
+                        run("rs_dsp_io_regs -tech genesis3");
+
+>>>>>>> main
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
             #if 1
@@ -1631,7 +1773,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
             }
 
 #ifdef DEV_BUILD
@@ -1654,6 +1796,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
             mapBrams();
         }
 
+#if 1
+        // In Genesis3 we do not support DFF with sync set/reset so we need to unmap them. We do this
+        // right after "mapBrams" because it may screw up Map inference if we dissolve the sync set/reset
+        // logic before.
+        // This is also the place where we noticed the minimum QoR diff on the Golden suite (Thierry).
+        //
+        if (tech == GENESIS_3) {
+          run("dffunmap -srst-only");
+          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+        }
+#endif
+
         run("pmuxtree");
 
         run("muxpack");
@@ -1661,6 +1815,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("memory_map");
 
         postProcessBrams();
+
+#if 0
+        if (tech == GENESIS_3) {
+          run("dffunmap -srst-only");
+          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+        }
+#endif
 
         if (check_label("map_gates")) {
             std::string arithMapFile;
@@ -1689,7 +1850,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             switch (tech) {
                 case Technologies::GENESIS:
-                case Technologies::GENESIS_3:
                 case Technologies::GENESIS_2: {
 #ifdef DEV_BUILD
                     run("stat");
@@ -1721,6 +1881,24 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                     break;    
                 }    
+                case Technologies::GENESIS_3: {
+                    switch (infer_carry) {
+                        case CarryMode::AUTO: {
+                            run(stringf("techmap -map +/techmap.v -map %s -D MAX_CARRY_CHAIN=%u", arithMapFile.c_str(), max_carry_length));
+                            break;
+                        }
+                        case CarryMode::ALL: {
+                            run(stringf("techmap -map +/techmap.v -map %s -D MAX_CARRY_CHAIN=%u", allArithMapFile.c_str(), max_carry_length));
+                            break;
+                        }
+                        case CarryMode::NO: {
+                            run("techmap");
+                            break;
+                        }
+                    }
+                    run("stat");
+                            break;
+                }
                 case Technologies::GENERIC: {
                     run("techmap");
                     break;
@@ -1731,7 +1909,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
             }
 
             run("opt_expr -full");
@@ -1857,10 +2035,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
+                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH 
+                                         // support has not been added to genesis3 architecture.
+                                         // Error out if it is the case. 
                         // TODO: run("shregmap -minlen 8 -maxlen 20");
                          run(
                                "dfflegalize -cell $_DFF_?_ 0 -cell $_DFF_???_ 0 -cell $_DFFE_????_ 0"
-                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0"
+                               " -cell $_DFFSR_???_ 0 -cell $_DFFSRE_????_ 0 -cell $_DLATCH_?_ 0 -cell $_DLATCH_???_ 0"
                             );
                         run("rs_dffsr_conv");
                         if (cec)
@@ -1870,10 +2051,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("stat");
 #endif
                                        
-                        check_DLATCH (); // Make sure that design does not have Latches since DLATCH 
-                                         // support has not been added to genesis3 architecture.
-                                         // Error out if it is the case. 
-
                         check_DFFSR(); // make sure we do not have any Generic DFFs with async. SR.
                                        // Error out if it is the case. 
 
@@ -1902,7 +2079,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
             if (!fast)
-                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4);
+                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
         }
 
         // Map left over cells like $mux (EDA-1441)
@@ -1924,11 +2101,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (check_label("check")) {
             run("hierarchy -check");
-            run("stat");
         }
 
         if (check_label("finalize")) {
             run("opt_clean -purge");
+        }
+
+        // In genesis3 eventually replace and expanse LLatch primitives if any in 
+        // the final netlist.
+        //
+        if (tech == Technologies::GENESIS_3) {
+
+           run("stat");
+
+           run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
+
+           run("flatten");
+
+           // remove the dangling LLatch primitives.
+           //
+           run("opt_clean -purge");
+           string readIOArgs;
+           readIOArgs=GET_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_cells_FILE);// RS_IO_BUF_Primitives
+           
+           if (!no_iobuf){
+                run("read_verilog -sv -lib "+readIOArgs);
+                run("clkbufmap -buf rs__CLK_BUF O:I");
+                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -tinoutpad rs__IOBUF ~T:O:I:IO");
+                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+
+           }
+
+
         }
 
         if (check_label("blif")) {
@@ -1949,6 +2154,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
         }
 
+        run("stat");
     }
 
 } SynthRapidSiliconPass;
