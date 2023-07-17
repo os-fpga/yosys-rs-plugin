@@ -41,6 +41,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
+#define LUTx_SIM_FILE LUT.v
+#define LUT_FINAL_MAP_FILE lut_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
@@ -56,6 +58,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define IO_cells_FILE io_cells_primitives_new.sv
 #define IO_MODEL_FILE io_model_map_new.v
+#define GET_FILE_PATH_RS_LUTx_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/LUT/" STR(file)
 #define GET_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/IO/" STR(file)
 #define GET_TECHMAP_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/TECHMAP/" STR(file)
 #define BRAM_WIDTH_36 36
@@ -1515,7 +1518,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
-                                GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE)
+                                GET_FILE_PATH_RS_LUTx_PRIMITVES(GENESIS_3_DIR, LUTx_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
@@ -2097,7 +2101,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
            }
 
-
+#if 1
+            string techMaplutArgs = GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
+            run("techmap -map" + techMaplutArgs);
+#endif
         }
 
         if (check_label("blif")) {
