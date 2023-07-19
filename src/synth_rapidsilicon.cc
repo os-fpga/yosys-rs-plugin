@@ -2075,7 +2075,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         // the final netlist.
         //
         if (tech == Technologies::GENESIS_3) {
+#if 0    //Removing latch conversion to $lut for EDA-1773
+           run("stat");
 
+           run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
+
+           run("flatten");
+#endif
            // remove the dangling LLatch primitives.
            //
            run("opt_clean -purge");
