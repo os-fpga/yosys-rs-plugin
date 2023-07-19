@@ -1408,15 +1408,3 @@ module DSP38 (A, B, ACC_FIR, Z, CLK, LRESET, FEEDBACK, LOAD_ACC, DLY_B,
     parameter        ADDER       = 1'h0;
     
 endmodule
-//------------------------------------------------------------------------------
-// 1 bit adder_carry
-//------------------------------------------------------------------------------
-(* blackbox *)
-module adder_carry (p, g, cin, sumout, cout);
-    input p;
-    input g;
-    input cin;
-    output sumout;
-    output cout;
-
-endmodule
