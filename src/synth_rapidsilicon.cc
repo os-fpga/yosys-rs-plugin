@@ -2081,10 +2081,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
            run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
 
            run("flatten");
-#endif
+
            // remove the dangling LLatch primitives.
            //
            run("opt_clean -purge");
+#endif
            string readIOArgs;
            readIOArgs=GET_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_cells_FILE);// RS_IO_BUF_Primitives
            
