@@ -1408,3 +1408,78 @@ module DSP38 (A, B, ACC_FIR, Z, CLK, LRESET, FEEDBACK, LOAD_ACC, DLY_B,
     parameter        ADDER       = 1'h0;
     
 endmodule
+//------------------------------------------------------------------------------
+//
+// Copyright (C) 2023 RapidSilicon
+//
+// genesis3 LLATChes
+//
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Positive level-sensitive latch implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCH(D, G, Q);
+  input D;
+  input G;
+  output Q;
+
+endmodule
+//------------------------------------------------------------------------------
+// Negative level-sensitive latch implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHN(D, G, Q);
+  input D;
+  input G;
+  output Q;
+
+endmodule
+//------------------------------------------------------------------------------
+// Positive level-sensitive latch with active-high asyncronous reset
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHR(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
+//------------------------------------------------------------------------------
+// Positive level-sensitive latch with active-high asyncronous set
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHS(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
+//------------------------------------------------------------------------------
+// Negative level-sensitive latch with active-high asyncronous reset
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHNR(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
+//------------------------------------------------------------------------------
+// Negative level-sensitive latch with active-high asyncronous set
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHNS(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
