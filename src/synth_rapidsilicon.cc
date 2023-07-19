@@ -2076,12 +2076,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         if (tech == Technologies::GENESIS_3) {
 
-           run("stat");
-
-           run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
-
-           run("flatten");
-
            // remove the dangling LLatch primitives.
            //
            run("opt_clean -purge");
