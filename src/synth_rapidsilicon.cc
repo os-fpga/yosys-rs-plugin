@@ -79,7 +79,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 173
+#define VERSION_PATCH 174
 
 enum Strategy {
     AREA,
@@ -2079,7 +2079,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         // the final netlist.
         //
         if (tech == Technologies::GENESIS_3) {
-
+#if 0    //Removing latch conversion to $lut for EDA-1773
            run("stat");
 
            run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
@@ -2089,6 +2089,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
            // remove the dangling LLatch primitives.
            //
            run("opt_clean -purge");
+#endif
            string readIOArgs;
            readIOArgs=GET_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_cells_FILE);// RS_IO_BUF_Primitives
            
