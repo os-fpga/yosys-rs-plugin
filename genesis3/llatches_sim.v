@@ -17,7 +17,7 @@
 //        if (G == 1'b1)
 //            Q <= D;
 //endmodule
-module llatch(D, G, Q);
+module LATCH(D, G, Q);
   input D;
   input G;
   output Q;
@@ -45,7 +45,7 @@ endmodule
 //        if (G == 1'b0)
 //            Q <= D;
 //endmodule
-module llatchn(D, G, Q);
+module LATCHN(D, G, Q);
   input D;
   input G;
   output Q;
@@ -78,7 +78,7 @@ endmodule
 //        else if (G == 1'b1)
 //            Q <= D;
 //endmodule
-module llatchr(D, G, R, Q);
+module LATCHR(D, G, R, Q);
   input D;
   input G;
   output Q;
@@ -112,7 +112,7 @@ endmodule
 //        else if (G == 1'b1)
 //            Q <= D;
 //endmodule
-module llatchs(D, G, R, Q);
+module LATCHS(D, G, R, Q);
   input D;
   input G;
   output Q;
@@ -147,7 +147,7 @@ endmodule
 //        else if (G == 1'b0)
 //            Q <= D;
 //endmodule
-module llatchnr(D, G, R, Q);
+module LATCHNR(D, G, R, Q);
   input D;
   input G;
   output Q;
@@ -181,7 +181,7 @@ endmodule
 //        else if (G == 1'b0)
 //            Q <= D;
 //endmodule
-module llatchns(D, G, R, Q);
+module LATCHNS(D, G, R, Q);
   input D;
   input G;
   output Q;
@@ -220,7 +220,7 @@ endmodule
 //        else if (E && G)
 //            Q <= D;
 //endmodule
-module llatchsre(Q, S, R, D, G, E);
+module LATCHSRE(Q, S, R, D, G, E);
   input D;
   input E;
   input G;
@@ -262,7 +262,7 @@ endmodule
 //        else if (E && !G)
 //            Q <= D;
 //endmodule
-module llatchnsre(Q, S, R, D, G, E);
+module LATCHNSRE(Q, S, R, D, G, E);
   input D;
   input E;
   input G;
