@@ -1308,3 +1308,178 @@ input wire  RESET
 );
 
 endmodule
+//------------------------------------------------------------------------------
+// Copyright (C) 2022 RapidSilicon
+// LUT Primitives
+//
+//
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LUT1 (A, Y);
+    parameter INIT_VALUE = 2'h0;
+    input wire A;
+    output wire Y;
+
+endmodule
+
+(* blackbox *)
+module LUT2 (A, Y);
+    parameter INIT_VALUE = 4'h0;
+    input wire [1:0] A;
+    output wire Y;
+
+endmodule
+
+(* blackbox *)
+module LUT3 (A, Y);
+    parameter INIT_VALUE = 8'h0;
+    input wire [2:0] A;
+    output wire Y;
+
+endmodule
+
+(* blackbox *)
+module LUT4 (A, Y);
+    parameter INIT_VALUE = 16'h0;
+    input wire [3:0] A;
+    output wire Y;
+
+endmodule
+
+(* blackbox *)
+module LUT5 (A, Y);
+    parameter INIT_VALUE = 32'h0;
+    input wire [4:0] A;
+    output wire Y;
+
+endmodule
+
+(* blackbox *)
+module LUT6 (A, Y);
+    parameter INIT_VALUE = 64'h0;
+    input wire [5:0] A;
+    output wire Y;
+
+endmodule
+//------------------------------------------------------------------------------
+// Copyright (C) 2022 RapidSilicon
+// CARRY CHAIN Primitive
+//
+//
+//------------------------------------------------------------------------------
+(* blackbox *)
+module CARRY_CHAIN(P, G, CIN, SUMOUT, COUT);
+    input wire  P, G, CIN;
+    output wire SUMOUT, COUT;
+endmodule
+//------------------------------------------------------------------------------
+// Copyright (C) 2022 RapidSilicon
+// DSP38 Primitive
+//
+//------------------------------------------------------------------------------
+(* blackbox *)
+module DSP38 (A, B, ACC_FIR, Z, CLK, LRESET, FEEDBACK, LOAD_ACC, DLY_B,
+        UNSIGNED_A, UNSIGNED_B, SATURATE_ENABLE, SHIFT_RIGHT, ROUND, SUBTRACT);
+
+    input  wire [19:0] A;
+    input  wire [17:0] B;
+    input  wire [ 5:0] ACC_FIR;
+    output wire [37:0] Z;
+    output wire [17:0] DLY_B;
+    
+    input wire       CLK;
+    input wire       LRESET;
+    input wire [2:0] FEEDBACK;
+    input wire       LOAD_ACC;
+    input wire       UNSIGNED_A;
+    input wire       UNSIGNED_B;
+    input wire       SATURATE_ENABLE;
+    input wire [5:0] SHIFT_RIGHT;
+    input wire       ROUND;
+    input wire       SUBTRACT;
+
+    parameter [0:19] COEFF_0     = 20'h0;
+    parameter [0:19] COEFF_1     = 20'h0;
+    parameter [0:19] COEFF_2     = 20'h0;
+    parameter [0:19] COEFF_3     = 20'h0;
+    parameter        OUTPUT_REG  = 1'h0;
+    parameter        INPUT_REG   = 1'h0;
+    parameter        ACCUMULATOR = 1'h0;
+    parameter        ADDER       = 1'h0;
+    
+endmodule
+//------------------------------------------------------------------------------
+//
+// Copyright (C) 2023 RapidSilicon
+//
+// genesis3 LLATChes
+//
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Positive level-sensitive latch implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCH(D, G, Q);
+  input D;
+  input G;
+  output Q;
+
+endmodule
+//------------------------------------------------------------------------------
+// Negative level-sensitive latch implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHN(D, G, Q);
+  input D;
+  input G;
+  output Q;
+
+endmodule
+//------------------------------------------------------------------------------
+// Positive level-sensitive latch with active-high asyncronous reset
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHR(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
+//------------------------------------------------------------------------------
+// Positive level-sensitive latch with active-high asyncronous set
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHS(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
+//------------------------------------------------------------------------------
+// Negative level-sensitive latch with active-high asyncronous reset
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHNR(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
+//------------------------------------------------------------------------------
+// Negative level-sensitive latch with active-high asyncronous set
+// implemented with feed-back loop LUT
+//------------------------------------------------------------------------------
+(* blackbox *)
+module LATCHNS(D, G, R, Q);
+  input D;
+  input G;
+  output Q;
+  input R;
+
+endmodule
