@@ -93,7 +93,9 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/RS_PRIMITIVES/IO/io_cells_primitives_new.sv \
 				  $(GENESIS3)/RS_PRIMITIVES/IO/io_cells_primitives.sv \
 				  $(GENESIS3)/RS_PRIMITIVES/IO/io_cells_sims.sv \
-				  $(GENESIS3)/RS_PRIMITIVES/TECHMAP/io_model_map_new.v
+				  $(GENESIS3)/RS_PRIMITIVES/TECHMAP/io_model_map_new.v \
+				  $(GENESIS3)/RS_PRIMITIVES/LUT/LUT.v \
+				  $(GENESIS3)/RS_PRIMITIVES/TECHMAP/lut_map.v
 
 
 NAME = synth-rs
