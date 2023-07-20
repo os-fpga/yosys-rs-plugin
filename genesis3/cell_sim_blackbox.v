@@ -4,7 +4,7 @@
 // ---------------------------------------- //
 
 // ---------------------------------------- 
-
+`celldefine
 (* blackbox *)
 module CLK_BUF (
     input  logic I,             
@@ -12,9 +12,11 @@ module CLK_BUF (
     );
 
 endmodule
+`endcelldefine
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module IO_BUF
   (
@@ -25,9 +27,11 @@ module IO_BUF
   );
   
 endmodule 
+`endcelldefine
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module IO_BUF_DS
   (
@@ -38,9 +42,11 @@ module IO_BUF_DS
     output logic O
   );
 
-endmodule 
-// ---------------------------------------- 
+endmodule // IO_BUF_DS
+`endcelldefine
 
+// ---------------------------------------- 
+`celldefine
 (* blackbox *)
 module I_BUF #(
     parameter PULL_UP_DOWN = "NONE",
@@ -53,10 +59,12 @@ module I_BUF #(
         output logic O             
     );
 endmodule 
+`endcelldefine
 
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module I_BUF_DS #(
     parameter SLEW_RATE = "SLOW",
@@ -70,10 +78,12 @@ module I_BUF_DS #(
   );
 
 endmodule
+`endcelldefine
 
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module I_DDR #(
     parameter SLEW_RATE = "SLOW",
@@ -89,10 +99,12 @@ module I_DDR #(
   );
 
 endmodule
+`endcelldefine
 
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module O_BUF #(
     parameter PULL_UP_DOWN = "NONE",
@@ -107,10 +119,12 @@ module O_BUF #(
 
 
 endmodule
+`endcelldefine
 
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module O_BUFT_DS #(
     parameter SLEW_RATE =  "SLOW" ,
@@ -125,10 +139,12 @@ module O_BUFT_DS #(
   );
 
 endmodule
+`endcelldefine
 
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module O_BUFT  #(
     parameter SLEW_RATE = "SLOW",
@@ -140,10 +156,12 @@ module O_BUFT  #(
   );
     
 endmodule  
+`endcelldefine
 
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module O_DDR #(
     parameter SLEW_RATE =  "SLOW" ,
@@ -160,9 +178,11 @@ module O_DDR #(
   );
 
 endmodule
+`endcelldefine
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module O_SERDES #(
   parameter DATA_RATE="DDR",          // SDR,DDR
@@ -190,9 +210,11 @@ module O_SERDES #(
     );
 
 endmodule
+`endcelldefine
 
 // ---------------------------------------- 
 
+`celldefine
 (* blackbox *)
 module I_SERDES #(
   parameter DATA_RATE = "SDR",         // SDR,DDR
@@ -223,7 +245,9 @@ module I_SERDES #(
       output logic DPA_ERROR           // DPA error if DPA does not find any closest alligned phase
     );
 
-endmodule
+endmodule // I_SERDES
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Copyright (C) 2022 RapidSilicon
 // genesis3 DFFs and LATChes
@@ -234,6 +258,7 @@ endmodule
 // active-Low asynchronous reset and
 // active-high enable
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module dffre(
     input D,
@@ -243,12 +268,14 @@ module dffre(
     output reg Q
 );
 endmodule
+`endcelldefine
 
 //------------------------------------------------------------------------------
 // Falling-edge D-flip-flop with
 // active-Low asynchronous reset and
 // active-high enable
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module dffnre(
     input D,
@@ -258,11 +285,13 @@ module dffnre(
     output reg Q
 );
 endmodule
+`endcelldefine
 
 
 //------------------------------------------------------------------------------
 // Positive level-sensitive latch
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module latch(
     input D,
@@ -270,10 +299,12 @@ module latch(
     output reg Q
 );
 endmodule
+`endcelldefine
 
 //------------------------------------------------------------------------------
 // Negative level-sensitive latch
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module latchn(
     input D,
@@ -281,10 +312,12 @@ module latchn(
     output reg Q
 );
 endmodule
+`endcelldefine
 
 //------------------------------------------------------------------------------
 // Positive level-sensitive latch with active-high asyncronous reset
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module latchr(
     input D,
@@ -293,10 +326,12 @@ module latchr(
     output reg Q
 );
 endmodule
+`endcelldefine
 
 //------------------------------------------------------------------------------
 // Negative level-sensitive latch with active-high asyncronous reset
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module latchnr(
     input D,
@@ -305,9 +340,11 @@ module latchnr(
     output reg Q
 );
 endmodule
+`endcelldefine
 
 
 //DSP primitives//
+`celldefine
 (* blackbox *)
 module RS_DSP ( 
     input   [19:0] a,
@@ -335,8 +372,10 @@ module RS_DSP (
 
  
 endmodule
+`endcelldefine
 
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULT ( 
     input   [19:0] a,
@@ -352,7 +391,9 @@ module RS_DSP_MULT (
 parameter [79:0] MODE_BITS = 80'd0; 
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULT_REGIN ( 
     input   [19:0] a,
@@ -371,7 +412,9 @@ module RS_DSP_MULT_REGIN (
 
 parameter [79:0] MODE_BITS = 80'd0;    
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULT_REGOUT ( 
     input   [19:0] a,
@@ -391,8 +434,10 @@ module RS_DSP_MULT_REGOUT (
     
 parameter [79:0] MODE_BITS = 80'd0;    
 endmodule
+`endcelldefine
 
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULT_REGIN_REGOUT ( 
     input   [19:0] a,
@@ -413,8 +458,10 @@ module RS_DSP_MULT_REGIN_REGOUT (
 parameter [79:0] MODE_BITS = 80'd0; 
     
 endmodule
+`endcelldefine
 
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTADD (
     input   [19:0] a,
@@ -444,7 +491,9 @@ parameter [79:0] MODE_BITS = 80'd0;
 
  
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTADD_REGIN (
     input   [19:0] a,
@@ -473,7 +522,9 @@ module RS_DSP_MULTADD_REGIN (
 parameter [79:0] MODE_BITS = 80'd0; 
   
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTADD_REGOUT (
     input   [19:0] a,
@@ -502,7 +553,9 @@ module RS_DSP_MULTADD_REGOUT (
 parameter [79:0] MODE_BITS = 80'd0; 
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTADD_REGIN_REGOUT (
     input   [19:0] a,
@@ -530,7 +583,9 @@ module RS_DSP_MULTADD_REGIN_REGOUT (
 parameter [79:0] MODE_BITS = 80'd0; 
   
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTACC (
     input   [19:0] a,
@@ -554,7 +609,9 @@ module RS_DSP_MULTACC (
 parameter [79:0] MODE_BITS = 80'd0; 
   
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTACC_REGIN (
     input   [19:0] a,
@@ -581,7 +638,9 @@ module RS_DSP_MULTACC_REGIN (
 parameter [79:0] MODE_BITS = 80'd0; 
   
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTACC_REGOUT (
     input   [19:0] a,
@@ -606,7 +665,9 @@ module RS_DSP_MULTACC_REGOUT (
 parameter [79:0] MODE_BITS = 80'd0; 
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module RS_DSP_MULTACC_REGIN_REGOUT (
     input   [19:0] a,
@@ -631,9 +692,11 @@ module RS_DSP_MULTACC_REGIN_REGOUT (
 parameter [79:0] MODE_BITS = 80'd0; 
   
 endmodule
+`endcelldefine
 
 //TDP BRAM //FIFO
 
+`celldefine
 (* blackbox *)
 module RS_TDP36K (
     WEN_A1,
@@ -707,8 +770,10 @@ module RS_TDP36K (
     input wire FLUSH2;
    
 endmodule
+`endcelldefine
 
 
+`celldefine
 (* blackbox *)
 module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, CLK3, CLK4, D1ADDR, D1DATA, D1EN, E1ADDR, E1DATA, E1EN, F1ADDR, F1DATA, F1EN, G1ADDR, G1DATA, G1EN, H1ADDR, H1DATA, H1EN);
     parameter CFG_ABITS = 11;
@@ -761,7 +826,9 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
     input [CFG_ENABLE_H-1:0] H1EN;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA, C1EN, CLK1, CLK2, D1ADDR, D1DATA, D1EN);
     parameter CFG_ABITS = 11;
@@ -798,7 +865,9 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, C1ADDR, C1DATA,
 
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST, WR_ADDR, WR_CLK, WR_DATA, WR_EN);
 
@@ -848,7 +917,9 @@ module \_$_mem_v2_asymmetric (RD_ADDR, RD_ARST, RD_CLK, RD_DATA, RD_EN, RD_SRST,
 
   
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module \$lut (A, Y);
 parameter WIDTH = 0;
@@ -858,7 +929,9 @@ input [WIDTH-1:0] A;
 output Y;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_AHB_S (
     output logic  		  S0_HRESETN_I  ,
@@ -878,7 +951,9 @@ module SOC_FPGA_INTF_AHB_S (
     input  logic                  S0_HCLK
 );
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_AXI_M0 (
     // AXI master 0
@@ -921,7 +996,9 @@ module SOC_FPGA_INTF_AXI_M0 (
     output                  	M0_ARESETN_I 
 );
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_AXI_M1 (
     //AXI master 1
@@ -964,7 +1041,9 @@ module SOC_FPGA_INTF_AXI_M1 (
     output                  	M1_ARESETN_I        
 );
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_AXI_M0_M1 (
     // AXI master 0
@@ -1045,7 +1124,9 @@ module SOC_FPGA_INTF_AXI_M0_M1 (
     output                  	M1_ARESETN_I        
 );
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_DMA (
     // FPGA DMA
@@ -1057,7 +1138,9 @@ module SOC_FPGA_INTF_DMA (
 );
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_GPIO (
     // FPGA GPIO
@@ -1070,7 +1153,9 @@ module SOC_FPGA_INTF_GPIO (
 );
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_IRQ (
     // FPGA IRQ
@@ -1082,7 +1167,9 @@ module SOC_FPGA_INTF_IRQ (
 );
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module SOC_FPGA_INTF_JTAG (
     // JTAG
@@ -1095,8 +1182,10 @@ module SOC_FPGA_INTF_JTAG (
 );
 
 endmodule
+`endcelldefine
 
 
+`celldefine
 (* blackbox *)
 module soc_fpga_intf (
     // FPGA fabric clocks
@@ -1237,15 +1326,17 @@ module soc_fpga_intf (
     //input  logic                   testmode 
 
 );
-endmodule
+endmodule // soc_fpga_intf
+`endcelldefine
+
 // --------------------------------------------------------------------------
 // ---------------- Copyright (C) 2023 RapidSilicon -------------------------
 // --------------------------------------------------------------------------
 // ------------------- FIFO18K Primitive Blackbox----------------------------
 // --------------------------------------------------------------------------
 
+`celldefine
 (* blackbox *)
-
 module FIFO18K #(
 // Parameters
 parameter   DATA_WIDTH          = 5'd18,
@@ -1272,15 +1363,17 @@ input wire  RDCLK,
 input wire  RESET
 );
 
-endmodule
+endmodule // FIFO18K
+`endcelldefine
+
 // --------------------------------------------------------------------------
 // ---------------- Copyright (C) 2023 RapidSilicon -------------------------
 // --------------------------------------------------------------------------
 // ------------------- FIFO36K Primitive Blackbox----------------------------
 // --------------------------------------------------------------------------
 
+`celldefine
 (* blackbox *)
-
 module FIFO36K #(
 // Parameters
 parameter   DATA_WIDTH          = 6'd36,
@@ -1308,12 +1401,16 @@ input wire  RESET
 );
 
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Copyright (C) 2022 RapidSilicon
 // LUT Primitives
 //
 //
 //------------------------------------------------------------------------------
+
+`celldefine
 (* blackbox *)
 module LUT1 (A, Y);
     parameter INIT_VALUE = 2'h0;
@@ -1321,7 +1418,9 @@ module LUT1 (A, Y);
     output wire Y;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module LUT2 (A, Y);
     parameter INIT_VALUE = 4'h0;
@@ -1329,7 +1428,9 @@ module LUT2 (A, Y);
     output wire Y;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module LUT3 (A, Y);
     parameter INIT_VALUE = 8'h0;
@@ -1337,7 +1438,9 @@ module LUT3 (A, Y);
     output wire Y;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module LUT4 (A, Y);
     parameter INIT_VALUE = 16'h0;
@@ -1345,7 +1448,9 @@ module LUT4 (A, Y);
     output wire Y;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module LUT5 (A, Y);
     parameter INIT_VALUE = 32'h0;
@@ -1353,7 +1458,9 @@ module LUT5 (A, Y);
     output wire Y;
 
 endmodule
+`endcelldefine
 
+`celldefine
 (* blackbox *)
 module LUT6 (A, Y);
     parameter INIT_VALUE = 64'h0;
@@ -1361,22 +1468,29 @@ module LUT6 (A, Y);
     output wire Y;
 
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Copyright (C) 2022 RapidSilicon
 // CARRY CHAIN Primitive
 //
 //
 //------------------------------------------------------------------------------
+
+`celldefine
 (* blackbox *)
 module CARRY_CHAIN(P, G, CIN, SUMOUT, COUT);
     input wire  P, G, CIN;
     output wire SUMOUT, COUT;
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Copyright (C) 2022 RapidSilicon
 // DSP38 Primitive
 //
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module DSP38 (A, B, ACC_FIR, Z, CLK, LRESET, FEEDBACK, LOAD_ACC, DLY_B,
         UNSIGNED_A, UNSIGNED_B, SATURATE_ENABLE, SHIFT_RIGHT, ROUND, SUBTRACT);
@@ -1408,6 +1522,8 @@ module DSP38 (A, B, ACC_FIR, Z, CLK, LRESET, FEEDBACK, LOAD_ACC, DLY_B,
     parameter        ADDER       = 1'h0;
     
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 //
 // Copyright (C) 2023 RapidSilicon
@@ -1418,6 +1534,8 @@ endmodule
 //------------------------------------------------------------------------------
 // Positive level-sensitive latch implemented with feed-back loop LUT
 //------------------------------------------------------------------------------
+
+`celldefine
 (* blackbox *)
 module LATCH(D, G, Q);
   input D;
@@ -1425,9 +1543,12 @@ module LATCH(D, G, Q);
   output Q;
 
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Negative level-sensitive latch implemented with feed-back loop LUT
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module LATCHN(D, G, Q);
   input D;
@@ -1435,10 +1556,13 @@ module LATCHN(D, G, Q);
   output Q;
 
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Positive level-sensitive latch with active-high asyncronous reset
 // implemented with feed-back loop LUT
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module LATCHR(D, G, R, Q);
   input D;
@@ -1447,10 +1571,12 @@ module LATCHR(D, G, R, Q);
   input R;
 
 endmodule
+`endcelldefine
 //------------------------------------------------------------------------------
 // Positive level-sensitive latch with active-high asyncronous set
 // implemented with feed-back loop LUT
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module LATCHS(D, G, R, Q);
   input D;
@@ -1459,10 +1585,13 @@ module LATCHS(D, G, R, Q);
   input R;
 
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Negative level-sensitive latch with active-high asyncronous reset
 // implemented with feed-back loop LUT
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module LATCHNR(D, G, R, Q);
   input D;
@@ -1471,10 +1600,13 @@ module LATCHNR(D, G, R, Q);
   input R;
 
 endmodule
+`endcelldefine
+
 //------------------------------------------------------------------------------
 // Negative level-sensitive latch with active-high asyncronous set
 // implemented with feed-back loop LUT
 //------------------------------------------------------------------------------
+`celldefine
 (* blackbox *)
 module LATCHNS(D, G, R, Q);
   input D;
@@ -1483,3 +1615,4 @@ module LATCHNS(D, G, R, Q);
   input R;
 
 endmodule
+`endcelldefine
