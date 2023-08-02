@@ -189,6 +189,10 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
         assign A1DATA = {PORT_A1_RDATA[16], PORT_A1_RDATA[7:0]};
 
     end
+    18: begin
+        assign PORT_A1_RDATA = {A1DATA[17], A1DATA[8], A1DATA[16:9], A1DATA[7:0]};
+
+    end
     default: begin
         assign A1DATA = PORT_A1_RDATA[CFG_DBITS-1:0];
     end
@@ -198,6 +202,10 @@ endcase
     case (PORT_B_WIDTH)
     9: begin
         assign PORT_A1_WDATA = {B1_WDATA_CMPL[17], B1DATA[8], B1_WDATA_CMPL[16:9], B1DATA[7:0]};
+
+    end
+    18: begin
+        assign PORT_A1_WDATA = {B1DATA[17], B1DATA[8], B1DATA[16:9], B1DATA[7:0]};
 
     end
     default: begin
@@ -211,6 +219,10 @@ endcase
         assign C1DATA = {PORT_B1_RDATA[16], PORT_B1_RDATA[7:0]};
 
     end
+    18: begin
+        assign PORT_B1_RDATA = {C1DATA[17], C1DATA[8], C1DATA[16:9], C1DATA[7:0]};
+
+    end
     default: begin
         assign C1DATA = PORT_B1_RDATA[CFG_DBITS-1:0];
     end
@@ -220,6 +232,10 @@ endcase
     case (PORT_D_WIDTH)
     9: begin
         assign PORT_B1_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+
+    end
+    18: begin
+        assign PORT_B1_WDATA = {D1DATA[17], D1DATA[8], D1DATA[16:9], D1DATA[7:0]};
 
     end
     default: begin
@@ -233,6 +249,10 @@ endcase
         assign E1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
 
     end
+    18: begin
+        assign PORT_A2_RDATA = {E1DATA[17], E1DATA[8], E1DATA[16:9], E1DATA[7:0]};
+
+    end
     default: begin
         assign E1DATA = PORT_A2_RDATA[CFG_DBITS-1:0];
     end
@@ -242,6 +262,10 @@ endcase
     case (PORT_F_WIDTH)
     9: begin
         assign PORT_A2_WDATA = {F1_WDATA_CMPL[17], F1DATA[8], F1_WDATA_CMPL[16:9], F1DATA[7:0]};
+
+    end
+    18: begin
+        assign PORT_A2_WDATA = {F1DATA[17], F1DATA[8], F1DATA[16:9], F1DATA[7:0]};
 
     end
     default: begin
@@ -255,6 +279,10 @@ endcase
         assign G1DATA = {PORT_B2_RDATA[16], PORT_B2_RDATA[7:0]};
 
     end
+    18: begin
+        assign PORT_B2_RDATA = {G1DATA[17], G1DATA[8], G1DATA[16:9], G1DATA[7:0]};
+
+    end
     default: begin
         assign G1DATA = PORT_B2_RDATA[CFG_DBITS-1:0];
     end
@@ -264,6 +292,10 @@ endcase
 case (PORT_H_WIDTH)
 9: begin
     assign PORT_B2_WDATA = {H1_WDATA_CMPL[17], H1DATA[8], H1_WDATA_CMPL[16:9], H1DATA[7:0]};
+
+end
+18: begin
+    assign PORT_B2_WDATA = {H1DATA[17], H1DATA[8], H1DATA[16:9], H1DATA[7:0]};
 
 end
 default: begin
@@ -6538,6 +6570,14 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 			//assign PORT_A2_WDATA = {18{1'b0}};
 			//assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
 		end
+        18: begin
+			//assign A1DATA = {PORT_A1_RDATA[16], PORT_A1_RDATA[7:0]};
+			//assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
+			//assign PORT_A1_WDATA = {18{1'b0}};
+			assign PORT_B1_WDATA = {B1DATA[17], B1DATA[8], B1DATA[16:9], B1DATA[7:0]};
+			//assign PORT_A2_WDATA = {18{1'b0}};
+			//assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+		end
 		default: begin
 			//assign A1DATA = PORT_A1_RDATA[CFG_DBITS-1:0];
 			//assign C1DATA = PORT_A2_RDATA[CFG_DBITS-1:0];
@@ -6552,6 +6592,14 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	case (PORT_A_WIDTH)
 	9: begin
 		assign A1DATA = {PORT_A1_RDATA[16], PORT_A1_RDATA[7:0]};
+		//assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
+		assign PORT_A1_WDATA = {18{1'b0}};
+		//assign PORT_B1_WDATA = {B1_WDATA_CMPL[17], B1DATA[8], B1_WDATA_CMPL[16:9], B1DATA[7:0]};
+		//assign PORT_A2_WDATA = {18{1'b0}};
+		//assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+	end
+    18: begin
+		assign PORT_A1_RDATA = {A1DATA[17],A1DATA[8],A1DATA[16:9], A1DATA[7:0]};
 		//assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
 		assign PORT_A1_WDATA = {18{1'b0}};
 		//assign PORT_B1_WDATA = {B1_WDATA_CMPL[17], B1DATA[8], B1_WDATA_CMPL[16:9], B1DATA[7:0]};
@@ -6574,6 +6622,10 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 			assign C1DATA = {PORT_A2_RDATA[16], PORT_A2_RDATA[7:0]};
 			assign PORT_A2_WDATA = {18{1'b0}};
 		end
+        18: begin
+			assign PORT_A2_RDATA = {C1DATA[17], C1DATA[8],C1DATA[16:9], C1DATA[7:0]};
+			assign PORT_A2_WDATA = {18{1'b0}};
+		end
 		default: begin
 			assign C1DATA = PORT_A2_RDATA[CFG_DBITS-1:0];
 			assign PORT_A2_WDATA = {18{1'b1}};
@@ -6583,6 +6635,9 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	case (PORT_D_WIDTH)
 	9: begin
 		assign PORT_B2_WDATA = {D1_WDATA_CMPL[17], D1DATA[8], D1_WDATA_CMPL[16:9], D1DATA[7:0]};
+	end
+    18: begin
+		assign PORT_B2_WDATA = {D1DATA[17], D1DATA[8], D1DATA[16:9], D1DATA[7:0]};
 	end
 	default: begin
 		assign PORT_B2_WDATA = {D1_WDATA_CMPL, D1DATA};
