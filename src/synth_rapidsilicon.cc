@@ -79,7 +79,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 177
+#define VERSION_PATCH 178
 
 enum Strategy {
     AREA,
@@ -170,6 +170,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -fast\n");
         log("        Used to speed up synthesis flow\n");
         log("        Disabled by default.\n");
+        log("\n");
+        log("    -no_sat\n");
+        log("        Disable SAT solver.\n");
         log("\n");
         log("    -no_flatten\n");
         log("        Do not flatten design to preserve hierarchy.\n");
@@ -304,6 +307,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nobram;
     bool de;
     bool fast;
+    bool no_sat;
     bool no_flatten;
     bool no_iobuf;
     CarryMode infer_carry;
@@ -334,6 +338,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         abc_script = "";
         cec = false;
         fast = false;
+        no_sat = false;
         no_flatten = false;
         no_iobuf= false;
         nobram = false;
@@ -414,6 +419,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-fast") {
                 fast = true;
+                continue;
+            }
+            if (args[argidx] == "-no_sat") {
+                no_sat = true;
                 continue;
             }
             if (args[argidx] == "-no_iobuf") {
@@ -638,6 +647,43 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return (_design->top_module()->cells_.size());
     }
 
+    int getNumberOfLUTx() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+          if (cell->type.in(ID(LUT1), ID(LUT2), ID(LUT3), ID(LUT4), ID(LUT5), ID(LUT6))) {
+            nb++;
+          }
+       }
+
+       return nb;
+    }
+
+    int getNumberOfLogic() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+          if (cell->type.in(ID($and), ID($_AND_), ID($_NAND_), ID($or), ID($_OR_),
+                            ID($_NOR_), ID($xor), ID($xnor), ID($_XOR_), ID($_XNOR_),
+                            ID($_MUX_), ID($mux),
+                            ID($not), ID($_NOT_), ID($_ANDNOT_), ID($_ORNOT_))) {
+            nb++;
+          }
+       }
+
+       return nb;
+    }
+
+    int getLoopNbIterations(int nbLogic) {
+
+         if (nbLogic > 200000) {
+           return 2;
+         }
+        return 4;
+    }
+
     void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
 
         string nodffe_str = "";
@@ -669,12 +715,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
                run("opt_share");
             }
             if (nosdff) {
+               if (sat) {
+                  run("opt_dff -nosdff " + nodffe_str);
+               }
                run("opt_dff -nosdff " + nodffe_str + sat_str);
             } else {
-                if (no_sdff_temp)
+                if (no_sdff_temp){
+                    if (sat) {
+                      run("opt_dff "  + nodffe_str);
+                    }
                     run("opt_dff "  + nodffe_str + sat_str);
-                else
+                } else {
+                    if (sat) {
+                      run("opt_dff " + nosdff_str + nodffe_str);
+                    }
                     run("opt_dff " + nosdff_str + nodffe_str + sat_str);
+                }
             }
             run("opt_clean");
             run("opt_expr");
@@ -689,9 +745,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 break;
             }
 
+#if 0
             if ((nbInstAfter >= 80000) && (iteration >= 4)) {
                 break;
             }
+#endif
 
         }
 
@@ -700,6 +758,38 @@ struct SynthRapidSiliconPass : public ScriptPass {
         _design->check();
 
         log("MAX OPT ITERATION = %d\n", iteration);
+    }
+
+    // Wrapper on 'run_opt' to better control way of using SAT mode. In non-SAT mode we call 
+    // 'run_opt" as in regular mode.
+    // In SAT mode we try to interleave non-SAT calls with 1 single SAT call in a general loop.
+    // SAT call will create few constants that will be propagated through fast non-SAT mode.
+    // On 'rsnoc" (EDA-1041) non-SAT mode takes 3 seconds and SAT mode can take up to 2 hours.
+    // (Thierry)
+    //
+    void top_run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
+
+      if (!sat) {
+         run_opt(nodffe, sat, nosdff, share, max_iter, no_sdff_temp);
+         return;
+      }
+
+      while (max_iter--) {
+
+         int nbInstBefore = getNumberOfInstances();
+
+         run_opt(nodffe, 0 /* NO SAT */, nosdff, share, 12 /* iteration */, no_sdff_temp);
+
+         // Note : only 1 iteration in SAT mode
+         //
+         run_opt(nodffe, 1 /* SAT */, nosdff, share, 1 /* iteration */, no_sdff_temp);
+
+         int nbInstAfter = getNumberOfInstances();
+
+         if (nbInstAfter == nbInstBefore) {
+           break;
+         }
+      }
     }
 
     void map_luts(EffortLevel effort_lvl) {
@@ -784,7 +874,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!fast)
-            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+            top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -832,11 +922,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         // Do not extract DFFE before simplify : it may have been done earlier
         //
-        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10, 0);
+        top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 0, 12, 0);
 
-        int maxLoop = 4;
+        if (!no_sat) {
+          top_run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10, 0);
+        }
+
+        run("stat");
+
+        int nbLogic = getNumberOfLogic();
+
+        //log(" Nb Logic instances = %d\n", nbLogic);
+
+        int maxLoop = getLoopNbIterations(nbLogic);
 
         int nbInst = getNumberOfInstances();
+
+        //log(" Nb instances = %d\n", nbInst);
 
         if (nbInst > 800000) { // skip "abc -dff" for very big designs
            maxLoop = 0;
@@ -846,6 +948,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
            maxLoop = 1;
         }
 
+        //log(" Max loop = %d\n", maxLoop);
+        
         for (int n=1; n <= maxLoop; n++) { 
 
             run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
@@ -856,7 +960,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         run("opt_ffinv");
 
-        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+        top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
+
+        if (!no_sat) {
+          top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+        }
     }
 
     void transform(int bmuxmap)
@@ -1446,7 +1554,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
 
             run("check");
-            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
+
+            run("stat");
+
+            top_run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
 
             if (fsm_encoding == Encoding::BINARY)
                 run("fsm -encoding binary");
@@ -1456,12 +1567,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_fsm.v");
 
+            run("wreduce -keepdc");
+            run("peepopt");
+            run("opt_clean");
+
             if (fast)
                 run("opt -fast");
-            else if (clke_strategy == ClockEnableStrategy::EARLY) {
-                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
+            else if (1 && (clke_strategy == ClockEnableStrategy::EARLY)) {
+                top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 1);
+                if (!no_sat) {
+                  top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 1);
+                }
             } else {
-                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 1);
+                if (!no_sat) {
+                  top_run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 1);
+                }
             }
 
             run("wreduce -keepdc");
@@ -1615,7 +1736,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
             }
 
 #ifdef DEV_BUILD
@@ -1646,7 +1767,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         if (tech == GENESIS_3) {
           run("dffunmap -srst-only");
-          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+          top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
         }
 #endif
 
@@ -1661,7 +1782,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #if 0
         if (tech == GENESIS_3) {
           run("dffunmap -srst-only");
-          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+          top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 1, 0);
         }
 #endif
 
@@ -1741,7 +1862,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
             }
 
             run("opt_expr -full");
@@ -1912,7 +2033,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
             if (!fast)
-                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
         }
 
         // Map left over cells like $mux (EDA-1441)
@@ -1961,9 +2082,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
            }
 
+           run("stat");
 #if 1
-            string techMaplutArgs = GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
-            run("techmap -map" + techMaplutArgs);
+           string techMaplutArgs = GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
+           run("techmap -map" + techMaplutArgs);
 #endif
         }
 
@@ -1986,6 +2108,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         run("stat");
+
+        int nbLUTx = getNumberOfLUTx();
+
+        log("   Number of LUTs:               %5d\n", nbLUTx);
     }
 
 } SynthRapidSiliconPass;
