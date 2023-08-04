@@ -79,7 +79,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 178
+#define VERSION_PATCH 179
 
 enum Strategy {
     AREA,
