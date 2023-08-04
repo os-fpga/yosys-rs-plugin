@@ -79,7 +79,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 179
+#define VERSION_PATCH 180
 
 enum Strategy {
     AREA,
@@ -228,6 +228,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Infer synchroneous set/reset DFFs when possible.\n");
         log("        By default synchroneous set/reset DFFs are not infered.\n");
         log("\n");
+        log("    -max_lut <num>\n");
+        log("        Specify the max number of LUTs allowed in the final synthesized netlist. \n");
+        log("        Synthesized netlist will be produced but synthesis will error out right after\n");
+        log("        if netlist LUTs number exceeds -max_lut value.\n");
+        log("        By default synthesis tool will not consider -max_lut if not specified. \n");
+        log("\n");
+        log("    -max_reg <num>\n");
+        log("        Specify the max number of DFFs allowed in the final synthesized netlist. \n");
+        log("        Synthesized netlist will be produced but synthesis will error out right after\n");
+        log("        if netlist DFFs number exceeds -max_reg value.\n");
+        log("        By default synthesis tool will not consider -max_reg if not specified. \n");
+        log("\n");
 #endif
         log("    -no_dsp\n");
         log("        By default use DSP blocks in output netlist.\n");
@@ -317,6 +329,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nolibmap;
     bool preserve_ip;
     int de_max_threads;
+    int max_lut;
+    int max_reg;
     int max_bram;
     int max_carry_length;
     int max_dsp;
@@ -342,6 +356,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_flatten = false;
         no_iobuf= false;
         nobram = false;
+        max_lut = -1;
+        max_reg = -1;
         max_bram = -1;
         max_carry_length = -1;
         max_dsp = -1;
@@ -478,6 +494,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
             if (args[argidx] == "-no_bram") {
                 nobram = true;
+                continue;
+            }
+            if (args[argidx] == "-max_lut" && argidx + 1 < args.size()) {
+                max_lut = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_reg" && argidx + 1 < args.size()) {
+                max_reg = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
@@ -660,6 +684,36 @@ struct SynthRapidSiliconPass : public ScriptPass {
        return nb;
     }
 
+    // Specific to GENESIS3 by checking GENESI3 DFF names (dffre, dffnre)
+    //
+    int getNumberOfREGs() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+          if (cell->type.in(ID(dffre), ID(dffnre))) {
+            nb++;
+          }
+       }
+
+       return nb;
+    }
+
+    int getNumberOfGenericREGs() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+
+          if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+              continue;
+
+          nb++;
+       }
+
+       return nb;
+    }
+
     int getNumberOfLogic() {
 
        int nb = 0;
@@ -676,12 +730,21 @@ struct SynthRapidSiliconPass : public ScriptPass {
        return nb;
     }
 
-    int getLoopNbIterations(int nbLogic) {
+    // Decides the number of iteration when performing "abc -dff". More REGs means more logic 
+    // partitions and more runtime. So we need to reduce the number of iterations accordingly.
+    //
+    int getLoopNbIterations() {
 
-         if (nbLogic > 200000) {
+         int nbGenericREGs = getNumberOfGenericREGs();
+
+         if (nbGenericREGs > 60000) { // if more than 60 K registers
+           return 1;                  // only 1 iteration !
+         }
+         if (nbGenericREGs > 40000) {
            return 2;
          }
-        return 4;
+
+         return 4; // by default we do 4 iterations
     }
 
     void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
@@ -757,7 +820,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         _design->sort();
         _design->check();
 
-        log("MAX OPT ITERATION = %d\n", iteration);
+        log("\nRUN-OPT ITERATIONS DONE : %d\n", iteration);
     }
 
     // Wrapper on 'run_opt' to better control way of using SAT mode. In non-SAT mode we call 
@@ -930,11 +993,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         run("stat");
 
+#if 0
         int nbLogic = getNumberOfLogic();
+        log(" Nb Logic instances = %d\n", nbLogic);
+#endif
 
-        //log(" Nb Logic instances = %d\n", nbLogic);
+        int nbGenericREGs = getNumberOfGenericREGs();
+        log("   Number of Generic REGs:          %d\n", nbGenericREGs);
 
-        int maxLoop = getLoopNbIterations(nbLogic);
+        int maxLoop = getLoopNbIterations();
 
         int nbInst = getNumberOfInstances();
 
@@ -951,6 +1018,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //log(" Max loop = %d\n", maxLoop);
         
         for (int n=1; n <= maxLoop; n++) { 
+
+            log("\nABC-DFF iteration : %d\n", n);
 
             run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
                                        // Use "-keepff" to preserve DFF output wire name
@@ -2109,9 +2178,23 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         run("stat");
 
+        // Note that numbers extractions are specific to GENESIS3
+        //
         int nbLUTx = getNumberOfLUTx();
+        int nbREGs = getNumberOfREGs();
 
         log("   Number of LUTs:               %5d\n", nbLUTx);
+        log("   Number of REGs:               %5d\n", nbREGs);
+
+        if ((max_lut != -1) && (nbLUTx > max_lut)) {
+          log("\n");
+          log_cmd_error("Final netlist LUTs number [%d] exceeds '-max_lut' specified value [%d].\n", nbLUTx, max_lut);
+        }
+
+        if ((max_reg != -1) && (nbREGs > max_reg)) {
+          log("\n");
+          log_cmd_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
+        }
     }
 
 } SynthRapidSiliconPass;
