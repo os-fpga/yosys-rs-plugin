@@ -31,7 +31,7 @@ struct RsPackDspRegsWorker
 
     bool run_opt_clean = false;
 
-    void run_scr (bool gen3) {
+    void run_scr (bool gen3,RTLIL::Design *design) {
 
         std::vector<Cell *> DSP_used_cells;
         std::vector<Cell *> DFF_used_cells;
@@ -69,11 +69,9 @@ struct RsPackDspRegsWorker
 
         // Getting each DSP from all DSPs of our MODULE
         for (auto &it_dsp : DSP_used_cells) {
-            log("\n\n\n");
             log_debug("Working with DSP by name: %s.\n", it_dsp->name.c_str());
 
             // if the port of DSP driven from DFF
-            bool port_z_from_dff = false;
             bool port_a_from_dff = false;
             bool port_b_from_dff = false;
             // if we check somthing and need to ignore selected DSP
@@ -85,7 +83,6 @@ struct RsPackDspRegsWorker
             // get it_dsp SigSpec of ports (a) and (b)
             RTLIL::SigSpec DSP_port_a = it_dsp->getPort(RTLIL::escape_id("\\a"));
             RTLIL::SigSpec DSP_port_b = it_dsp->getPort(RTLIL::escape_id("\\b"));
-            RTLIL::SigSpec DSP_port_z = it_dsp->getPort(RTLIL::escape_id("\\z"));
 
             // Getting each cell of DESIGN to check if there is connection between
             for (auto &it_cell : ALL_cells_of_design) {
@@ -141,8 +138,9 @@ struct RsPackDspRegsWorker
 
                 // Lambda function for action when having connection between DSP and DFF
                 auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
-                    log("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
-                    if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk) {
+                    log_debug("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
+                    // EDA-1701: if reset value is not zero ignore DSP
+                    if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk || ff.val_srst.as_int()>0 || ff.val_arst.as_int() > 0 ) {
                         ignore_dsp = true;
                         return;
                     }
@@ -186,33 +184,11 @@ struct RsPackDspRegsWorker
                     }
                 };
 
-                // getting all bits of selected DFF port ( q )
-                // log("\n");
-                // for (auto bit_dff : m_sigmap(ff.sig_d)) {
-                //     log("bit_dff = %s",log_signal(bit_dff));
-                // }
-                for (auto bit_dff : m_sigmap(ff.sig_d)) {
-                    // getting all bits of DSP port (z)
-                    for (auto bit_dsp : m_sigmap(DSP_port_z)) {
-                        // comparing if DFF port bit is the same as DSP port bit
-                        // log("bit_dff = %s bit_dsp = %s\n",log_signal(bit_dff),log_signal(bit_dsp));
-                        if (bit_dff == bit_dsp) {
-                            // calling lambda function for port (z)
-                            check_dff(port_z_from_dff, 'z');
-                            // // we cancel the comparison of the remaining bits because it is already clear that the DSP port receives a signal from the DFF
-                            break;
-                        }
-                    }
 
-                    if (next_dff || ignore_dsp)
-                        break;
-                }
                 for (auto bit_dff : m_sigmap(ff.sig_q)) {
                     // getting all bits of DSP port (a)
-                    log("\n next_dff = %d ignore_dsp = %d",next_dff, ignore_dsp);
                     for (auto bit_dsp : m_sigmap(DSP_port_a)) {
                         // comparing if DFF port bit is the same as DSP port bit
-                        log("bit_dff = %s bit_dsp = %s\n",log_signal(bit_dff),log_signal(bit_dsp));
                         if (bit_dff == bit_dsp) {
                             // calling lambda function for port (a)
                             check_dff(port_a_from_dff, 'a');
@@ -225,7 +201,6 @@ struct RsPackDspRegsWorker
                     // getting all bits of DSP port (b)
                     for (auto bit_dsp : m_sigmap(DSP_port_b)) {
                         // comparing if DFF port bit is the same as DSP port bit
-                        // log("bit_dff = %s bit_dsp = %s\n",log_signal(bit_dff),log_signal(bit_dsp));
                         if (bit_dff == bit_dsp) {
                             // calling lambda function for port (a)
                             check_dff(port_b_from_dff, 'b');
@@ -248,7 +223,7 @@ struct RsPackDspRegsWorker
             if (port_a_from_dff && port_b_from_dff && !ignore_dsp) {
                 DSP_driven_only_by_DFF.push_back(it_dsp);
             }
-            if (port_z_from_dff &&!ignore_dsp) {
+            if (1) {
                 DSP_drives_DFF.push_back(it_dsp);
             }
         }
@@ -257,119 +232,99 @@ struct RsPackDspRegsWorker
         sig_f.append(RTLIL::S0);
         sig_f.append(RTLIL::S1);
         for (auto &DFF_driven_DSP : DSP_drives_DFF) {
-            // creating new SigSpecs with which we will change the SigSpecs of DSP ports Z
-            RTLIL::SigSpec new_sigspec_for_z;
+            bool RST_POL = true;
+            RTLIL::Const DSP_RST_POL;
+            RTLIL::Const dsp_mode_bits_const = DFF_driven_DSP->getParam(RTLIL::escape_id("MODE_BITS"));
+            if (dsp_mode_bits_const[1] == RTLIL::S1 || dsp_mode_bits_const[80] == RTLIL::S1){
 
-            // get selected DSP SigSpec of port (z)
-            RTLIL::SigSpec DSP_port_z = DFF_driven_DSP->getPort(RTLIL::escape_id("\\z"));
-            if (DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
-                log("Mult accumulator is infered in REGOUT BLOCK\n");
-            }
-            // get all bits of DSP port (z)
-            for (auto bit_dsp : m_sigmap(DSP_port_z)) {
-                // get all DFFs
-                for (auto &it_dff : DFF_used_cells) {
-                    // making each DFF as FF object
-                    FfData ff(&m_initvals, it_dff);
-                    log("DSP Port = %s DFF = %s\n",log_signal(m_sigmap(DSP_port_z)),log_signal(m_sigmap(ff.sig_d)));
-                    // this index var is used to take the input bit of DFF with the index of the output bit DFF
-                    int use_index_for_dff = 0;
-                    // get all bits of DFF output port
-                    for (auto bit_dff : m_sigmap(ff.sig_d)) {
-                        // compare if bit of DSP port (z) is the same with bit of DFF port (q)
-                        if (bit_dsp == bit_dff) {
-                            // add DFF input data port bit for new SigSpec for DSP port (z)
-                            new_sigspec_for_z.append(ff.sig_q[use_index_for_dff]);
-                            // get selected DFF clock and reset for this DSP
-                            DFF_clk = ff.sig_clk;
-                            DFF_hasArst = ff.has_arst;
-                            DFF_hasSrst = ff.has_srst;
-                            if (DFF_hasArst)
-                                DFF_rst = ff.sig_arst;
-                            if (DFF_hasSrst)
-                                DFF_rst = ff.sig_srst;
+                // Apply clock and reset to DSP port 
+                auto CLK_PORT = (DFF_driven_DSP->getParam(ID::DSP_CLK)).decode_string();
+                auto RST_PORT = (DFF_driven_DSP->getParam(ID::DSP_RST)).decode_string();
+                RTLIL::SigSpec _arst_;
+                RTLIL::SigSpec _rst_;
+                for (auto &module : design->selected_modules()) {
+                    for (auto wire : module->wires()){
+                        if (wire->name==CLK_PORT.c_str()){
+                            DFF_driven_DSP->setPort(RTLIL::escape_id("\\clk"), wire);
                         }
-                        // incrementing index;
-                        use_index_for_dff++;
+                        if (wire->name==RST_PORT.c_str()){
+                            DSP_RST_POL = DFF_driven_DSP->getParam(RTLIL::escape_id("DSP_RST_POL"));
+                            if (DSP_RST_POL[0] == RTLIL::S0){
+                                RST_POL = false;
+                                _arst_ = wire;
+                            }
+                            else {
+                                RST_POL = true;
+                                _arst_ = wire;
+                                // 
+                            }
+                        }
                     }
-                    // ff.remove();
-                }
-            }
-            
-            
-            // After all DFFs will be changed DSP port (a) and (b)
-            DFF_driven_DSP->setPort(RTLIL::escape_id("\\z"), new_sigspec_for_z);
 
-            // Getting DSP Reginster inputs port to change value 1
-            if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP2")){
-                DFF_driven_DSP->setPort(RTLIL::escape_id("output_select"),sig_f);
-            }
-            else if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP3")){
-                // Getting RS_DSP3 MODE_BITS param;
-                RTLIL::Const dsp_mode_bits_const = DFF_driven_DSP->getParam(RTLIL::escape_id("MODE_BITS"));
-                // Changing RS_DSP3 MODE_BITS param with index 92, which is REGISTER_INPUTS
-                dsp_mode_bits_const[MODE_BITS_OUTPUT_SELECT_START_ID] = RTLIL::S1;
-                // log("Mode Bits %d\n",dsp_mode_bits_const);
-                DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
-            } else {
-                // Getting RS_DSP MODE_BITS param;
-                RTLIL::Const dsp_mode_bits_const = DFF_driven_DSP->getParam(RTLIL::escape_id("MODE_BITS"));
-                // Changing RS_DSP MODE_BITS param with index 83, which is REGISTER_INPUTS
-                // RTLIL::Const(3, 3)
-                if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S0){
-                    dsp_mode_bits_const[1] = RTLIL::S1;
-                    dsp_mode_bits_const[2] = RTLIL::S0;
-                    dsp_mode_bits_const[3] = RTLIL::S0;
                 }
-                else if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
-                    dsp_mode_bits_const[1] = RTLIL::S1;
-                    dsp_mode_bits_const[2] = RTLIL::S0;
-                    dsp_mode_bits_const[3] = RTLIL::S1;
-                }
-                else if(gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S0){
-                    dsp_mode_bits_const[82] = RTLIL::S1;
-                    dsp_mode_bits_const[81] = RTLIL::S0;
-                    dsp_mode_bits_const[81] = RTLIL::S0;
-                }
-                else {
-                    dsp_mode_bits_const[82] = RTLIL::S1;
-                    dsp_mode_bits_const[81] = RTLIL::S0;
-                    dsp_mode_bits_const[80] = RTLIL::S1;
-                }
-                log("Mode Bits %d\n",dsp_mode_bits_const.as_int());
-                DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
-            }
 
-            // Getting DSP clock port to connect it with DFF clock port
-            DFF_driven_DSP->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
-            // Getting DSP reset port to connect it with DFF reset port
-            RTLIL::SigSpec _arst_;
-            bool rst_inv = false;
-            if (DFF_hasArst || DFF_hasSrst) {
-                // BEGIN: Awais: inverter added at ouput of reset as active low reset is not supported by DSP architecture.
-                log("DFF_ARST_POL == %d  , DFF_hasArst = %d",DFF_ARST_POL,DFF_hasArst);
-                if (DFF_ARST_POL == 0  and DFF_hasArst){
-                    rst_inv = true;
-                    _arst_ = m_module->Not(NEW_ID, DFF_rst);
+                // Handle the syncronous reset by adding DFF at its input
+                if (DSP_RST_POL[2] == RTLIL::S1){
+                    RTLIL::SigSpec rst_sync = m_module->addWire(NEW_ID,GetSize(_arst_));
+                    m_module->addDff(NEW_ID, DFF_driven_DSP->getPort(RTLIL::escape_id("\\clk")), _arst_, rst_sync, RST_POL);
+                    _rst_ = rst_sync;
                 }
-                if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv){
-                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _arst_);
+
+                if (!RST_POL && DSP_RST_POL[2] == RTLIL::S1) {
+                    _rst_ = m_module->Not(NEW_ID, _rst_);
+                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
                 }
-                // END: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
-                else if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv == 0){
-                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
+                else if (DSP_RST_POL[2] == RTLIL::S1){
+                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
                 }
                 else{
-                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _arst_);
+                }
+                
+                // Unset the temporary parameter
+                DFF_driven_DSP->unsetParam(ID::DSP_CLK);
+                DFF_driven_DSP->unsetParam(ID::DSP_RST);
+                DFF_driven_DSP->unsetParam(ID::DSP_RST_POL);
+
+                // Set the MODEBITS for REGOUT
+                if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP2")){
+                    DFF_driven_DSP->setPort(RTLIL::escape_id("output_select"),sig_f);
+                }
+                else if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP3")){
+
+                    // Changing RS_DSP3 MODE_BITS param with index 92, which is REGISTER_INPUTS
+                    dsp_mode_bits_const[MODE_BITS_OUTPUT_SELECT_START_ID] = RTLIL::S1;
+                    DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
+                } else {   
+                    if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S0){
+                        dsp_mode_bits_const[1] = RTLIL::S1;
+                        dsp_mode_bits_const[2] = RTLIL::S0;
+                        dsp_mode_bits_const[3] = RTLIL::S0;
+                    }
+                    else if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
+                        dsp_mode_bits_const[1] = RTLIL::S1;
+                        dsp_mode_bits_const[2] = RTLIL::S0;
+                        dsp_mode_bits_const[3] = RTLIL::S1;
+                    }
+                    else if(gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
+                        dsp_mode_bits_const[80] = RTLIL::S1;
+                        dsp_mode_bits_const[81] = RTLIL::S0;
+                        dsp_mode_bits_const[82] = RTLIL::S0;
+                    }
+                    else {
+                        dsp_mode_bits_const[80] = RTLIL::S0;
+                        dsp_mode_bits_const[81] = RTLIL::S0;
+                        dsp_mode_bits_const[82] = RTLIL::S1;
+                    }
+                    DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
                 }
             }
+
         }
+    
 
 // ----- A piece of code that works with DSP connections  -----
         for (auto &DSP_driven_DFF : DSP_driven_only_by_DFF) {
-            if (DSP_driven_DFF->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
-                log("Mult accumulator is infered in REGIN Block\n");
-            }
             // creating new SigSpecs with which we will change the SigSpecs of DSP ports A and B
             RTLIL::SigSpec new_sigspec_for_a;
             RTLIL::SigSpec new_sigspec_for_b;
@@ -462,42 +417,10 @@ struct RsPackDspRegsWorker
 
             // Getting DSP clock port to connect it with DFF clock port
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
-            // Getting DSP reset port to connect it with DFF reset port
-            RTLIL::SigSpec _arst_;
-            bool rst_inv = false;
-            if (DFF_hasArst || DFF_hasSrst) {
-                // BEGIN: Awais: inverter added at ouput of reset as active low reset is not supported by DSP architecture.
-                log("DFF_ARST_POL == %d  , DFF_hasArst = %d",DFF_ARST_POL,DFF_hasArst);
-                if (DFF_ARST_POL == 0 ){
-                    rst_inv = true;
-                    _arst_ = m_module->Not(NEW_ID, DFF_rst);
-                }
-                if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv){
-                    DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), _arst_);
-                }
-                // END: Awais: inverter added at ouput of reset as active low reset is not supported by DSP architecture.
-                else if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv == 0){
-                    DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
-                }
-                else{
-                    DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
-                }
-            }
-
+   
             run_opt_clean = true;
         }
-        for (auto &DFF_driven_DSP : DSP_drives_DFF) {
-            for (auto &it_dff : DFF_used_cells) {
-                // making each DFF as FF object
-                RTLIL::SigSpec DSP_port_z = DFF_driven_DSP->getPort(RTLIL::escape_id("\\z"));
-                FfData ff(&m_initvals, it_dff);
-                log("DSP Reg = %s DFF = %s\n",log_signal(m_sigmap(ff.sig_q)), log_signal(m_sigmap(DSP_port_z)));
-                if (m_sigmap(DSP_port_z) == m_sigmap(ff.sig_q) ){
-                    ff.remove();
-                    break;
-                }
-            }
-        }
+
     }
 };
 
@@ -527,7 +450,7 @@ struct RsPackDspRegsPass : public Pass {
 
         for (auto mod : design->selected_modules()) {
             RsPackDspRegsWorker worker(mod);
-            worker.run_scr(gen3);
+            worker.run_scr(gen3,design);
             if (worker.run_opt_clean)
                 Pass::call(design, "opt_clean");
         }
