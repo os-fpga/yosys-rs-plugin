@@ -32,14 +32,20 @@ module dsp_t1_20x18x64_cfg_ports (
     parameter [0:19] COEFF_3 = 20'd0;
     parameter [0:2] OUTPUT_SELECT = 3'b000;
     parameter REGISTER_INPUTS = 1'b0;
+    parameter DSP_CLK = "";
+    parameter DSP_RST = "";
+    parameter DSP_RST_POL = "";
 
     RS_DSP # (
-        .MODE_BITS          ({COEFF_0,
-                              COEFF_1,
-                              COEFF_2,
-                              COEFF_3,
-                              OUTPUT_SELECT,
-                              REGISTER_INPUTS})
+        .MODE_BITS ({COEFF_0,
+                    COEFF_1,
+                    COEFF_2,
+                    COEFF_3,
+                    OUTPUT_SELECT,
+                    REGISTER_INPUTS}),
+        .DSP_CLK(DSP_CLK),
+        .DSP_RST(DSP_RST),
+        .DSP_RST_POL(DSP_RST_POL)
     ) _TECHMAP_REPLACE_ (
         .a                  (a_i),
         .b                  (b_i),
@@ -47,7 +53,7 @@ module dsp_t1_20x18x64_cfg_ports (
         .z                  (z_o),
         .dly_b              (dly_b_o),
 
-        .clk                (clock_i),
+        .clk                (CLK),
         .lreset             (reset_i),
 
         .feedback           (feedback_i),
