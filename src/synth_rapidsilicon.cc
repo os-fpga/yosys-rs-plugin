@@ -41,6 +41,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
+#define LUTx_SIM_FILE LUT.v
+#define LUT_FINAL_MAP_FILE lut_map.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
@@ -56,6 +58,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define IO_cells_FILE io_cells_primitives_new.sv
 #define IO_MODEL_FILE io_model_map_new.v
+#define GET_FILE_PATH_RS_LUTx_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/LUT/" STR(file)
 #define GET_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/IO/" STR(file)
 #define GET_TECHMAP_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/TECHMAP/" STR(file)
 #define BRAM_WIDTH_36 36
@@ -80,7 +83,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 172
+#define VERSION_PATCH 180
 
 enum Strategy {
     AREA,
@@ -172,6 +175,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Used to speed up synthesis flow\n");
         log("        Disabled by default.\n");
         log("\n");
+        log("    -no_sat\n");
+        log("        Disable SAT solver.\n");
+        log("\n");
         log("    -no_flatten\n");
         log("        Do not flatten design to preserve hierarchy.\n");
         log("        Disabled, design is flattened by default.\n");
@@ -225,6 +231,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -sdffr\n");
         log("        Infer synchroneous set/reset DFFs when possible.\n");
         log("        By default synchroneous set/reset DFFs are not infered.\n");
+        log("\n");
+        log("    -max_lut <num>\n");
+        log("        Specify the max number of LUTs allowed in the final synthesized netlist. \n");
+        log("        Synthesized netlist will be produced but synthesis will error out right after\n");
+        log("        if netlist LUTs number exceeds -max_lut value.\n");
+        log("        By default synthesis tool will not consider -max_lut if not specified. \n");
+        log("\n");
+        log("    -max_reg <num>\n");
+        log("        Specify the max number of DFFs allowed in the final synthesized netlist. \n");
+        log("        Synthesized netlist will be produced but synthesis will error out right after\n");
+        log("        if netlist DFFs number exceeds -max_reg value.\n");
+        log("        By default synthesis tool will not consider -max_reg if not specified. \n");
         log("\n");
 #endif
         log("    -no_dsp\n");
@@ -305,6 +323,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nobram;
     bool de;
     bool fast;
+    bool no_sat;
     bool no_flatten;
     bool no_iobuf;
     CarryMode infer_carry;
@@ -314,6 +333,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool nolibmap;
     bool preserve_ip;
     int de_max_threads;
+    int max_lut;
+    int max_reg;
     int max_bram;
     int max_carry_length;
     int max_dsp;
@@ -335,9 +356,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
         abc_script = "";
         cec = false;
         fast = false;
+        no_sat = false;
         no_flatten = false;
         no_iobuf= false;
         nobram = false;
+        max_lut = -1;
+        max_reg = -1;
         max_bram = -1;
         max_carry_length = -1;
         max_dsp = -1;
@@ -417,6 +441,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 fast = true;
                 continue;
             }
+            if (args[argidx] == "-no_sat") {
+                no_sat = true;
+                continue;
+            }
             if (args[argidx] == "-no_iobuf") {
 				no_iobuf = true;
 				continue;
@@ -470,6 +498,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
             if (args[argidx] == "-no_bram") {
                 nobram = true;
+                continue;
+            }
+            if (args[argidx] == "-max_lut" && argidx + 1 < args.size()) {
+                max_lut = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_reg" && argidx + 1 < args.size()) {
+                max_reg = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-max_bram" && argidx + 1 < args.size()) {
@@ -639,6 +675,82 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return (_design->top_module()->cells_.size());
     }
 
+    int getNumberOfLUTx() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+          if (cell->type.in(ID(LUT1), ID(LUT2), ID(LUT3), ID(LUT4), ID(LUT5), ID(LUT6))) {
+            nb++;
+          }
+       }
+
+       return nb;
+    }
+
+    // Specific to GENESIS3 by checking GENESI3 DFF names (dffre, dffnre)
+    //
+    int getNumberOfREGs() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+          if (cell->type.in(ID(dffre), ID(dffnre))) {
+            nb++;
+          }
+       }
+
+       return nb;
+    }
+
+    int getNumberOfGenericREGs() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+
+          if (!RTLIL::builtin_ff_cell_types().count(cell->type))
+              continue;
+
+          nb++;
+       }
+
+       return nb;
+    }
+
+    int getNumberOfLogic() {
+
+       int nb = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+          if (cell->type.in(ID($and), ID($_AND_), ID($_NAND_), ID($or), ID($_OR_),
+                            ID($_NOR_), ID($xor), ID($xnor), ID($_XOR_), ID($_XNOR_),
+                            ID($_MUX_), ID($mux),
+                            ID($not), ID($_NOT_), ID($_ANDNOT_), ID($_ORNOT_))) {
+            nb++;
+          }
+       }
+
+       return nb;
+    }
+
+    // Decides the number of iteration when performing "abc -dff". More REGs means more logic 
+    // partitions and more runtime. So we need to reduce the number of iterations accordingly.
+    //
+    int getLoopNbIterations() {
+
+         int nbGenericREGs = getNumberOfGenericREGs();
+
+         if (nbGenericREGs > 60000) { // if more than 60 K registers
+           return 1;                  // only 1 iteration !
+         }
+         if (nbGenericREGs > 40000) {
+           return 2;
+         }
+
+         return 4; // by default we do 4 iterations
+    }
+
     void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
 
         string nodffe_str = "";
@@ -670,12 +782,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
                run("opt_share");
             }
             if (nosdff) {
+               if (sat) {
+                  run("opt_dff -nosdff " + nodffe_str);
+               }
                run("opt_dff -nosdff " + nodffe_str + sat_str);
             } else {
-                if (no_sdff_temp)
+                if (no_sdff_temp){
+                    if (sat) {
+                      run("opt_dff "  + nodffe_str);
+                    }
                     run("opt_dff "  + nodffe_str + sat_str);
-                else
+                } else {
+                    if (sat) {
+                      run("opt_dff " + nosdff_str + nodffe_str);
+                    }
                     run("opt_dff " + nosdff_str + nodffe_str + sat_str);
+                }
             }
             run("opt_clean");
             run("opt_expr");
@@ -690,9 +812,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 break;
             }
 
+#if 0
             if ((nbInstAfter >= 80000) && (iteration >= 4)) {
                 break;
             }
+#endif
 
         }
 
@@ -700,7 +824,39 @@ struct SynthRapidSiliconPass : public ScriptPass {
         _design->sort();
         _design->check();
 
-        log("MAX OPT ITERATION = %d\n", iteration);
+        log("\nRUN-OPT ITERATIONS DONE : %d\n", iteration);
+    }
+
+    // Wrapper on 'run_opt' to better control way of using SAT mode. In non-SAT mode we call 
+    // 'run_opt" as in regular mode.
+    // In SAT mode we try to interleave non-SAT calls with 1 single SAT call in a general loop.
+    // SAT call will create few constants that will be propagated through fast non-SAT mode.
+    // On 'rsnoc" (EDA-1041) non-SAT mode takes 3 seconds and SAT mode can take up to 2 hours.
+    // (Thierry)
+    //
+    void top_run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
+
+      if (!sat) {
+         run_opt(nodffe, sat, nosdff, share, max_iter, no_sdff_temp);
+         return;
+      }
+
+      while (max_iter--) {
+
+         int nbInstBefore = getNumberOfInstances();
+
+         run_opt(nodffe, 0 /* NO SAT */, nosdff, share, 12 /* iteration */, no_sdff_temp);
+
+         // Note : only 1 iteration in SAT mode
+         //
+         run_opt(nodffe, 1 /* SAT */, nosdff, share, 1 /* iteration */, no_sdff_temp);
+
+         int nbInstAfter = getNumberOfInstances();
+
+         if (nbInstAfter == nbInstBefore) {
+           break;
+         }
+      }
     }
 
     void map_luts(EffortLevel effort_lvl) {
@@ -785,7 +941,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         if (!fast)
-            run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+            top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
 
         if (cec)
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
@@ -833,11 +989,27 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         // Do not extract DFFE before simplify : it may have been done earlier
         //
-        run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10, 0);
+        top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 0, 12, 0);
 
-        int maxLoop = 4;
+        if (!no_sat) {
+          top_run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 0, 10, 0);
+        }
+
+        run("stat");
+
+#if 0
+        int nbLogic = getNumberOfLogic();
+        log(" Nb Logic instances = %d\n", nbLogic);
+#endif
+
+        int nbGenericREGs = getNumberOfGenericREGs();
+        log("   Number of Generic REGs:          %d\n", nbGenericREGs);
+
+        int maxLoop = getLoopNbIterations();
 
         int nbInst = getNumberOfInstances();
+
+        //log(" Nb instances = %d\n", nbInst);
 
         if (nbInst > 800000) { // skip "abc -dff" for very big designs
            maxLoop = 0;
@@ -847,7 +1019,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
            maxLoop = 1;
         }
 
+        //log(" Max loop = %d\n", maxLoop);
+        
         for (int n=1; n <= maxLoop; n++) { 
+
+            log("\nABC-DFF iteration : %d\n", n);
 
             run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
                                        // Use "-keepff" to preserve DFF output wire name
@@ -857,7 +1033,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         run("opt_ffinv");
 
-        run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+        top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
+
+        if (!no_sat) {
+          top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+        }
     }
 
     void transform(int bmuxmap)
@@ -1218,39 +1398,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
     void correctBramInitValues() {
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
-                //For $__RS_FACTOR_BRAM36_TDP
-                if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP")) && 
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36) &&
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_36)) {
-                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1;
-                    std::vector<RTLIL::State> init_value2;
-                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-                        if (i % 2 == 0) {
-                            for (int j = 0; j <BRAM_WIDTH_18; ++j) {
-                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            }
-                        }
-                        else {
-                            for (int j = 0; j < BRAM_WIDTH_18; ++j) {
-                                init_value2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            }
-                        }
-                    }
-                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
-                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                }
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_TDP 
-                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))) && 
-                        ((((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_9))||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_4)) ||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1))))) {
-                            
+                //For $__RS_FACTOR_BRAM36_TDP and $__RS_FACTOR_BRAM36_SDP
+                if (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
+                   (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
+                {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_value2;
@@ -1287,126 +1438,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
 
                 }
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_TDP
-                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) && 
-                        ((((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_9))||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_4)) ||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_2)) ||
-                          ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) &&
-                           (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH")).as_int()) == BRAM_WIDTH_1)))
-                        )) {
-                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1;
-                    std::vector<RTLIL::State> init_temp;
-                    int width_size = 0;
-                    if((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP")))
-                        width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
-                    else
-                        width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
-
-                    for (int i = 0; i < width_size; ++i) {
-                        for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                            init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                            init_value1.push_back(init_temp[k]);
-                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
-                            init_value1.push_back(init_temp[m]);
-                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
-                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
-                        init_temp.clear();
-                    }
-                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                }
-                //For $__RS_FACTOR_BRAM36_SDP, 
-               else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_36)) ||
-                        ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")) && 
-                        (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_18))
-                        ) {      
-                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1;
-                    std::vector<RTLIL::State> init_value2;
-                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-                        if (i % 2 == 0) {
-                            for (int j = 0; j <BRAM_WIDTH_18; ++j) {
-                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            }
-                        }
-                        else {
-                            for (int j = 0; j < BRAM_WIDTH_18; ++j) {
-                                init_value2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            }
-                        }
-                    }
-                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
-                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                }
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM36_SDP
-                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))) && 
-                        ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
-
-                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
-                    std::vector<RTLIL::State> init_value1;
-                    std::vector<RTLIL::State> init_value2;
-                    std::vector<RTLIL::State> init_temp;
-                    std::vector<RTLIL::State> init_temp2;
-
-                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-
-                        if (i % 2 == 0){
-                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                                init_value1.push_back(init_temp[k]);
-                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
-                                init_value1.push_back(init_temp[m]);
-                            init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
-                            init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
-                            init_temp.clear();
-                        }
-                        else
-                        {
-                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                                init_temp2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                                init_value2.push_back(init_temp2[k]);
-                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
-                                init_value2.push_back(init_temp2[m]);
-                            init_value2.push_back(init_temp2[BRAM_first_byte_parity_bit]);//placed at location [16]
-                            init_value2.push_back(init_temp2[BRAM_second_byte_parity_bit]);
-                            init_temp2.clear();
-                        }
-                    }
-                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
-                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                }
-                
-                /// For 9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_SDP
-                else if (((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) && 
-                        ((get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_9) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_4) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_2) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")).as_int()) == BRAM_WIDTH_1) ||
-                         (get_width_mode(cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")).as_int()) == BRAM_WIDTH_1))) {
-                    
+                /// For 18/9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_TDP and $__RS_FACTOR_BRAM18_SDP
+                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) ||
+                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) 
+                {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
                     int width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
-
                     for (int i = 0; i < width_size; ++i) {
                         for (int j = 0; j <BRAM_WIDTH_18; ++j)
                             init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
@@ -1715,7 +1754,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
-                                GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE)
+                                GET_FILE_PATH_RS_LUTx_PRIMITVES(GENESIS_3_DIR, LUTx_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
@@ -1783,7 +1823,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
 
             run("check");
-            run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
+
+            run("stat");
+
+            top_run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
 
             if (fsm_encoding == Encoding::BINARY)
                 run("fsm -encoding binary");
@@ -1793,12 +1836,22 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (cec)
                 run("write_verilog -noattr -nohex after_fsm.v");
 
+            run("wreduce -keepdc");
+            run("peepopt");
+            run("opt_clean");
+
             if (fast)
                 run("opt -fast");
-            else if (clke_strategy == ClockEnableStrategy::EARLY) {
-                run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
+            else if (1 && (clke_strategy == ClockEnableStrategy::EARLY)) {
+                top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 1);
+                if (!no_sat) {
+                  top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 1);
+                }
             } else {
-                run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 1);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 1);
+                if (!no_sat) {
+                  top_run_opt(1 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 1);
+                }
             }
 
             run("wreduce -keepdc");
@@ -1964,7 +2017,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_alumacc.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
             }
 
 #ifdef DEV_BUILD
@@ -1995,7 +2048,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         if (tech == GENESIS_3) {
           run("dffunmap -srst-only");
-          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+          top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
         }
 #endif
 
@@ -2010,7 +2063,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #if 0
         if (tech == GENESIS_3) {
           run("dffunmap -srst-only");
-          run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 1, 0);
+          top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 1, 0);
         }
 #endif
 
@@ -2090,7 +2143,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_carry_map.v");
 
             if (!fast) {
-                run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
             }
 
             run("opt_expr -full");
@@ -2261,7 +2314,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
 
             if (!fast)
-                run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 4, 0);
+                top_run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
         }
 
         // Map left over cells like $mux (EDA-1441)
@@ -2287,7 +2340,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         // the final netlist.
         //
         if (tech == Technologies::GENESIS_3) {
-
+#if 0    //Removing latch conversion to $lut for EDA-1773
            run("stat");
 
            run("read_verilog " GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE));
@@ -2297,6 +2350,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
            // remove the dangling LLatch primitives.
            //
            run("opt_clean -purge");
+#endif
            string readIOArgs;
            readIOArgs=GET_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_cells_FILE);// RS_IO_BUF_Primitives
            
@@ -2309,7 +2363,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
            }
 
-
+           run("stat");
+#if 1
+           string techMaplutArgs = GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
+           run("techmap -map" + techMaplutArgs);
+#endif
         }
 
         if (check_label("blif")) {
@@ -2331,6 +2389,24 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         run("stat");
+
+        // Note that numbers extractions are specific to GENESIS3
+        //
+        int nbLUTx = getNumberOfLUTx();
+        int nbREGs = getNumberOfREGs();
+
+        log("   Number of LUTs:               %5d\n", nbLUTx);
+        log("   Number of REGs:               %5d\n", nbREGs);
+
+        if ((max_lut != -1) && (nbLUTx > max_lut)) {
+          log("\n");
+          log_cmd_error("Final netlist LUTs number [%d] exceeds '-max_lut' specified value [%d].\n", nbLUTx, max_lut);
+        }
+
+        if ((max_reg != -1) && (nbREGs > max_reg)) {
+          log("\n");
+          log_cmd_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
+        }
     }
 
 } SynthRapidSiliconPass;
