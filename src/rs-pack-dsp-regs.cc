@@ -234,9 +234,9 @@ struct RsPackDspRegsWorker
         for (auto &DFF_driven_DSP : DSP_drives_DFF) {
             bool RST_POL = true;
             RTLIL::Const DSP_RST_POL;
+            DSP_RST_POL = DFF_driven_DSP->getParam(RTLIL::escape_id("DSP_RST_POL"));
             RTLIL::Const dsp_mode_bits_const = DFF_driven_DSP->getParam(RTLIL::escape_id("MODE_BITS"));
-            if (dsp_mode_bits_const[1] == RTLIL::S1 || dsp_mode_bits_const[80] == RTLIL::S1){
-
+            if ((dsp_mode_bits_const[1] == RTLIL::S1 || dsp_mode_bits_const[80] == RTLIL::S1) && DSP_RST_POL.as_int()!=0){
                 // Apply clock and reset to DSP port 
                 auto CLK_PORT = (DFF_driven_DSP->getParam(ID::DSP_CLK)).decode_string();
                 auto RST_PORT = (DFF_driven_DSP->getParam(ID::DSP_RST)).decode_string();
@@ -248,16 +248,7 @@ struct RsPackDspRegsWorker
                             DFF_driven_DSP->setPort(RTLIL::escape_id("\\clk"), wire);
                         }
                         if (wire->name==RST_PORT.c_str()){
-                            DSP_RST_POL = DFF_driven_DSP->getParam(RTLIL::escape_id("DSP_RST_POL"));
-                            if (DSP_RST_POL[0] == RTLIL::S0){
-                                RST_POL = false;
-                                _arst_ = wire;
-                            }
-                            else {
-                                RST_POL = true;
-                                _arst_ = wire;
-                                // 
-                            }
+                            _arst_ = wire;
                         }
                     }
 
@@ -266,21 +257,26 @@ struct RsPackDspRegsWorker
                 // Handle the syncronous reset by adding DFF at its input
                 if (DSP_RST_POL[2] == RTLIL::S1){
                     RTLIL::SigSpec rst_sync = m_module->addWire(NEW_ID,GetSize(_arst_));
-                    m_module->addDff(NEW_ID, DFF_driven_DSP->getPort(RTLIL::escape_id("\\clk")), _arst_, rst_sync, RST_POL);
+                    m_module->addDff(NEW_ID, DFF_driven_DSP->getPort(RTLIL::escape_id("\\clk")), _arst_, rst_sync, DSP_RST_POL[3] == RTLIL::S1);
                     _rst_ = rst_sync;
                 }
 
-                if (!RST_POL && DSP_RST_POL[2] == RTLIL::S1) {
-                    _rst_ = m_module->Not(NEW_ID, _rst_);
+                if (DSP_RST_POL[3] == RTLIL::S0 && DSP_RST_POL[1] == RTLIL::S1) {
+                    _rst_ = m_module->Not(NEW_ID, _arst_);
                     DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
                 }
-                else if (DSP_RST_POL[2] == RTLIL::S1){
-                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
-                }
-                else{
+                else if (DSP_RST_POL[3] == RTLIL::S1 && DSP_RST_POL[1] == RTLIL::S1){
                     DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _arst_);
                 }
-                
+                else if (DSP_RST_POL[3] == RTLIL::S0 && DSP_RST_POL[2] == RTLIL::S1){
+                    RTLIL::SigSpec rst_low = m_module->addWire(NEW_ID,GetSize(_rst_));
+                    rst_low = m_module->Not(NEW_ID, _rst_);
+                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), rst_low);
+                }
+                else{
+                    DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
+                }
+
                 // Unset the temporary parameter
                 DFF_driven_DSP->unsetParam(ID::DSP_CLK);
                 DFF_driven_DSP->unsetParam(ID::DSP_RST);
@@ -295,7 +291,7 @@ struct RsPackDspRegsWorker
                     // Changing RS_DSP3 MODE_BITS param with index 92, which is REGISTER_INPUTS
                     dsp_mode_bits_const[MODE_BITS_OUTPUT_SELECT_START_ID] = RTLIL::S1;
                     DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
-                } else {   
+                } else {  
                     if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S0){
                         dsp_mode_bits_const[1] = RTLIL::S1;
                         dsp_mode_bits_const[2] = RTLIL::S0;
