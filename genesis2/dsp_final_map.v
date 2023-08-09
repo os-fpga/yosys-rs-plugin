@@ -53,7 +53,7 @@ module dsp_t1_20x18x64_cfg_ports (
         .z                  (z_o),
         .dly_b              (dly_b_o),
 
-        .clk                (CLK),
+        .clk                (clock_i),
         .lreset             (reset_i),
 
         .feedback           (feedback_i),
