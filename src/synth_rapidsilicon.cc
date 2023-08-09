@@ -898,7 +898,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             if (wire->name==CLK_PORT.c_str()){
                                 ff.has_clk = true;
                                 ff.sig_clk = wire;
-                                ff.pol_clk = REGOUT[3];
+                                ff.pol_clk = REGOUT[4];
                             }
                             if (wire->name == RST_PORT.c_str()){
                                 if (REGOUT[1]){
@@ -1044,6 +1044,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                 mult->setParam(RTLIL::escape_id("DSP_RST_POL"), RTLIL::Const(ff.pol_srst));
                                 REGOUT[2] = RTLIL::S1;
                                 REGOUT[3] = RTLIL::State(ff.pol_srst);
+                                log("ff.pol_srst = %d\n",ff.pol_srst);
                             }
                             
                             Const clk_paramValue;
@@ -1054,7 +1055,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             rst_paramValue = Const(rst_name);
                             mult->setParam(ID::DSP_RST, rst_name);
 
-                            REGOUT[3] = RTLIL::State(ff.pol_clk);
+                            REGOUT[4] = RTLIL::State(ff.pol_clk);
                             mult->setParam(RTLIL::escape_id("REG_OUT"), REGOUT);
 
                             mult->setPort(ID::Y, ff.sig_q);
@@ -1923,7 +1924,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         // Check if mult output is connected with Registers output  
                         check_mult_regout();
                         processDsp(cec);
-                        run("write_verilog -noattr -nohex after_processDSP.v");
+
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
                         else
