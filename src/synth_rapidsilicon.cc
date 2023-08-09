@@ -1024,6 +1024,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
                                        // Use "-keepff" to preserve DFF output wire name
 
+            top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 2, 0);
+
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
@@ -1998,8 +2000,12 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!nosimplify)
                 run("opt_ffinv"); // help for "trial1" to gain further luts
+
+            top_run_opt(1 /* nodffe */, 1 /* sat */, 1 /* force nosdff */, 1, 2, 0);
+
         }
         
+
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
 
