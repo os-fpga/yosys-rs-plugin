@@ -66,7 +66,7 @@ struct RsPackDspRegsWorker
         bool DFF_hasArst = false;
         bool DFF_hasSrst = false;
         bool DFF_ARST_POL = true;
-
+        bool DFF_REGOUT = false;
         // Getting each DSP from all DSPs of our MODULE
         for (auto &it_dsp : DSP_used_cells) {
             log_debug("Working with DSP by name: %s.\n", it_dsp->name.c_str());
@@ -276,7 +276,7 @@ struct RsPackDspRegsWorker
                 else{
                     DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
                 }
-
+                DFF_REGOUT = true;
                 // Unset the temporary parameter
                 DFF_driven_DSP->unsetParam(ID::DSP_CLK);
                 DFF_driven_DSP->unsetParam(ID::DSP_RST);
@@ -413,7 +413,28 @@ struct RsPackDspRegsWorker
 
             // Getting DSP clock port to connect it with DFF clock port
             DSP_driven_DFF->setPort(RTLIL::escape_id("\\clk"), DFF_clk);
-   
+            // Getting DSP reset port to connect it with DFF reset port
+            if (DFF_REGOUT == false){
+                RTLIL::SigSpec _arst_;
+                bool rst_inv = false;
+                if (DFF_hasArst || DFF_hasSrst) {
+                    // BEGIN: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
+                    if (DFF_ARST_POL == 0  and DFF_hasArst){
+                        rst_inv = true;
+                        _arst_ = m_module->Not(NEW_ID, DFF_rst);
+                    }
+                    if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv){
+                        DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), _arst_);
+                    }
+                    // END: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
+                    else if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv == 0){
+                        DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
+                    }
+                    else{
+                        DSP_driven_DFF->setPort(RTLIL::escape_id("\\reset"), DFF_rst);
+                    }
+                }
+            }
             run_opt_clean = true;
         }
 

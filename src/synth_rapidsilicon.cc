@@ -1241,6 +1241,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             mult->setPort(ID::Y, ff.sig_q);
                             DFF_used_cells.erase(DFF_used_cells.begin()+x);
                             ff.remove();
+                            break;
                         }
                     }
                     x = x+1;
