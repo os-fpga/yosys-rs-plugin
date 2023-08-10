@@ -183,8 +183,18 @@ static void create_rs_macc_dsp(rs_dsp_macc_pm &pm)
         } else {
             rst = st.ff->getPort(ID(ARST));
         }
-    } else {
-        rst = RTLIL::SigSpec(RTLIL::S0);
+    } else if (st.ff->hasPort(ID(SRST))){
+        // EDA-1766 ff is inserted to handle syncronous reset
+        RTLIL::SigSpec rst_sync = pm.module->addWire(NEW_ID,GetSize(st.ff->getPort(ID(SRST))));
+        pm.module->addDff(NEW_ID, st.ff->getPort(ID(CLK)),st.ff->getPort(ID(SRST)),rst_sync,st.ff->getParam(ID(SRST_POLARITY)).as_int());
+        if (st.ff->getParam(ID(SRST_POLARITY)).as_int() != 1) {
+            rst = pm.module->Not(NEW_ID, rst_sync);
+        } else {
+            rst = rst_sync;
+        }
+    }
+    else {
+            rst = RTLIL::SigSpec(RTLIL::S0);
     }
 
     if (st.ff->hasPort(ID(EN))) {
