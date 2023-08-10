@@ -7,6 +7,10 @@ module \$__RS_MUL20X18 (input [19:0] A, input [17:0] B, output [37:0] Y);
     parameter A_WIDTH = 0;
     parameter B_WIDTH = 0;
     parameter Y_WIDTH = 0;
+    parameter REG_OUT = 0;
+    parameter DSP_CLK = "";
+    parameter DSP_RST = "";
+    parameter DSP_RST_POL = "";
 
     wire [19:0] a;
     wire [17:0] b;
@@ -21,7 +25,17 @@ module \$__RS_MUL20X18 (input [19:0] A, input [17:0] B, output [37:0] Y);
                             {{(18 - B_WIDTH){1'b0}},         B};
 
     (* is_inferred=1 *)
-    dsp_t1_20x18x64_cfg_ports _TECHMAP_REPLACE_ (
+    dsp_t1_20x18x64_cfg_ports #(
+        .COEFF_0(20'd0),
+        .COEFF_1(20'd0),
+        .COEFF_2(20'd0),
+        .COEFF_3(20'd0),
+        .OUTPUT_SELECT({2'b0,REG_OUT[0]}),
+        .REGISTER_INPUTS(1'b0),
+        .DSP_CLK(DSP_CLK),
+        .DSP_RST(DSP_RST),
+        .DSP_RST_POL(REG_OUT)
+    ) _TECHMAP_REPLACE_ (
         .a_i                (a),
         .b_i                (b),
         .acc_fir_i          (6'd0),

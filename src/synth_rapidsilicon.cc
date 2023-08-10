@@ -67,6 +67,10 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_WIDTH_4 4
 #define BRAM_WIDTH_2 2
 #define BRAM_WIDTH_1 1
+
+#define DSP_MIN_WIDTH_A 4
+#define DSP_MIN_WIDTH_B 4
+
 #define BRAM_first_byte_parity_bit 8
 #define BRAM_second_byte_parity_bit 17
 #define BRAM_MAX_ADDRESS_FOR_36_WIDTH 2048
@@ -1050,7 +1054,204 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("clean_zerowidth");
         _design->sort();
     }
+    void add_out_reg(){
+        std::vector <SigChunk> port_chunk;
+        for (auto &module : _design->selected_modules()) {
+            for (auto &cell : module->selected_cells()) {
+                std::string cell_type_str = cell->type.str();
+                SigMap sigmap(_design->top_module());
+                
+                if(cell_type_str == RTLIL::escape_id("$mul")){
+                    
+                    auto REGOUT = (cell->getParam(ID::REG_OUT));
+                    if(REGOUT[0] == RTLIL::S1){
+                        SigMap sigmap(_design->top_module());
+                        FfInitVals initvals(&sigmap, _design->top_module());
 
+                        FfData ff(module, &initvals, NEW_ID);
+
+                        ff.width = cell->getParam(ID::Y_WIDTH).as_int();
+                        auto CLK_PORT = (cell->getParam(ID::DSP_CLK)).decode_string();
+                        auto RST_PORT = (cell->getParam(ID::DSP_RST)).decode_string();
+
+                        // log("Size of mult = %d\n",ff.width);
+                        SigSpec sig_q 		= module->addWire(NEW_ID,ff.width);
+                        for (auto wire : module->wires()){
+                            if (wire->name==CLK_PORT.c_str()){
+                                ff.has_clk = true;
+                                ff.sig_clk = wire;
+                                ff.pol_clk = REGOUT[4];
+                            }
+                            if (wire->name == RST_PORT.c_str()){
+                                if (REGOUT[1]){
+                                    ff.has_arst = true;
+                                    ff.sig_arst = wire;
+                                    ff.pol_arst = REGOUT[3];
+                                    ff.val_arst = Const(0,ff.width);
+                                }
+                                if(REGOUT[2]){
+                                    ff.has_srst = true;
+                                    ff.sig_srst = wire;
+                                    ff.pol_srst = REGOUT[3];
+                                    ff.val_srst = Const(0,ff.width);
+                                }
+                            }
+                        }
+                        
+                        ff.has_ce = false;
+                        ff.has_sr = false;
+                        ff.has_aload  = false;
+                        ff.has_gclk = false;
+                        int size_chunk = 0 ;
+                        RTLIL::IdString chunk_id;
+                        RTLIL::SigSpec Chunk_sig;
+                        for (auto &module_ : _design->selected_modules()) {
+                            for (auto &cell_ : module_->selected_cells()) {
+                                if(cell_->type == RTLIL::escape_id("$add")){
+                                    for (auto &conn_ : cell_->connections()) {
+                                        if (!conn_.second.is_chunk()){
+                                            std::vector<SigChunk> chunks_ = sigmap(conn_.second);
+                                            size_chunk = GetSize(conn_.second);
+                                            for (auto &chunk_ : chunks_){
+                                                if (chunk_.wire != nullptr){
+                                                    if (cell->getPort(ID::Y) == chunk_){
+                                                        port_chunk = chunks_;
+                                                        chunk_id = conn_.first;
+                                                        Chunk_sig = conn_.second;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        SigSpec new_sig_s = module->addWire(NEW_ID, size_chunk);
+                        int chunk_id_ = 0;
+                        for (auto &chunk : port_chunk){
+
+                            if(SigSpec(chunk) == cell->getPort(ID::Y)){
+                                if (chunk_id_ ==0 )
+                                    new_sig_s = sig_q;
+                                else
+                                    new_sig_s.append(sig_q);
+                            }
+                            else{if (chunk_id_ ==0 )
+                                    new_sig_s = chunk;
+                                else
+                                    new_sig_s.append(chunk);
+                            }
+                        chunk_id_ = chunk_id_ + 1;                                            
+                            
+                        }
+                        for (auto &module_ : _design->selected_modules()) {
+                            for (auto &cell_ : module_->selected_cells()) {
+                                if(cell_->type == RTLIL::escape_id("$add")){
+                                    if (cell_->getPort(chunk_id) == Chunk_sig){
+                                        cell_->unsetPort(chunk_id);
+                                        cell_->setPort(chunk_id,new_sig_s);
+                                    }
+                                }
+                            }
+                        }
+                        port_chunk.clear();
+                        ff.sig_d = cell->getPort(ID::Y);
+                        ff.sig_q = sig_q;
+                        ff.val_init = Const(0,ff.width);
+                        // log("After mapping signal\n");
+                        ff.emit();
+                    }
+                }
+                if(cell_type_str == RTLIL::escape_id("RS_DSP")){
+                    RTLIL::Const MODE_BITS_ = cell->getParam(RTLIL::escape_id("MODE_BITS"));
+                    if (MODE_BITS_[1] == RTLIL::S0 || MODE_BITS_[80] == RTLIL::S0){
+                        cell->unsetParam(ID::DSP_CLK);
+                        cell->unsetParam(ID::DSP_RST);
+                        cell->unsetParam(ID::DSP_RST_POL);
+                    }
+                }
+            }
+        }
+    }
+    void check_mult_regout(){
+        std::vector<Cell *> DFF_used_cells;
+        std::vector<Cell *> MULT_used_cells; 
+        std::vector<Cell *> MULT_DFF_used_cells;
+        SigMap sigmap(_design->top_module());
+        FfInitVals initvals(&sigmap, _design->top_module());
+        for (auto &module : _design->selected_modules()) {
+            for (auto &cell : module->selected_cells()) {
+                
+                if (RTLIL::builtin_ff_cell_types().count(cell->type)) {
+                    //adding all DFF cells of design
+                    DFF_used_cells.push_back(cell);
+                    continue;
+                }
+                if(cell->type == RTLIL::escape_id("$mul")){
+                    // log("$mul has been detected\n");
+                    MULT_used_cells.push_back(cell);
+                    continue;
+                }
+            }
+        }
+        for (auto &mult : MULT_used_cells){
+            if (mult->getPort(ID::A).size() >= DSP_MIN_WIDTH_A && mult->getPort(ID::B).size()>=DSP_MIN_WIDTH_B){
+                int x = 0;
+
+                for (auto &_dff_ :  DFF_used_cells){
+                    FfData ff(&initvals, _dff_);
+                    bool ignore_dsp = false;
+                    if (sigmap(ff.sig_d) == sigmap(mult->getPort(ID::Y))){
+                        if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk) {
+                            ignore_dsp = true;
+                        }
+                        if (!ignore_dsp){
+                            _design->DFF_cells.push_back(_dff_);
+                            mult->setParam(RTLIL::escape_id("REG_OUT"), RTLIL::Const(1));
+                            RTLIL::Const REGOUT = mult->getParam(RTLIL::escape_id("REG_OUT"));
+                            RTLIL::Const reset_pol = mult->getParam(RTLIL::escape_id("DSP_RST_POL"));
+                            string clk_name = log_signal(ff.sig_clk);
+                            string rst_name = "";
+                            // bool rst_pol = true;
+                            if(ff.has_arst){
+                                rst_name = log_signal(ff.sig_arst);
+                                mult->setParam(RTLIL::escape_id("DSP_RST_POL"), RTLIL::Const(ff.pol_arst));
+                                REGOUT[1] = RTLIL::S1;
+                                REGOUT[3] = RTLIL::State(ff.pol_arst);
+                            }
+                            if(ff.has_srst){
+                                rst_name = log_signal(ff.sig_srst);
+                                mult->setParam(RTLIL::escape_id("DSP_RST_POL"), RTLIL::Const(ff.pol_srst));
+                                REGOUT[2] = RTLIL::S1;
+                                REGOUT[3] = RTLIL::State(ff.pol_srst);
+                                log("ff.pol_srst = %d\n",ff.pol_srst);
+                            }
+                            
+                            Const clk_paramValue;
+                            clk_paramValue = Const(clk_name);
+                            mult->setParam(ID::DSP_CLK, clk_name);
+
+                            Const rst_paramValue;
+                            rst_paramValue = Const(rst_name);
+                            mult->setParam(ID::DSP_RST, rst_name);
+
+                            REGOUT[4] = RTLIL::State(ff.pol_clk);
+                            mult->setParam(RTLIL::escape_id("REG_OUT"), REGOUT);
+
+                            mult->setPort(ID::Y, ff.sig_q);
+                            DFF_used_cells.erase(DFF_used_cells.begin()+x);
+                            ff.remove();
+                            break;
+                        }
+                    }
+                    x = x+1;
+                }
+                
+            }
+        }
+    }
     void processDsp(bool cec){
         struct DspParams {
             size_t a_maxwidth;
@@ -1703,7 +1904,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #endif
                         run("wreduce t:$mul");
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis2 + " -max_dsp " + std::to_string(max_dsp));
-                        if (max_dsp != -1)
+                        if (max_dsp != -1){
                             for(auto& modules : _design->selected_modules()){
                                 for(auto& cells : modules->selected_cells()){
                                     if(cells->type == RTLIL::escape_id("$mul")){
@@ -1714,6 +1915,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                     }
                                 }
                             }
+                        }
+
+                        // Check if mult output is connected with Registers output
+                        if (tech == Technologies::GENESIS_2)
+                            check_mult_regout();
 
                         processDsp(cec);
 
@@ -1737,8 +1943,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
+                        if (tech == Technologies::GENESIS)
+                            run("rs-pack-dsp-regs -genesis");
+                        else   
+                            run("rs-pack-dsp-regs");
 
-                        run("rs-pack-dsp-regs");
+                        // add register at the remaining decomposed small multiplier that are not packed in DSP cells
+                        if(tech == Technologies::GENESIS_2)
+                            add_out_reg();
+
                         if (tech == Technologies::GENESIS)
                             run("rs_dsp_io_regs");
                         else
@@ -1768,6 +1981,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                 }
                             }
 
+                        // Check if mult output is connected with Registers output  
+                        if (tech == Technologies::GENESIS_3)
+                            check_mult_regout();
                         processDsp(cec);
 
                         if (use_dsp_cfg_params.empty())
@@ -1787,6 +2003,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs -genesis3");
+
+                        // add register at the remaining decomposed small multiplier that are not packed in DSP cells
+                        if (tech == Technologies::GENESIS_3)
+                            add_out_reg();
                         run("rs_dsp_io_regs -tech genesis3");
 
                         if (cec)
@@ -2005,7 +2225,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         }
         
-
         if (check_label("map_ffs")) {
             if (tech != Technologies::GENERIC) {
 
