@@ -1918,7 +1918,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         }
 
                         // Check if mult output is connected with Registers output
-                        check_mult_regout();
+                        if (tech == Technologies::GENESIS_2)
+                            check_mult_regout();
 
                         processDsp(cec);
 
@@ -1942,11 +1943,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
-
-                        run("rs-pack-dsp-regs");
+                        if (tech == Technologies::GENESIS)
+                            run("rs-pack-dsp-regs -genesis");
+                        else   
+                            run("rs-pack-dsp-regs");
 
                         // add register at the remaining decomposed small multiplier that are not packed in DSP cells
-                        add_out_reg();
+                        if(tech == Technologies::GENESIS_2)
+                            add_out_reg();
 
                         if (tech == Technologies::GENESIS)
                             run("rs_dsp_io_regs");
@@ -1978,7 +1982,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             }
 
                         // Check if mult output is connected with Registers output  
-                        check_mult_regout();
+                        if (tech == Technologies::GENESIS_3)
+                            check_mult_regout();
                         processDsp(cec);
 
                         if (use_dsp_cfg_params.empty())
@@ -2000,7 +2005,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         run("rs-pack-dsp-regs -genesis3");
 
                         // add register at the remaining decomposed small multiplier that are not packed in DSP cells
-                        add_out_reg();
+                        if (tech == Technologies::GENESIS_3)
+                            add_out_reg();
                         run("rs_dsp_io_regs -tech genesis3");
 
                         if (cec)
