@@ -83,7 +83,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 181
+#define VERSION_PATCH 183
 
 enum Strategy {
     AREA,
@@ -1027,6 +1027,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
                                        // Use "-keepff" to preserve DFF output wire name
+
+            top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 2, 0);
 
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
@@ -2000,6 +2002,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         // add register at the remaining decomposed small multiplier that are not packed in DSP cells
                         add_out_reg();
                         run("rs_dsp_io_regs -tech genesis3");
+
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
 
@@ -2211,6 +2214,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             if (!nosimplify)
                 run("opt_ffinv"); // help for "trial1" to gain further luts
+
+            top_run_opt(1 /* nodffe */, 1 /* sat */, 1 /* force nosdff */, 1, 2, 0);
+
         }
         
         if (check_label("map_ffs")) {
