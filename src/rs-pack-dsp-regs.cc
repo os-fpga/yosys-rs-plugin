@@ -66,6 +66,7 @@ struct RsPackDspRegsWorker
         bool DFF_hasArst = false;
         bool DFF_hasSrst = false;
         bool DFF_ARST_POL = true;
+        bool DFF_SRST_POL = true;
         bool DFF_REGOUT = false;
         // Getting each DSP from all DSPs of our MODULE
         for (auto &it_dsp : DSP_used_cells) {
@@ -137,7 +138,7 @@ struct RsPackDspRegsWorker
                 FfData ff(&m_initvals, it_dff);
 
                 // Lambda function for action when having connection between DSP and DFF
-                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, this](bool &port_from_dff, char working_port) {
+                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, &DFF_SRST_POL, this](bool &port_from_dff, char working_port) {
                     log_debug("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
                     // EDA-1701: if reset value is not zero ignore DSP
                     if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk || ff.val_srst.as_int()>0 || ff.val_arst.as_int() > 0 ) {
@@ -149,6 +150,7 @@ struct RsPackDspRegsWorker
                         DFF_hasArst = ff.has_arst;
                         DFF_hasSrst = ff.has_srst;
                         DFF_ARST_POL = ff.pol_arst;
+                        DFF_SRST_POL = ff.pol_srst;
                         if (DFF_hasArst)
                             DFF_rst = ff.sig_arst;
                         if (DFF_hasSrst)
@@ -419,7 +421,7 @@ struct RsPackDspRegsWorker
                 bool rst_inv = false;
                 if (DFF_hasArst || DFF_hasSrst) {
                     // BEGIN: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
-                    if (DFF_ARST_POL == 0  and DFF_hasArst){
+                    if ((DFF_ARST_POL == 0  and DFF_hasArst) || (DFF_SRST_POL == 0  and DFF_hasSrst)){
                         rst_inv = true;
                         _arst_ = m_module->Not(NEW_ID, DFF_rst);
                     }
