@@ -7,6 +7,10 @@ module \$__RS_MUL20X18 (input [19:0] A, input [17:0] B, output [37:0] Y);
     parameter A_WIDTH = 0;
     parameter B_WIDTH = 0;
     parameter Y_WIDTH = 0;
+    parameter REG_OUT = 0;
+    parameter DSP_CLK = "";
+    parameter DSP_RST = "";
+    parameter DSP_RST_POL = "";
 
     wire [19:0] a;
     wire [17:0] b;
@@ -73,6 +77,10 @@ module \$__RS_MUL10X9 (input [9:0] A, input [8:0] B, output [18:0] Y);
     parameter A_WIDTH = 0;
     parameter B_WIDTH = 0;
     parameter Y_WIDTH = 0;
+    parameter REG_OUT = 0;
+    parameter DSP_CLK = "";
+    parameter DSP_RST = "";
+    parameter DSP_RST_POL = "";
 
     wire [ 9:0] a;
     wire [ 8:0] b;
