@@ -1082,7 +1082,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         auto CLK_PORT = (cell->getParam(ID::DSP_CLK)).decode_string();
                         auto RST_PORT = (cell->getParam(ID::DSP_RST)).decode_string();
 
-                        // log("Size of mult = %d\n",ff.width);
                         SigSpec sig_q 		= module->addWire(NEW_ID,ff.width);
                         for (auto wire : module->wires()){
                             if (wire->name==CLK_PORT.c_str()){
@@ -1153,7 +1152,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         for (auto &cell_ : add_cells) {
                             if (chunk_id != ""){
                                 if (cell_->getPort(chunk_id) == Chunk_sig){
-                                    log("Signal = %s\n",log_signal(cell_->getPort(chunk_id)));
                                     cell_->unsetPort(chunk_id);
                                     cell_->setPort(chunk_id,new_sig_s);
                                 }
@@ -1164,7 +1162,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         ff.sig_d = cell->getPort(ID::Y);
                         ff.sig_q = sig_q;
                         ff.val_init = Const(0,ff.width);
-                        // log("After mapping signal\n");
                         ff.emit();
                     }
                 }
@@ -1194,7 +1191,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     continue;
                 }
                 if(cell->type == RTLIL::escape_id("$mul")){
-                    // log("$mul has been detected\n");
                     MULT_used_cells.push_back(cell);
                     continue;
                 }
