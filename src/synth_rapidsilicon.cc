@@ -1056,6 +1056,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
     }
     void add_out_reg(){
         std::vector <SigChunk> port_chunk;
+        std::vector<Cell *> add_cells;
+        for (auto &module : _design->selected_modules()) {
+            for (auto &cell : module->selected_cells()) {
+                if(cell->type == RTLIL::escape_id("$add")){
+                    add_cells.push_back(cell);
+                }
+            }
+        }
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
                 std::string cell_type_str = cell->type.str();
@@ -1105,22 +1113,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         int size_chunk = 0 ;
                         RTLIL::IdString chunk_id;
                         RTLIL::SigSpec Chunk_sig;
-                        for (auto &module_ : _design->selected_modules()) {
-                            for (auto &cell_ : module_->selected_cells()) {
-                                if(cell_->type == RTLIL::escape_id("$add")){
-                                    for (auto &conn_ : cell_->connections()) {
-                                        if (!conn_.second.is_chunk()){
-                                            std::vector<SigChunk> chunks_ = sigmap(conn_.second);
-                                            size_chunk = GetSize(conn_.second);
-                                            for (auto &chunk_ : chunks_){
-                                                if (chunk_.wire != nullptr){
-                                                    if (cell->getPort(ID::Y) == chunk_){
-                                                        port_chunk = chunks_;
-                                                        chunk_id = conn_.first;
-                                                        Chunk_sig = conn_.second;
-                                                        break;
-                                                    }
-                                                }
+                        for (auto &cell_ : add_cells) {
+                            for (auto &conn_ : cell_->connections()) {
+                                if (!conn_.second.is_chunk()){
+                                    std::vector<SigChunk> chunks_ = sigmap(conn_.second);
+                                    size_chunk = GetSize(conn_.second);
+                                    for (auto &chunk_ : chunks_){
+                                        if (chunk_.wire != nullptr){
+                                            if (cell->getPort(ID::Y) == chunk_){
+                                                port_chunk = chunks_;
+                                                chunk_id = conn_.first;
+                                                Chunk_sig = conn_.second;
+                                                break;
                                             }
                                         }
                                     }
@@ -1146,16 +1150,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         chunk_id_ = chunk_id_ + 1;                                            
                             
                         }
-                        for (auto &module_ : _design->selected_modules()) {
-                            for (auto &cell_ : module_->selected_cells()) {
-                                if(cell_->type == RTLIL::escape_id("$add")){
-                                    if (cell_->getPort(chunk_id) == Chunk_sig){
-                                        cell_->unsetPort(chunk_id);
-                                        cell_->setPort(chunk_id,new_sig_s);
-                                    }
+                        for (auto &cell_ : add_cells) {
+                            if (chunk_id != ""){
+                                if (cell_->getPort(chunk_id) == Chunk_sig){
+                                    log("Signal = %s\n",log_signal(cell_->getPort(chunk_id)));
+                                    cell_->unsetPort(chunk_id);
+                                    cell_->setPort(chunk_id,new_sig_s);
                                 }
                             }
                         }
+                        
                         port_chunk.clear();
                         ff.sig_d = cell->getPort(ID::Y);
                         ff.sig_q = sig_q;
@@ -1226,7 +1230,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                                 mult->setParam(RTLIL::escape_id("DSP_RST_POL"), RTLIL::Const(ff.pol_srst));
                                 REGOUT[2] = RTLIL::S1;
                                 REGOUT[3] = RTLIL::State(ff.pol_srst);
-                                log("ff.pol_srst = %d\n",ff.pol_srst);
                             }
                             
                             Const clk_paramValue;
@@ -2003,6 +2006,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
                         run("rs-pack-dsp-regs -genesis3");
+                        run("write_verilog -noattr -nohex before_regout.v");
 
                         // add register at the remaining decomposed small multiplier that are not packed in DSP cells
                         if (tech == Technologies::GENESIS_3)
