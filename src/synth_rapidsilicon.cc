@@ -1064,17 +1064,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 }
             }
         }
+
+        SigMap sigmap(_design->top_module());
+        FfInitVals initvals(&sigmap, _design->top_module());
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
                 std::string cell_type_str = cell->type.str();
-                SigMap sigmap(_design->top_module());
                 
                 if(cell_type_str == RTLIL::escape_id("$mul")){
                     
                     auto REGOUT = (cell->getParam(ID::REG_OUT));
                     if(REGOUT[0] == RTLIL::S1){
-                        SigMap sigmap(_design->top_module());
-                        FfInitVals initvals(&sigmap, _design->top_module());
 
                         FfData ff(module, &initvals, NEW_ID);
 
@@ -1966,6 +1966,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
+                        // run("rs-dsp-multadd -genesis3");
                         run("wreduce t:$mul");
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
                         if (max_dsp != -1)
