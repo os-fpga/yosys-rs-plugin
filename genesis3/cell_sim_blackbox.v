@@ -260,7 +260,7 @@ endmodule // I_SERDES
 //------------------------------------------------------------------------------
 `celldefine
 (* blackbox *)
-module dffre(
+module DFFRE(
     input D,
     input R,
     input E,
@@ -277,7 +277,7 @@ endmodule
 //------------------------------------------------------------------------------
 `celldefine
 (* blackbox *)
-module dffnre(
+module DFFNRE(
     input D,
     input R,
     input E,
