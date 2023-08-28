@@ -1499,7 +1499,8 @@ module DSP38 #(
     parameter [19:0] COEFF_3        = 20'h0,
     parameter        OUTPUT_REG_EN  = "TRUE",
     parameter        INPUT_REG_EN   = "TRUE",
-    parameter        DSP_MODE       = "MULTIPLY_ACCUMULATE"
+    parameter        DSP_MODE       = "MULTIPLY_ACCUMULATE", // (MULTIPLY, MULTIPLY_ADD_SUB)
+    parameter        SIGNED_UNSIGNED = "UNSIGNED" // Specify whether data is signed or unsigned (SIGNED/UNSIGNED)
 ) (
     input  wire [19:0] A,
     input  wire [17:0] B,
@@ -1510,9 +1511,7 @@ module DSP38 #(
     input wire       RESET,
     input wire [2:0] FEEDBACK,
     input wire       LOAD_ACC,
-    input wire       UNSIGNED_A,
-    input wire       UNSIGNED_B,
-    input wire       SATURATE_ENABLE,
+    input wire       SATURATE,
     input wire [5:0] SHIFT_RIGHT,
     input wire       ROUND,
     input wire       SUBTRACT
