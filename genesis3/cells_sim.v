@@ -8,7 +8,7 @@
 // active-Low asynchronous reset and
 // active-high enable
 //------------------------------------------------------------------------------
-module dffre(
+module DFFRE(
     input D,
     input R,
     input E,
@@ -34,7 +34,7 @@ endmodule
 // active-Low asynchronous reset and
 // active-high enable
 //------------------------------------------------------------------------------
-module dffnre(
+module DFFNRE(
     input D,
     input R,
     input E,
