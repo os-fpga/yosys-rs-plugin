@@ -1,0 +1,291 @@
+// Copyright (C) 2022 RapidSilicon
+//
+
+#include "kernel/yosys.h"
+#include "kernel/modtools.h"
+#include "kernel/ffinit.h"
+#include "kernel/ff.h"
+
+USING_YOSYS_NAMESPACE
+PRIVATE_NAMESPACE_BEGIN
+
+// Bits are accessed from right to left, but in GENESIS_2
+// MODE_BITS are stored in Big Endian order, so we have to
+// use reverse of the bit indecies for the access:
+// actual bit idx = 83 --> access idx = 0
+#define MODE_BITS_GENESIS2_REGISTER_INPUTS_ID 0
+#define MODE_BITS_GENESIS3_REGISTER_INPUTS_ID 83
+#define MODE_BITS_REGISTER_INPUTS_ID 92
+
+#define MODE_BITS_OUTPUT_SELECT_START_ID 1
+#define MODE_BITS_OUTPUT_SELECT_WIDTH 3
+bool is_genesis;
+bool is_genesis2;
+bool is_genesis3;
+struct RsDspMultAddWorker
+{
+    RTLIL::Module *m_module;
+    SigMap m_sigmap;
+    FfInitVals m_initvals;
+    RsDspMultAddWorker(RTLIL::Module *module) :
+        m_module(module), m_sigmap(module), m_initvals(&m_sigmap, module) {}
+
+    bool run_opt_clean = false;
+
+    void run_scr (bool gen, bool gen3,RTLIL::Design *design) {
+        SigMap sigmap(design->top_module());
+        // $shl->InputA<<InputB (WIDTH <= 6) and ((MultInput * coefficient) || (MultInput * acc[19:0]) + $shl) could be the candidate for multadd cell
+        std::vector<Cell *> mul_cells;
+        std::vector<Cell *> shl_cells;
+        std::vector<Cell *> add_cells_;
+        std::vector<Cell *> dff_cells_;
+        RTLIL::Cell *shift_left_cell;
+        RTLIL::Cell *mult_coeff;
+        RTLIL::Cell *mult_add_cell;
+        RTLIL::Cell *regout_cell;
+        bool add_shl = false;
+        bool add_mul = false;
+        bool mult_coef = false;
+        bool add_regout = false;
+        for (auto &cell : m_module->selected_cells()) {
+            if(cell->type == RTLIL::escape_id("$mul")){
+                mul_cells.push_back(cell);
+                continue;
+            }
+            if(cell->type == RTLIL::escape_id("$shl")){
+                shl_cells.push_back(cell);
+                continue;
+            }
+            if(cell->type == RTLIL::escape_id("$add")){
+                add_cells_.push_back(cell);
+                continue;
+            }
+            if (RTLIL::builtin_ff_cell_types().count(cell->type)) {
+                    //adding all DFF cells of design
+                    dff_cells_.push_back(cell);
+                    continue;
+            }
+        }
+        
+        for (auto &add_cell : add_cells_) {
+            add_shl = false;
+            add_mul = false;
+            mult_coef = false;
+            add_regout = false;
+            for (auto &conn_add : add_cell->connections()) {
+                for (auto &shl_cell : shl_cells) {
+                    for (auto &conn_shl : shl_cell->connections()) {
+                        if (conn_add.second==conn_shl.second){
+                            log("Signal MSB Chunk = %s",log_signal(conn_shl.second.extract(0,20)));
+                            shift_left_cell = shl_cell;
+                            mult_add_cell = add_cell;
+                            add_shl = true;
+                            break;
+                        }
+                    }
+                }
+                for (auto &mul_cell : mul_cells) {
+                    for (auto &conn_mul : mul_cell->connections()) {
+                        if (conn_mul.second.is_fully_const()){
+                            mult_coef = true;
+                        }
+                        if (conn_add.second==conn_mul.second){
+                            mult_coeff = mul_cell;
+                            mult_add_cell = add_cell;
+                            add_mul = true;
+                            break;
+                        }
+                    }                    
+                }
+            }
+            if (add_mul && add_shl && mult_coef){
+                RTLIL::IdString type;
+                string cell_base_name = "dsp_t1";
+                string cell_size_name = "_20x18x64";
+                string cell_cfg_name = "_cfg_ports";
+                string cell_full_name = cell_base_name + cell_size_name + cell_cfg_name;
+                type = RTLIL::escape_id(cell_full_name);
+                size_t tgt_a_width;
+                size_t tgt_b_width;
+                size_t tgt_z_width;
+                size_t a_width = GetSize(mult_coeff->getPort(ID(A)));
+                size_t b_width = GetSize(mult_coeff->getPort(ID(B)));
+                size_t z_width = GetSize(mult_coeff->getPort(ID(Y)));
+                size_t min_width = std::min(a_width, b_width);
+                size_t max_width = std::max(a_width, b_width);
+
+                // Signed / unsigned
+                bool a_signed = mult_coeff->getParam(ID(A_SIGNED)).as_bool();
+                bool b_signed = mult_coeff->getParam(ID(B_SIGNED)).as_bool();
+
+                if (min_width <= 2 && max_width <= 2 && z_width <= 4) {
+                    // Too narrow
+                    continue;
+                } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && is_genesis) {
+                    cell_size_name = "_10x9x32";
+                    tgt_a_width = 10;
+                    tgt_b_width = 9;
+                    tgt_z_width = 19;
+                } else if (min_width <= 18 && max_width <= 20 && z_width <= 38) {
+                    cell_size_name = "_20x18x64";
+                    tgt_a_width = 20;
+                    tgt_b_width = 18;
+                    tgt_z_width = 38;
+                } else {
+                    // Too wide
+                    continue;
+                }
+                log("Inferring MULTADD %zux%zu->%zu as %s from:\n", a_width, b_width, z_width, RTLIL::unescape_id(type).c_str());
+                for (auto cell : {mult_coeff, mult_add_cell, shift_left_cell}) { //Awais: unescape $neg which is being handled in MACC
+                    if (cell != nullptr) {
+                        log(" %s (%s)\n", RTLIL::unescape_id(cell->name).c_str(), RTLIL::unescape_id(cell->type).c_str());
+                    }
+                }
+                // Build the DSP cell name
+                std::string name;
+                name += RTLIL::unescape_id(mult_coeff->name) + "_";
+                name += RTLIL::unescape_id(shift_left_cell->name) + "_";
+                name += RTLIL::unescape_id(mult_add_cell->name);
+
+                // Add the DSP cell
+                bool shiftl_A_valid_size = false;
+                bool valid_shiftl_chunk = false;
+                RTLIL::SigSpec chunk_msb;
+                if (!(shift_left_cell->getPort(ID::A).is_chunk())){
+                    int size_chunk = 0 ;
+                    RTLIL::IdString chunk_id;
+                    std::vector<SigChunk> chunks_ = sigmap(shift_left_cell->getPort(ID::A));
+                    size_chunk = GetSize(shift_left_cell->getPort(ID::A));
+                    int n = 0 ;
+                    chunk_msb = chunks_.at(0);
+                    if (GetSize(chunks_.at(0))<=20 && GetSize(shift_left_cell->getPort(ID::B))<=6){
+                        shiftl_A_valid_size = true;
+                    }
+                    log("Chunk's[0] = %s, Size = %d Sig[19] = %s\n",log_signal(chunk_msb),GetSize(chunks_.at(0)),log_signal(chunk_msb[19]));
+                    for (auto &chunk_ : chunks_){
+                        if (n>0 && chunk_msb[GetSize(chunks_.at(0))-1] == chunk_){
+                            valid_shiftl_chunk  = true;
+                        }
+                        else{
+                            valid_shiftl_chunk  = false;
+                        }
+                        n++;
+                    }
+                }
+                if (!(shiftl_A_valid_size && valid_shiftl_chunk)) continue;
+                RTLIL::Cell *cell_muladd = m_module->addCell(RTLIL::escape_id(name), type);
+
+                // Set attributes
+                cell_muladd->set_bool_attribute(RTLIL::escape_id("is_inferred"), true);
+                if (mult_coeff->getPort(ID::B).is_fully_const()){
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), mult_coeff->getPort(ID::B).as_const());
+                    cell_muladd->setPort(RTLIL::escape_id("b_i"), mult_coeff->getPort(ID::A));
+                    cell_muladd->setPort(RTLIL::escape_id("a_i"), chunk_msb);
+                    cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
+                }
+                else{
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), mult_coeff->getPort(ID::A).as_const());
+                    cell_muladd->setPort(RTLIL::escape_id("b_i"), mult_coeff->getPort(ID::B));
+                    cell_muladd->setPort(RTLIL::escape_id("a_i"), chunk_msb);
+                    cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::B_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
+                }
+                cell_muladd->setPort(RTLIL::escape_id("acc_fir_i"), shift_left_cell->getPort(ID::B));
+                RTLIL::SigSpec sig_f;
+                    
+                sig_f.append(RTLIL::S1);
+                sig_f.append(RTLIL::S1);
+                sig_f.append(RTLIL::S1);
+
+                cell_muladd->setPort(RTLIL::escape_id("feedback_i"), sig_f);
+                cell_muladd->setPort(RTLIL::escape_id("load_acc_i"), RTLIL::SigSpec(RTLIL::S0));
+                cell_muladd->setPort(RTLIL::escape_id("subtract_i"), RTLIL::SigSpec(RTLIL::S0));
+
+                // Connect control ports
+                cell_muladd->setPort(RTLIL::escape_id("unsigned_a_i"),shift_left_cell->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
+                cell_muladd->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
+                cell_muladd->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
+                cell_muladd->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
+                // cell_muladd->getParam(ID::COEFF_0);
+                // Get input/output data signals
+                RTLIL::SigSpec clk;
+                RTLIL::SigSpec reset;
+                cell_muladd->setPort(RTLIL::escape_id("clock_i"), clk);
+                cell_muladd->setPort(RTLIL::escape_id("reset_i"), reset);
+                for (auto dff_cell : dff_cells_){
+                    if (mult_add_cell->getPort(ID::Y) == dff_cell->getPort(ID::D)){
+                        regout_cell = dff_cell;
+                        add_regout = true;
+                        log("Signal = %s\n",log_signal(dff_cell->getPort(ID::D)));
+                    }
+                }
+                if (is_genesis3){
+                    if (add_regout){
+                        cell_muladd->setParam(RTLIL::escape_id("OUTPUT_SELECT"), RTLIL::Const(6, 3));
+                        cell_muladd->setPort(RTLIL::escape_id("z_o"), regout_cell->getPort(ID::Q));
+                        m_module->remove(regout_cell);
+                    }
+                    else{
+                        cell_muladd->setParam(RTLIL::escape_id("OUTPUT_SELECT"), RTLIL::Const(2, 3));
+                        cell_muladd->setPort(RTLIL::escape_id("z_o"), mult_add_cell->getPort(ID::Y));
+                    }
+                }
+                if (is_genesis3){
+                    if (add_regout){
+                        cell_muladd->setParam(RTLIL::escape_id("OUTPUT_SELECT"), RTLIL::Const(3, 3));
+                        cell_muladd->setPort(RTLIL::escape_id("z_o"), regout_cell->getPort(ID::Q));
+                        m_module->remove(regout_cell);
+                    }
+                    else{
+                        cell_muladd->setParam(RTLIL::escape_id("OUTPUT_SELECT"), RTLIL::Const(2, 3));
+                        cell_muladd->setPort(RTLIL::escape_id("z_o"), mult_add_cell->getPort(ID::Y));
+                    }
+                }
+	            m_module->remove(mult_add_cell);
+	            m_module->remove(shift_left_cell);
+	            m_module->remove(mult_coeff);
+                RTLIL::SigSpec sig_z;
+                RTLIL::SigSpec acc_fir;
+            }
+        }
+    }
+};
+
+struct RSDspMultAddPass : public Pass {
+    RSDspMultAddPass() : Pass("rs-dsp-multadd", "pack multadd into DSP") { }
+    void help() override
+    {
+        //   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
+        log("\n");
+        log("    Rs_dsp_multadd [selection]\n");
+        log("\n");
+        log("    This pass packs DSP input registers inside DSP component\n");
+        log("\n");
+    }
+
+    void execute(std::vector<std::string> a_Args, RTLIL::Design *design) override
+    {
+        log_header(design, "Executing RS_DSP_MULTADD pass.\n");
+        bool gen3 = false;
+        bool gen = false;
+        size_t argidx;
+        for (argidx = 1; argidx < a_Args.size(); argidx++) {
+            if (a_Args[argidx] == "-genesis3")
+                is_genesis3 = true;
+            if (a_Args[argidx] == "-genesis2")
+                is_genesis2 = true;
+            if (a_Args[argidx] == "-genesis")
+                is_genesis = true;
+        }
+        
+        extra_args(a_Args, argidx, design);
+
+        for (auto mod : design->selected_modules()) {
+            RsDspMultAddWorker worker(mod);
+            worker.run_scr(gen,gen3,design);
+            // if (worker.run_opt_clean)
+            //     Pass::call(design, "opt_clean");
+        }
+    }
+} RSDspMultAddPass;
+
+PRIVATE_NAMESPACE_END
