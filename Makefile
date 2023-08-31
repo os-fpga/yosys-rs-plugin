@@ -107,7 +107,8 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-dffsr-conv.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc \
-		  src/rs-pack-dsp-regs.cc
+		  src/rs-pack-dsp-regs.cc \
+		  src/rs-dsp-multadd.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
