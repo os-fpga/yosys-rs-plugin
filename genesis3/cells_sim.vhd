@@ -13,7 +13,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity dffre is
+entity DFFRE is
    generic (
                INIT_VALUE : std_logic := '0';
                VCS_MODE : boolean := false
@@ -25,9 +25,9 @@ entity dffre is
       d: in std_logic;
       q: out std_logic
    );
-end dffre;
+end DFFRE;
 
-architecture arch of dffre is
+architecture arch of DFFRE is
 begin
    process_init : process
    begin
@@ -57,7 +57,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity dffnre is
+entity DFFNRE is
    generic (
                INIT_VALUE : std_logic := '0';
                VCS_MODE : boolean := false
@@ -69,9 +69,9 @@ entity dffnre is
       d: in std_logic;
       q: out std_logic
    );
-end dffnre;
+end DFFNRE;
 
-architecture arch of dffnre is
+architecture arch of DFFNRE is
 begin
    process_init : process
    begin
