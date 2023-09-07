@@ -83,6 +83,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
+
 #define VERSION_PATCH 189
 
 enum Strategy {
@@ -695,7 +696,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
        int nb = 0;
 
        for (auto cell : _design->top_module()->cells()) {
-          if (cell->type.in(ID(dffre), ID(dffnre))) {
+          if (cell->type.in(ID(DFFRE), ID(DFFNRE))) {
             nb++;
           }
        }
