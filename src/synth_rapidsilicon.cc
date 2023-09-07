@@ -83,8 +83,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-
-#define VERSION_PATCH 189
+#define VERSION_PATCH 190
 
 enum Strategy {
     AREA,
@@ -752,7 +751,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
          return 4; // by default we do 4 iterations
     }
 
-    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
+    void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter, int no_sdff_temp) {
 
         string nodffe_str = "";
         string sat_str = "";
@@ -835,7 +834,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     // On 'rsnoc" (EDA-1041) non-SAT mode takes 3 seconds and SAT mode can take up to 2 hours.
     // (Thierry)
     //
-    void top_run_opt(int nodffe, int sat, int nosdff, int share, int max_iter,int no_sdff_temp) {
+    void top_run_opt(int nodffe, int sat, int nosdff, int share, int max_iter, int no_sdff_temp) {
 
       if (!sat) {
          run_opt(nodffe, sat, nosdff, share, max_iter, no_sdff_temp);
@@ -950,22 +949,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         index++;
     }
 
-    // Perform a small loop of successive "abc -dff" calls.  
-    // This "simplify" pass may have some big QoR impact on this list of designs:
-    //     - wrapper_io_reg_max 
-    //     - wrapper_io_reg_tc1 
-    //     - wrapper_multi_enc_decx2x4
-    //     - keymgr 
-    //     - kmac 
-    //     - alu4 
-    //     - s38417
-    //
-    void simplify() 
+    void preSimplify() 
     {
         if (tech != Technologies::GENERIC) {
-#ifdef DEV_BUILD
             run("stat");
-#endif
             switch (tech) {
                 case Technologies::GENESIS: {
                     if (sdffr) {run("dfflegalize -cell $_SDFF_???_ 0 t:$_SDFFCE_*");}
@@ -983,9 +970,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
                         break;
                     }
                 }
-#ifdef DEV_BUILD
-            run("stat");
-#endif
         }
 
         // Do not extract DFFE before simplify : it may have been done earlier
@@ -997,10 +981,32 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
 
         run("stat");
+    }
+
+    void postSimplify() 
+    {
+        top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
+
+        if (!no_sat) {
+          top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
+        }
+    }
+
+    // Perform a small loop of successive "abc -dff" calls.  
+    // This "simplify" pass may have some big QoR impact on this list of designs:
+    //     - wrapper_io_reg_max 
+    //     - wrapper_io_reg_tc1 
+    //     - wrapper_multi_enc_decx2x4
+    //     - keymgr 
+    //     - kmac 
+    //     - alu4 
+    //     - s38417
+    //
+    void simplify(int unmap_dff_ce) 
+    {
 
 #if 0
-        int nbLogic = getNumberOfLogic();
-        log(" Nb Logic instances = %d\n", nbLogic);
+        preSimplify();
 #endif
 
         int nbGenericREGs = getNumberOfGenericREGs();
@@ -1029,18 +1035,37 @@ struct SynthRapidSiliconPass : public ScriptPass {
             run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
                                        // Use "-keepff" to preserve DFF output wire name
 
-            top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 2, 0);
+#if 0
+            top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 0, 1, 0, 0);
+#else
+            if (!unmap_dff_ce) {
+               top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 2, 0);
+            } else {
+            
+              run("opt_dff -nosdff -nodffe");
+              run("opt_expr");
+              run("opt_clean");
+
+              run("opt_dff -nosdff -nodffe");
+              run("opt_expr");
+              run("opt_clean");
+
+              run("opt_dff -nosdff");
+              run("opt_expr");
+              run("opt_clean");
+
+              run("dffunmap -ce-only");
+            }
+#endif
 
             if (cec)
                 run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
         }
         run("opt_ffinv");
 
-        top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
-
-        if (!no_sat) {
-          top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
-        }
+#if 0
+        postSimplify();
+#endif
     }
 
     void transform(int bmuxmap)
@@ -2205,7 +2230,75 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 if (cec)
                     run("write_verilog -noattr -nohex before_simplify.v");
 
-                simplify();
+                preSimplify();
+
+                // Explore two strategies :
+                //     - one with FF with clock enables
+                //     - the other with no clock enables
+                // Perform this sequentially (as multi-thread would not work
+                // here) and pick up the best on rough criterion.
+                //
+
+                // First save the original design
+                //
+                run("design -save original");
+
+                // Simplify wit clock enables if any
+                //
+                simplify(0 /* unmap_dff_ce */);
+                run("design -push-copy");
+
+                int nbcells_strategy1 = getNumberOfInstances();
+                int nbGenericREGs1 = getNumberOfGenericREGs();
+                int nbOfLogic1 = getNumberOfLogic();
+
+                // re-start from original design
+                //
+                run("design -load original");
+
+                // Simplify without clock enables
+                //
+                simplify(1 /* unmap_dff_ce */);
+                run("design -save unmap_dff_ce");
+
+                int nbcells_strategy2 = getNumberOfInstances();
+                int nbGenericREGs2 = getNumberOfGenericREGs();
+                int nbOfLogic2 = getNumberOfLogic();
+
+                if (0) {   
+                   log("****************************\n");
+                   log(" NB cells strategy 1 : %d\n", nbcells_strategy1);
+                   log(" NB REGs strategy 1  : %d\n", nbGenericREGs1);
+                   log(" NB LOGs strategy 1  : %d\n", nbOfLogic1);
+                   log(" NB cells strategy 2 : %d\n", nbcells_strategy2);
+                   log(" NB REGs strategy 2  : %d\n", nbGenericREGs2);
+                   log(" NB LOGs strategy 2  : %d\n", nbOfLogic2);
+                   log("****************************\n");
+
+                   //getchar();
+                }
+
+                // Pick up second strategy only if total number of logic 
+                // cells increase is limited.
+                //
+                float thresh = 0.92;
+
+                if (1 && (nbOfLogic2 * thresh <= nbOfLogic1)) {
+
+                   log("select CE dissolving strategy (tresh=%f)\n", thresh);
+
+                   run("design -save unmap_dff_ce");
+                   run("design -pop");
+                   run("design -load unmap_dff_ce");
+
+                } else {
+
+                   log("select CE preserving strategy (tresh=%f)\n", thresh);
+
+                   run("design -pop");
+                }
+
+                postSimplify();
 
                 if (cec)
                     run("write_verilog -noattr -nohex after_simplify.v");
