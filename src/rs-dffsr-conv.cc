@@ -40,7 +40,7 @@ struct rsDffsrConv : public Pass {
 					module->addAdff(RTLIL::escape_id(cell->name.str() + "dffs"), cell->getPort("\\C"), cell->getPort("\\S"), d_not, not_in, RTLIL::Const(0 , cell->getPort("\\S").size()));
 					module->addDff(RTLIL::escape_id(cell->name.str() + "dff"), cell->getPort("\\C"), cell->getPort("\\D"), xor_in);
 				} else {
-					module->addAdffe(RTLIL::escape_id(cell->name.str() + "dffre"), cell->getPort("\\C"), cell->getPort("\\E"), cell->getPort("\\R"), cell->getPort("\\D"), mux_b, RTLIL::Const(0 , cell->getPort("\\R").size()));
+					module->addAdffe(RTLIL::escape_id(cell->name.str() + "DFFRE"), cell->getPort("\\C"), cell->getPort("\\E"), cell->getPort("\\R"), cell->getPort("\\D"), mux_b, RTLIL::Const(0 , cell->getPort("\\R").size()));
 					module->addAdffe(RTLIL::escape_id(cell->name.str() + "dffse"), cell->getPort("\\C"), cell->getPort("\\E"),cell->getPort("\\S"), d_not, not_in, RTLIL::Const(0 , cell->getPort("\\S").size()));
 					module->addDffe(RTLIL::escape_id(cell->name.str() + "dffe"), cell->getPort("\\C"), cell->getPort("\\E"), cell->getPort("\\D"), xor_in);
 				}
