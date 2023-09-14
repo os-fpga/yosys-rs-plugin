@@ -70,7 +70,7 @@ design -load postopt
 yosys cd subtractor
 stat
 select -assert-count 0 t:adder_carry
-select -assert-count 6 t:\$lut
+select -assert-count 5 t:\$lut
 
 design -reset
 
