@@ -75,6 +75,7 @@ struct RsPackDspRegsWorker
             // if the port of DSP driven from DFF
             bool port_a_from_dff = false;
             bool port_b_from_dff = false;
+            bool port_load_acc_from_dff = false;
             // if we check somthing and need to ignore selected DSP
             bool ignore_dsp = false;
             // if we check somthing and need to ignore selected DFF
@@ -84,6 +85,7 @@ struct RsPackDspRegsWorker
             // get it_dsp SigSpec of ports (a) and (b)
             RTLIL::SigSpec DSP_port_a = it_dsp->getPort(RTLIL::escape_id("\\a"));
             RTLIL::SigSpec DSP_port_b = it_dsp->getPort(RTLIL::escape_id("\\b"));
+            RTLIL::SigSpec DSP_port_load_acc = it_dsp->getPort(RTLIL::escape_id("\\load_acc"));
 
             // Getting each cell of DESIGN to check if there is connection between
             for (auto &it_cell : ALL_cells_of_design) {
@@ -138,8 +140,8 @@ struct RsPackDspRegsWorker
                 FfData ff(&m_initvals, it_dff);
 
                 // Lambda function for action when having connection between DSP and DFF
-                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, &DFF_SRST_POL, this](bool &port_from_dff, char working_port) {
-                    log_debug("There is a connection between DSP port ( \\%c ) and DFF port ( q )\n", working_port);
+                auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, &DFF_SRST_POL, this](bool &port_from_dff, string working_port) {
+                    log("There is a connection between DSP port ( \\%s ) and DFF port ( q )\n", working_port.c_str());
                     // EDA-1701: if reset value is not zero ignore DSP
                     if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk || ff.val_srst.as_int()>0 || ff.val_arst.as_int() > 0 ) {
                         ignore_dsp = true;
@@ -193,7 +195,7 @@ struct RsPackDspRegsWorker
                         // comparing if DFF port bit is the same as DSP port bit
                         if (bit_dff == bit_dsp) {
                             // calling lambda function for port (a)
-                            check_dff(port_a_from_dff, 'a');
+                            check_dff(port_a_from_dff, "a");
                             // we cancel the comparison of the remaining bits because it is already clear that the DSP port receives a signal from the DFF
                             break;
                         }
@@ -205,11 +207,62 @@ struct RsPackDspRegsWorker
                         // comparing if DFF port bit is the same as DSP port bit
                         if (bit_dff == bit_dsp) {
                             // calling lambda function for port (a)
-                            check_dff(port_b_from_dff, 'b');
+                            check_dff(port_b_from_dff, "b");
                             // we cancel the comparison of the remaining bits because it is already clear that the DSP port receives a signal from the DFF
                             break;
                         }
                     }
+                    if(DSP_port_load_acc.is_fully_const()){
+                        port_load_acc_from_dff = true;
+                    }
+                    else{
+                        for (auto bit_dsp : m_sigmap(DSP_port_load_acc)) {
+                            // comparing if DFF port bit is the same as DSP port bit
+                            if (bit_dff == bit_dsp) {
+                                // calling lambda function for port (load_acc)
+                                check_dff(port_load_acc_from_dff, "load_acc");
+                                if (port_load_acc_from_dff){
+                                    RTLIL::SigSpec new_sigspec_for_load_acc;
+
+                                    RTLIL::SigSpec DSP_port_load_acc = it_dsp->getPort(RTLIL::escape_id("\\load_acc"));
+
+                                    for (auto bit_dsp : m_sigmap(DSP_port_load_acc)) {
+                                        // get all DFFs
+                                        for (auto &it_dff : DFF_used_cells) {
+                                            // making each DFF as FF object
+                                            FfData ff(&m_initvals, it_dff);
+                                            // this index var is used to take the input bit of DFF with the index of the output bit DFF
+                                            int use_index_for_dff = 0;
+                                            // get all bits of DFF output port
+                                            for (auto bit_dff : m_sigmap(ff.sig_q)) {
+                                                // compare if bit of DSP port (b) is the same with bit of DFF port (q)
+                                                if (bit_dsp == bit_dff) {
+                                                    // add DFF input data port bit for new SigSpec for DSP port (b)
+                                                    new_sigspec_for_load_acc.append(ff.sig_d[use_index_for_dff]);
+                                                    // get selected DFF clock and reset for this DSP
+                                                    DFF_clk = ff.sig_clk;
+                                                    DFF_hasArst = ff.has_arst;
+                                                    DFF_hasSrst = ff.has_srst;
+                                                    if (DFF_hasArst)
+                                                        DFF_rst = ff.sig_arst;
+                                                    if (DFF_hasSrst)
+                                                        DFF_rst = ff.sig_srst;
+                                                }
+                                                // incrementing index;
+                                                use_index_for_dff++;
+                                            }
+                                        }
+                                    }
+                                    it_dsp->setPort(RTLIL::escape_id("\\load_acc"), new_sigspec_for_load_acc);
+                                }
+
+                                // we cancel the comparison of the remaining bits because it is already clear that the DSP port receives a signal from the DFF
+                                break;
+                            }
+                        }
+                    }
+                    if (ignore_dsp)
+                        break;
                     if (next_dff || ignore_dsp)
                         break;
                 }
@@ -222,7 +275,7 @@ struct RsPackDspRegsWorker
                 continue;
 
             // if DSP data ports is driven from DFFs add it in vector
-            if (port_a_from_dff && port_b_from_dff && !ignore_dsp) {
+            if (port_a_from_dff && port_b_from_dff && port_load_acc_from_dff && !ignore_dsp) {
                 DSP_driven_only_by_DFF.push_back(it_dsp);
             }
             if (1) {
@@ -328,10 +381,12 @@ struct RsPackDspRegsWorker
             // creating new SigSpecs with which we will change the SigSpecs of DSP ports A and B
             RTLIL::SigSpec new_sigspec_for_a;
             RTLIL::SigSpec new_sigspec_for_b;
+            RTLIL::SigSpec new_sigspec_for_load_acc;
 
             // get selected DSP SigSpec of ports (a) and (b)
             RTLIL::SigSpec DSP_port_a = DSP_driven_DFF->getPort(RTLIL::escape_id("\\a"));
             RTLIL::SigSpec DSP_port_b = DSP_driven_DFF->getPort(RTLIL::escape_id("\\b"));
+            RTLIL::SigSpec DSP_port_load_acc = DSP_driven_DFF->getPort(RTLIL::escape_id("\\load_acc"));
 
             // get all bits of DSP port (a)
             for (auto bit_dsp : m_sigmap(DSP_port_a)) {
