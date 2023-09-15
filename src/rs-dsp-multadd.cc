@@ -101,7 +101,6 @@ struct RsDspMultAddWorker
                                     mult_coeff = mul_cell;
                                     mult_add_cell = add_cell;
                                     add_mul = true;
-                                    // log("Mult is connected to Register\n");
                                     break;
                                 }
                             }
@@ -183,7 +182,6 @@ struct RsDspMultAddWorker
                     if (GetSize(chunks_.at(0))<=20 && GetSize(shift_left_cell->getPort(ID::B))<=6){
                         shiftl_A_valid_size = true;
                     }
-                    log("Chunk's[0] = %s, Size = %d Sig[19] = %s\n",log_signal(chunk_msb),GetSize(chunks_.at(0)),log_signal(chunk_msb[19]));
                     for (auto &chunk_ : chunks_){
                         if (n>0 && chunk_msb[GetSize(chunks_.at(0))-1] == chunk_){
                             valid_shiftl_chunk  = true;
@@ -202,33 +200,36 @@ struct RsDspMultAddWorker
                 RTLIL::SigSpec sig_b;
                 RTLIL::SigSpec sig_z;
                 cell_muladd->set_bool_attribute(RTLIL::escape_id("is_inferred"), true);
+                sig_a = chunk_msb;
                 if (acc_multA){ 
                     if (mult_coeff->getPort(ID::B) == (regout_mult_cell->getPort(ID::Q)).extract(0,20)){
-                        cell_muladd->setPort(RTLIL::escape_id("a_i"), chunk_msb);
-                        cell_muladd->setPort(RTLIL::escape_id("b_i"), mult_coeff->getPort(ID::A));
+                        cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);
+                        sig_b = mult_coeff->getPort(ID::A);
+                        cell_muladd->setPort(RTLIL::escape_id("b_i"),sig_b);
                     }
                     else if (mult_coeff->getPort(ID::A) == (regout_mult_cell->getPort(ID::Q)).extract(0,20)){
-                        cell_muladd->setPort(RTLIL::escape_id("a_i"), chunk_msb);
-                        cell_muladd->setPort(RTLIL::escape_id("b_i"), mult_coeff->getPort(ID::B));
+                        cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);
+                        sig_b = mult_coeff->getPort(ID::B);
+                        cell_muladd->setPort(RTLIL::escape_id("b_i"), sig_b);
                     }
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_a_i"),mult_coeff->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::B_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                 }
                 else if (mult_coeff->getPort(ID::B).is_fully_const()){
                     cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), mult_coeff->getPort(ID::B).as_const());
-                    cell_muladd->setPort(RTLIL::escape_id("b_i"), mult_coeff->getPort(ID::A));
-                    cell_muladd->setPort(RTLIL::escape_id("a_i"), chunk_msb);
+                    sig_b = mult_coeff->getPort(ID::A);
+                    cell_muladd->setPort(RTLIL::escape_id("b_i"), sig_b);
+                    cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                 }
                 else{
                     cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), mult_coeff->getPort(ID::A).as_const());
-                    cell_muladd->setPort(RTLIL::escape_id("b_i"), mult_coeff->getPort(ID::B));
-                    cell_muladd->setPort(RTLIL::escape_id("a_i"), chunk_msb);
+                    sig_b = mult_coeff->getPort(ID::B);
+                    cell_muladd->setPort(RTLIL::escape_id("b_i"), sig_b);
+                    cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::B_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                 }
 
-                sig_a = cell_muladd->getPort(RTLIL::escape_id("a"));
-                sig_b = cell_muladd->getPort(RTLIL::escape_id("a"));
                 sig_a.extend_u0(tgt_a_width, a_signed);
                 sig_b.extend_u0(tgt_b_width, b_signed);
                 RTLIL::SigSpec sig_f;
@@ -268,7 +269,6 @@ struct RsDspMultAddWorker
                     if (mult_add_cell->getPort(ID::Y) == dff_cell->getPort(ID::D)){
                         regout_cell = dff_cell;
                         add_regout = true;
-                        log("Signal = %s\n",log_signal(dff_cell->getPort(ID::D)));
                     }
                     if (dff_cell->getPort(ID::Q) ==  shift_left_cell->getPort(ID::B)){
                         shiftl_PB_cell = dff_cell;
@@ -314,13 +314,6 @@ struct RsDspMultAddWorker
                 if (shiftl_PB_Reg){
     	            m_module->remove(shiftl_PB_cell);
                 }
-                // log("Before add regout\n");
-                // if (add_regout){
-                //     m_module->remove(regout_cell);
-                // }
-                
-	            // m_module->remove(mult_coeff);
-                // RTLIL::SigSpec sig_z;
             }
         }
     }
