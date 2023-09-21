@@ -172,27 +172,40 @@ struct RsDspMultAddWorker
                 bool shiftl_A_valid_size = false;
                 bool valid_shiftl_chunk = false;
                 RTLIL::SigSpec chunk_msb;
-                if (!(shift_left_cell->getPort(ID::A).is_chunk())){
-                    int size_chunk = 0 ;
-                    RTLIL::IdString chunk_id;
-                    std::vector<SigChunk> chunks_ = sigmap(shift_left_cell->getPort(ID::A));
-                    size_chunk = GetSize(shift_left_cell->getPort(ID::A));
-                    int n = 0 ;
-                    chunk_msb = chunks_.at(0);
-                    if (GetSize(chunks_.at(0))<=20 && GetSize(shift_left_cell->getPort(ID::B))<=6){
+                #if 0 // if verific on
+                    if (!(shift_left_cell->getPort(ID::A).is_chunk())){
+                        int size_chunk = 0 ;
+                        RTLIL::IdString chunk_id;
+                        std::vector<SigChunk> chunks_ = sigmap(shift_left_cell->getPort(ID::A));
+                        size_chunk = GetSize(shift_left_cell->getPort(ID::A));
+                        int n = 0 ;
+                        chunk_msb = chunks_.at(0);
+                        if (GetSize(chunks_.at(0))<=20 && GetSize(shift_left_cell->getPort(ID::B))<=6){
+                            shiftl_A_valid_size = true;
+                        }
+                        for (auto &chunk_ : chunks_){
+                            if (n>0 && chunk_msb[GetSize(chunks_.at(0))-1] == chunk_){
+                                valid_shiftl_chunk  = true;
+                            }
+                            else{
+                                valid_shiftl_chunk  = false;
+                            }
+                            n++;
+                        }
+                    }
+                    if (!(shiftl_A_valid_size && valid_shiftl_chunk)) {
+                        continue;
+                    };
+                #endif
+                #if 1
+                    if (GetSize(shift_left_cell->getPort(ID::A))<=20 && GetSize(shift_left_cell->getPort(ID::B))<=6){
                         shiftl_A_valid_size = true;
+                        chunk_msb = shift_left_cell->getPort(ID::A);
                     }
-                    for (auto &chunk_ : chunks_){
-                        if (n>0 && chunk_msb[GetSize(chunks_.at(0))-1] == chunk_){
-                            valid_shiftl_chunk  = true;
-                        }
-                        else{
-                            valid_shiftl_chunk  = false;
-                        }
-                        n++;
-                    }
-                }
-                if (!(shiftl_A_valid_size && valid_shiftl_chunk)) continue;
+                    if (!(shiftl_A_valid_size)) {
+                        continue;
+                    };
+                #endif
                 RTLIL::Cell *cell_muladd = m_module->addCell(RTLIL::escape_id(name), type);
 
                 // Set attributes
