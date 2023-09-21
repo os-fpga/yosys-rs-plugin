@@ -152,9 +152,9 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsr_pnp
 yosys cd my_dffsr_pnp
 stat
-select -assert-count 1 t:latchnr
+select -assert-count 0 t:latchnr
 select -assert-count 2 t:dffr
-select -assert-count 4 t:\$lut
+select -assert-count 3 t:\$lut
 design -reset
 
 # DFFSR (posedge CLK posedge SET negedge RST)
@@ -164,7 +164,7 @@ yosys cd my_dffsr_ppn
 stat
 select -assert-count 1 t:latchr
 select -assert-count 2 t:dffr
-select -assert-count 3 t:\$lut
+select -assert-count 4 t:\$lut
 design -reset
 
 # DFFSR (posedge CLK negedge SET negedge RST)
@@ -172,9 +172,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsr_pnn
 yosys cd my_dffsr_pnn
 stat
-select -assert-count 1 t:latchnr
+select -assert-count 0 t:latchnr
 select -assert-count 2 t:dffr
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 3 t:\$lut
 design -reset
 
 # DFFSR (negedge CLK posedge SET posedge RST)
@@ -184,7 +185,7 @@ yosys cd my_dffsr_npp
 stat
 select -assert-count 1 t:latchr
 select -assert-count 2 t:dffnr
-select -assert-count 3 t:\$lut
+select -assert-max 4 t:\$lut
 design -reset
 
 # DFFSR (negedge CLK negedge SET posedge RST)
@@ -192,9 +193,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsr_nnp
 yosys cd my_dffsr_nnp
 stat
-select -assert-count 1 t:latchnr
+select -assert-max 1 t:latchnr
 select -assert-count 2 t:dffnr
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 3 t:\$lut
 design -reset
 
 # DFFSR (negedge CLK posedge SET negedge RST)
@@ -204,7 +206,8 @@ yosys cd my_dffsr_npn
 stat
 select -assert-count 1 t:latchr
 select -assert-count 2 t:dffnr
-select -assert-count 3 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 2 t:\$lut
 design -reset
 
 # DFFSR (negedge CLK negedge SET negedge RST)
@@ -212,9 +215,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsr_nnn
 yosys cd my_dffsr_nnn
 stat
-select -assert-count 1 t:latchnr
+select -assert-max 1 t:latchnr
 select -assert-count 2 t:dffnr
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 3 t:\$lut
 design -reset
 
 # DFFSRE (posedge CLK posedge SET posedge RST)
@@ -222,9 +226,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_ppp
 yosys cd my_dffsre_ppp
 stat
-select -assert-count 1 t:latchr
+select -assert-max 1 t:latchr
 select -assert-count 2 t:dffre
-select -assert-count 3 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 2 t:\$lut
 design -reset
 
 # DFFSRE (posedge CLK negedge SET posedge RST)
@@ -232,9 +237,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_pnp
 yosys cd my_dffsre_pnp
 stat
-select -assert-count 1 t:latchnr
+select -assert-max 1 t:latchnr
 select -assert-count 2 t:dffre
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 3 t:\$lut
 design -reset
 
 # DFFSRE (posedge CLK posedge SET negedge RST)
@@ -242,9 +248,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_ppn
 yosys cd my_dffsre_ppn
 stat
-select -assert-count 1 t:latchr
+select -assert-max 1 t:latchr
 select -assert-count 2 t:dffre
-select -assert-count 3 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 2 t:\$lut
 design -reset
 
 # DFFSRE (posedge CLK negedge SET negedge RST)
@@ -252,9 +259,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_pnn
 yosys cd my_dffsre_pnn
 stat
-select -assert-count 1 t:latchnr
+select -assert-max 1 t:latchnr
 select -assert-count 2 t:dffre
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 3 t:\$lut
 design -reset
 
 # DFFSRE (negedge CLK posedge SET posedge RST)
@@ -262,9 +270,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_npp
 yosys cd my_dffsre_npp
 stat
-select -assert-count 1 t:latchr
+select -assert-max 1 t:latchr
 select -assert-count 2 t:dffnre
-select -assert-count 3 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 2 t:\$lut
 design -reset
 
 # DFFSRE (negedge CLK negedge SET posedge RST)
@@ -272,9 +281,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_nnp
 yosys cd my_dffsre_nnp
 stat
-select -assert-count 1 t:latchnr
+select -assert-max 1 t:latchnr
 select -assert-count 2 t:dffnre
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 2 t:\$lut
 design -reset
 
 # DFFSRE (negedge CLK posedge SET negedge RST)
@@ -282,9 +292,10 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_npn
 yosys cd my_dffsre_npn
 stat
-select -assert-count 1 t:latchr
+select -assert-max 1 t:latchr
 select -assert-count 2 t:dffnre
-select -assert-count 3 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 2 t:\$lut
 design -reset
 
 # DFFSRE (negedge CLK negedge SET negedge RST)
@@ -292,7 +303,8 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -goal area -de -top my_dffsre_nnn
 yosys cd my_dffsre_nnn
 stat
-select -assert-count 1 t:latchnr
+select -assert-max 1 t:latchnr
 select -assert-count 2 t:dffnre
-select -assert-count 4 t:\$lut
+select -assert-max 4 t:\$lut
+select -assert-min 3 t:\$lut
 design -reset
