@@ -31,7 +31,6 @@ struct RsDspMaccWorker
     bool run_opt_clean = false;
 
     void run_scr (bool gen, bool gen3,RTLIL::Design *design) {
-        log("In macc circuit\n");
         SigMap sigmap(design->top_module());
         // $shl->InputA<<InputB (WIDTH <= 6) and ((MultInput * coefficient) || (MultInput * acc[19:0]) + $shl) could be the candidate for multadd cell
         std::vector<Cell *> mul_cells;
@@ -82,7 +81,6 @@ struct RsDspMaccWorker
             }
         }
         for (auto &add_cell : add_cells_) {
-            log("Inside %s\n",log_id(add_cell->name));
             add = add_cell;
             add_mul = false;
             add_regout = false;
@@ -92,7 +90,6 @@ struct RsDspMaccWorker
             muxY_valid = false;
             // shiftl_PB_Reg = false;
             for (auto dff_ : dff_cells_){
-                // log("Reg->add = %d \nadd->Reg = %d\n",(conn_add.second == dff_->getPort(ID::Q)),(add_cell->getPort(ID::Y) == dff_->getPort(ID::D)));
                 if (((add_cell->getPort(ID::A) == dff_->getPort(ID::Q))||(add_cell->getPort(ID::B) == dff_->getPort(ID::Q))) && add_cell->getPort(ID::Y) == dff_->getPort(ID::D)){
                     add_regout = true;
                     ff = dff_;
@@ -100,16 +97,13 @@ struct RsDspMaccWorker
                 }
                 else if ((add_cell->getPort(ID::A) == dff_->getPort(ID::Q))|| add_cell->getPort(ID::B) == dff_->getPort(ID::Q)){
                     for (auto &mux_cell : mux_cells_) {
-                        // log("MuxY = %d MuxA = %d MuxB = %d\n",mux_cell->getPort(ID::Y) == dff_->getPort(ID::D), (mux_cell->getPort(ID::A) == add_cell->getPort(ID::Y)), (mux_cell->getPort(ID::B) == add_cell->getPort(ID::Y)));
                         if ((mux_cell->getPort(ID::Y) == dff_->getPort(ID::D) && (mux_cell->getPort(ID::A) == add_cell->getPort(ID::Y) || mux_cell->getPort(ID::B) == add_cell->getPort(ID::Y)))){
-                            log("Mux is valid\n");
                             ff = dff_;
                             add_regout = true;
                             muxY_valid = true;
                             mux = mux_cell;
                             for (auto &mul_cell : mul_cells) {
                                 if (mux_cell->getPort(ID::A) == mul_cell->getPort(ID::Y) || mux_cell->getPort(ID::B) == mul_cell->getPort(ID::Y)){
-                                    log("mult is also valid\n");
                                     muxA_valid = true;
                                     mul = mul_cell;
                                     break;
@@ -172,7 +166,6 @@ struct RsDspMaccWorker
             }
             
             
-            log("Mux Schematic = %d\nNeg Schematic = %d\nMul Schematic = %d\n",mux_valid,neg_mul,add_mul);
             if (!(mux_valid || neg_mul || add_mul)){
                 continue;
             }
@@ -330,12 +323,10 @@ struct RsDspMaccWorker
             cell->setPort(RTLIL::escape_id("load_acc_i"), ena);
 
             // Insert feedback_i control logic used for clearing / loading the accumulator
-            log("MuxB = %d\n",muxB_valid);
             if (mux_valid) {
                 RTLIL::SigSpec sig_s = mux->getPort(ID(S));
 
                 // Depending on the mux port ordering insert inverter if needed
-                log("MuxB_Valid = %d MUXB = %s MulY = %s \n",muxB_valid == 0, log_signal(mux->getPort(ID::A)),log_signal(mul->getPort(ID::Y)));
                 if (!muxB_valid && (mux->getPort(ID::A) == mul->getPort(ID::Y))) {
                     sig_s = m_module->Not(NEW_ID, sig_s);
                 }
@@ -393,7 +384,6 @@ struct RsDspMaccWorker
             
             // Awais: handle mux select signal for accomulator as per MACC type
             if (mux_valid) {
-                // log("\nmux Valid\n");
                 RTLIL::SigSpec sig_s = mux->getPort(ID(S));
                 // Depending on the mux port ordering insert inverter if needed
                 // log_assert(mux_ba == ID(A) || mux_ba == ID(B));
