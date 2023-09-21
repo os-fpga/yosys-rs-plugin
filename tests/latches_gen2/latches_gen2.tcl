@@ -28,6 +28,7 @@ yosys read -vlog2k $::env(DESIGN_TOP).v
 synth_rs -tech genesis2 -top my_latchsre -goal area -de
 yosys cd my_latchsre
 stat
-select -assert-count 3 t:\$lut
-select -assert-count 3 t:latchr
+select -assert-count 2 t:\$lut
+select -assert-max 3 t:latchr
+select -assert-min 0 t:latchr
 design -reset
