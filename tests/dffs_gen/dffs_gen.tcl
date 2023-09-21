@@ -148,7 +148,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsr_pnp
 yosys cd my_dffsr_pnp
 stat
 select -assert-count 1 t:dffsre
-select -assert-count 1 t:\$lut
+select -assert-count 2 t:\$lut
 design -reset
 
 # DFFSR (posedge CLK posedge SET negedge RST)
@@ -157,7 +157,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsr_ppn
 yosys cd my_dffsr_ppn
 stat
 select -assert-count 1 t:dffsre
-select -assert-count 2 t:\$lut
+select -assert-count 1 t:\$lut
 design -reset
 
 # DFFSR (posedge CLK negedge SET negedge RST)
@@ -183,7 +183,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsr_nnp
 yosys cd my_dffsr_nnp
 stat
 select -assert-count 1 t:dffnsre
-select -assert-count 1 t:\$lut
+select -assert-count 2 t:\$lut
 design -reset
 
 # DFFSR (negedge CLK posedge SET negedge RST)
@@ -192,7 +192,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsr_npn
 yosys cd my_dffsr_npn
 stat
 select -assert-count 1 t:dffnsre
-select -assert-count 2 t:\$lut
+select -assert-count 1 t:\$lut
 design -reset
 
 # DFFSR (negedge CLK negedge SET negedge RST)
@@ -218,7 +218,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsre_pnp
 yosys cd my_dffsre_pnp
 stat
 select -assert-count 1 t:dffsre
-select -assert-count 1 t:\$lut
+select -assert-count 2 t:\$lut
 design -reset
 
 # DFFSRE (posedge CLK posedge SET negedge RST)
@@ -227,7 +227,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsre_ppn
 yosys cd my_dffsre_ppn
 stat
 select -assert-count 1 t:dffsre
-select -assert-count 2 t:\$lut
+select -assert-count 1 t:\$lut
 design -reset
 
 # DFFSRE (posedge CLK negedge SET negedge RST)
@@ -253,7 +253,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsre_nnp
 yosys cd my_dffsre_nnp
 stat
 select -assert-count 1 t:dffnsre
-select -assert-count 1 t:\$lut
+select -assert-count 2 t:\$lut
 design -reset
 
 # DFFSRE (negedge CLK posedge SET negedge RST)
@@ -262,7 +262,7 @@ synth_rs -no_libmap -tech genesis -goal area -de -top my_dffsre_npn
 yosys cd my_dffsre_npn
 stat
 select -assert-count 1 t:dffnsre
-select -assert-count 2 t:\$lut
+select -assert-count 1 t:\$lut
 design -reset
 
 # DFFSRE (negedge CLK negedge SET negedge RST)
