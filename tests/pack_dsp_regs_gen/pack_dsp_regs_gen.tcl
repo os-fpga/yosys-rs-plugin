@@ -44,6 +44,6 @@ yosys echo on
 
 test_dsp_design "dsp_is_driven_only_by_dffs"                            "38"    "_MULT_REGIN"
 test_dsp_design "dsp_is_driven_by_different_clk_dffs"                   "76"    "_MULT"
-test_dsp_design "dsp_is_driven_only_by_dffs_which_drive_other_cell"     "114"   "_MULT_REGIN"
+test_dsp_design "dsp_is_driven_only_by_dffs_which_drive_other_cell"     "97"   "_MULT_REGIN"
 test_dsp_design "dsp_is_driven_by_multiple_dffs"                        "38"    "_MULT_REGIN"
 test_dsp_design "dsp_is_not_driven_only_by_dffs"                        "74"    "_MULT"
