@@ -58,12 +58,13 @@ parameter DWIDTH = 36)(
 
 	end
 
-	integer i = 0;
+	// integer i = 0;
 	initial
 	begin
-        while(i < (1<<AWIDTH)-1) begin 
+		for (integer i = 0; i<AWIDTH; i = i+1)begin
+        // while(i < (1<<AWIDTH)-1) begin 
 			memory[i] = 0;
-            i = i+1;
+            // i = i+1;
         end;
 	end
 
