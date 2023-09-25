@@ -34,7 +34,7 @@ struct RsDspMultAddWorker
 
     void run_scr (bool gen, bool gen3,RTLIL::Design *design) {
         SigMap sigmap(design->top_module());
-        // $shl->InputA<<InputB (WIDTH <= 6) and ((MultInput * coefficient) || (MultInput * acc[19:0]) + $shl) could be the candidate for multadd cell
+
         std::vector<Cell *> mul_cells;
         std::vector<Cell *> shl_cells;
         std::vector<Cell *> add_cells_;
@@ -71,7 +71,37 @@ struct RsDspMultAddWorker
                     continue;
             }
         }
-        
+        // If the following structure is found in the rtlil model than we can infr a MULTADD for RS-DSP
+        //                         _______                 ____________
+        //                        |       |               |            |
+        //  Coefficint[19:0] ---->|       |               |            |
+        //                        |  Mult |-------------> |            |
+        //        In_B[19:0] ---->|       |               |            |
+        //                        |_______|               |            |
+        //                         _______                |   Adder    |------->   output                   
+        //                        |       |               |            |
+        //        In_A[19:0] ---->|       |               |            |
+        //                        | Shift |-------------> |            |
+        //      acc_fir[5:0] ---->| Left  |               |            |
+        //                        |_______|               |____________|
+        //                                                
+        //
+        //
+        //                    ________________________________________________________________
+        //                   |                                                                |
+        //                   |     _______                 ____________                       |
+        //                   |    |       |               |            |                      |
+        //         ACC[19:0] `--->|       |               |            |         _________    |
+        //                        |  Mult |-------------> |            |        |         |___|-----------------------------> output
+        //        In_B[19:0] ---->|       |               |            |------->|D       Q|
+        //                        |_______|               |            |        |         |
+        //                         _______                |   Adder    |        |   ACC   |                      
+        //                        |       |               |            |        |         |
+        //        In_A[19:0] ---->|       |               |            |  clk-->|         |
+        //                        | Shift |-------------> |            |        |_________|
+        //      acc_fir[5:0] ---->| Left  |               |            |
+        //                        |_______|               |____________|
+
         for (auto &add_cell : add_cells_) {
             add_shl = false;
             add_mul = false;
@@ -172,7 +202,7 @@ struct RsDspMultAddWorker
                 bool shiftl_A_valid_size = false;
                 bool valid_shiftl_chunk = false;
                 RTLIL::SigSpec chunk_msb;
-                #if 0 // if verific on
+                #if 0 // if verific on-> verific append A input with MSB to match the size of Y output, so we have original value of A input in the chunk[0]
                     if (!(shift_left_cell->getPort(ID::A).is_chunk())){
                         int size_chunk = 0 ;
                         RTLIL::IdString chunk_id;
@@ -214,6 +244,7 @@ struct RsDspMultAddWorker
                 RTLIL::SigSpec sig_z;
                 cell_muladd->set_bool_attribute(RTLIL::escape_id("is_inferred"), true);
                 sig_a = chunk_msb;
+                // we can have feedback from accomulator register or we can have coefficients for A input of mult
                 if (acc_multA){ 
                     if (mult_coeff->getPort(ID::B) == (regout_mult_cell->getPort(ID::Q)).extract(0,20)){
                         cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);
@@ -272,12 +303,12 @@ struct RsDspMultAddWorker
                 cell_muladd->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
                 cell_muladd->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
                 cell_muladd->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
-                // cell_muladd->getParam(ID::COEFF_0);
-                // Get input/output data signals
+                
                 RTLIL::SigSpec clk;
                 RTLIL::SigSpec reset;
                 cell_muladd->setPort(RTLIL::escape_id("clock_i"), clk);
                 cell_muladd->setPort(RTLIL::escape_id("reset_i"), reset);
+                // Check if there is an output register connected
                 for (auto dff_cell : dff_cells_){
                     if (mult_add_cell->getPort(ID::Y) == dff_cell->getPort(ID::D)){
                         regout_cell = dff_cell;
