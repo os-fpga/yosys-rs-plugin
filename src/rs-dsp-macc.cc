@@ -38,7 +38,6 @@ struct RsDspMaccWorker
         std::vector<Cell *> add_cells_;
         std::vector<Cell *> mux_cells_;
         std::vector<Cell *> dff_cells_;
-        std::vector<Cell *> sub_cells_;
         RTLIL::Cell *neg;
         RTLIL::Cell *mul;
         RTLIL::Cell *add;
@@ -117,7 +116,7 @@ struct RsDspMaccWorker
                     }
                 }
             }
-            
+
             if (add_regout && !mux_valid){
                 for (auto &mux_cell : mux_cells_) {
                     if ((mux_cell->getPort(ID::Y) == add_cell->getPort(ID::A))||(mux_cell->getPort(ID::Y) == add_cell->getPort(ID::B))){
@@ -164,7 +163,6 @@ struct RsDspMaccWorker
                     }
                 }
             }
-            
             
             if (!(mux_valid || neg_mul || add_mul)){
                 continue;
@@ -399,20 +397,40 @@ struct RsDspMaccWorker
             else{
                 cell->setPort(RTLIL::escape_id("subtract_i"), RTLIL::SigSpec(subtract ? RTLIL::S1 : RTLIL::S0));
             }
+            auto ff_rem = std::find(dff_cells_.begin(), dff_cells_.end(), ff);
+            if (ff_rem != dff_cells_.end()) {
+                int indexToRemove = std::distance(dff_cells_.begin(), ff_rem);
+                dff_cells_.erase(dff_cells_.begin()+indexToRemove);
+            }
+            auto mul_rem = std::find(mul_cells.begin(), mul_cells.end(), mul);
+            if (mul_rem != mul_cells.end()) {
+                int indexToRemove = std::distance(mul_cells.begin(), mul_rem);
+                mul_cells.erase(mul_cells.begin()+indexToRemove);
+            }
             
-
             // Mark the cells for removal
             m_module->remove(mul);
             m_module->remove(add);
             if (mux_valid) {
+                auto mux_rem = std::find(mux_cells_.begin(), mux_cells_.end(), mux);
+                if (mux_rem != mux_cells_.end()) {
+                    int indexToRemove = std::distance(mux_cells_.begin(), mux_rem);
+                    mux_cells_.erase(mux_cells_.begin()+indexToRemove);
+                }
                 m_module->remove(mux);
             }
             m_module->remove(ff);
-            if (neg_mul || muxB_valid)
+            if (neg_mul || muxB_valid){
+                auto neg_rem = std::find(neg_cells.begin(), neg_cells.end(), neg);
+                if (neg_rem != neg_cells.end()) {
+                    int indexToRemove = std::distance(neg_cells.begin(), neg_rem);
+                    neg_cells.erase(neg_cells.begin()+indexToRemove);
+                }
                 m_module->remove(neg);  // Awais: remove $neg, it is handle in MACC
+            }
         }
         
-        
+        run_opt_clean = true;
     }
 };
 
@@ -472,8 +490,8 @@ struct RSDspMacc : public Pass {
         for (auto mod : a_Design->selected_modules()) {
             RsDspMaccWorker worker(mod);
             worker.run_scr(is_genesis2,is_genesis3,a_Design);
-            // if (worker.run_opt_clean)
-            //     Pass::call(design, "opt_clean");
+            if (worker.run_opt_clean)
+                Pass::call(a_Design, "opt_clean");
         }
 
         // for (auto module : a_Design->selected_modules()) {
