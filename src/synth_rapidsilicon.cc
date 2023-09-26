@@ -83,7 +83,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 192
+#define VERSION_PATCH 193
 
 enum Strategy {
     AREA,
@@ -1992,7 +1992,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 #ifdef DEV_BUILD
                         run("stat");
 #endif
-                        // run("rs-dsp-multadd -genesis3");
+                        run("rs-dsp-multadd -genesis3");
                         run("wreduce t:$mul");
                         run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
                         if (max_dsp != -1)
