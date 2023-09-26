@@ -30,7 +30,96 @@ struct RsPackDspRegsWorker
         m_module(module), m_sigmap(module), m_initvals(&m_sigmap, module) {}
 
     bool run_opt_clean = false;
+    void merge_regout(bool gen, bool gen3, RTLIL::Cell *DFF_driven_DSP,RTLIL::Design *design){
+        RTLIL::SigSpec sig_f;
+        // bool _DFF_REGOUT_ = false;
+        sig_f.append(RTLIL::S1);
+        sig_f.append(RTLIL::S0);
+        sig_f.append(RTLIL::S1);
+        // bool RST_POL = true;
+        RTLIL::Const DSP_RST_POL;
+        DSP_RST_POL = DFF_driven_DSP->getParam(RTLIL::escape_id("DSP_RST_POL"));
+        RTLIL::Const dsp_mode_bits_const = DFF_driven_DSP->getParam(RTLIL::escape_id("MODE_BITS"));
+        if ((dsp_mode_bits_const[1] == RTLIL::S1 || dsp_mode_bits_const[80] == RTLIL::S1) && DSP_RST_POL.as_int()!=0 && gen == false){
+            // Apply clock and reset to DSP port 
+            auto CLK_PORT = (DFF_driven_DSP->getParam(ID::DSP_CLK)).decode_string();
+            auto RST_PORT = (DFF_driven_DSP->getParam(ID::DSP_RST)).decode_string();
+            RTLIL::SigSpec _arst_;
+            RTLIL::SigSpec _rst_;
+            for (auto &module : design->selected_modules()) {
+                for (auto wire : module->wires()){
+                    if (wire->name==CLK_PORT.c_str()){
+                        DFF_driven_DSP->setPort(RTLIL::escape_id("\\clk"), wire);
+                    }
+                    if (wire->name==RST_PORT.c_str()){
+                        _arst_ = wire;
+                    }
+                }
 
+            }
+
+            // Handle the syncronous reset by adding DFF at its input
+            if (DSP_RST_POL[2] == RTLIL::S1){
+                RTLIL::SigSpec rst_sync = m_module->addWire(NEW_ID,GetSize(_arst_));
+                m_module->addDff(NEW_ID, DFF_driven_DSP->getPort(RTLIL::escape_id("\\clk")), _arst_, rst_sync, DSP_RST_POL[3] == RTLIL::S1);
+                _rst_ = rst_sync;
+            }
+
+            if (DSP_RST_POL[3] == RTLIL::S0 && DSP_RST_POL[1] == RTLIL::S1) {
+                _rst_ = m_module->Not(NEW_ID, _arst_);
+                DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
+            }
+            else if (DSP_RST_POL[3] == RTLIL::S1 && DSP_RST_POL[1] == RTLIL::S1){
+                DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _arst_);
+            }
+            else if (DSP_RST_POL[3] == RTLIL::S0 && DSP_RST_POL[2] == RTLIL::S1){
+                RTLIL::SigSpec rst_low = m_module->addWire(NEW_ID,GetSize(_rst_));
+                rst_low = m_module->Not(NEW_ID, _rst_);
+                DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), rst_low);
+            }
+            else{
+                DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
+            }
+            // _DFF_REGOUT_ = true;
+            // Unset the temporary parameter
+            DFF_driven_DSP->unsetParam(ID::DSP_CLK);
+            DFF_driven_DSP->unsetParam(ID::DSP_RST);
+            DFF_driven_DSP->unsetParam(ID::DSP_RST_POL);
+
+            // Set the MODEBITS for REGOUT
+            if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP2")){
+                DFF_driven_DSP->setPort(RTLIL::escape_id("output_select"),sig_f);
+            }
+            else if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP3")){
+
+                // Changing RS_DSP3 MODE_BITS param with index 92, which is REGISTER_INPUTS
+                dsp_mode_bits_const[MODE_BITS_OUTPUT_SELECT_START_ID] = RTLIL::S1;
+                DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
+            } else {  
+                if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S0){
+                    dsp_mode_bits_const[1] = RTLIL::S1;
+                    dsp_mode_bits_const[2] = RTLIL::S0;
+                    dsp_mode_bits_const[3] = RTLIL::S0;
+                }
+                else if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
+                    dsp_mode_bits_const[1] = RTLIL::S1;
+                    dsp_mode_bits_const[2] = RTLIL::S0;
+                    dsp_mode_bits_const[3] = RTLIL::S1;
+                }
+                else if(gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
+                    dsp_mode_bits_const[80] = RTLIL::S1;
+                    dsp_mode_bits_const[81] = RTLIL::S0;
+                    dsp_mode_bits_const[82] = RTLIL::S0;
+                }
+                else {
+                    dsp_mode_bits_const[80] = RTLIL::S0;
+                    dsp_mode_bits_const[81] = RTLIL::S0;
+                    dsp_mode_bits_const[82] = RTLIL::S1;
+                }
+                DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
+            }
+        }
+    }
     void run_scr (bool gen, bool gen3,RTLIL::Design *design) {
 
         std::vector<Cell *> DSP_used_cells;
@@ -131,9 +220,10 @@ struct RsPackDspRegsWorker
                     break;
             }
             // pick next DSP
-            if (ignore_dsp)
+            if (ignore_dsp){
+                merge_regout(gen,gen3,it_dsp,design);
                 continue;
-
+            }
             // Getting each DFF from all DFFs of our MODULE
             for (auto &it_dff : DFF_used_cells) {
                 log_debug("Working with DFF by name: %s.\n", it_dff->name.c_str());
@@ -141,7 +231,7 @@ struct RsPackDspRegsWorker
 
                 // Lambda function for action when having connection between DSP and DFF
                 auto check_dff = [&DFF_hasArst, &DFF_hasSrst, &DFF_ARST_POL, &DFF_rst, &DFF_clk, &for_first_dff, &ff, &ignore_dsp, &next_dff, &DFF_SRST_POL, this](bool &port_from_dff, string working_port) {
-                    log("There is a connection between DSP port ( \\%s ) and DFF port ( q )\n", working_port.c_str());
+                    log_debug("There is a connection between DSP port ( \\%s ) and DFF port ( q )\n", working_port.c_str());
                     // EDA-1701: if reset value is not zero ignore DSP
                     if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk || ff.val_srst.as_int()>0 || ff.val_arst.as_int() > 0 ) {
                         ignore_dsp = true;
@@ -268,11 +358,13 @@ struct RsPackDspRegsWorker
                 }
                 if (ignore_dsp)
                     break;
-                if (next_dff)
+                if (next_dff) {
                     continue;
+                }
             }
-            if (ignore_dsp)
+            if (ignore_dsp){
                 continue;
+            }
 
             // if DSP data ports is driven from DFFs add it in vector
             if (port_a_from_dff && port_b_from_dff && port_load_acc_from_dff && !ignore_dsp) {
@@ -282,96 +374,10 @@ struct RsPackDspRegsWorker
                 DSP_drives_DFF.push_back(it_dsp);
             }
         }
-        RTLIL::SigSpec sig_f;
-        sig_f.append(RTLIL::S1);
-        sig_f.append(RTLIL::S0);
-        sig_f.append(RTLIL::S1);
+
         if(!gen){
             for (auto &DFF_driven_DSP : DSP_drives_DFF) {
-                bool RST_POL = true;
-                RTLIL::Const DSP_RST_POL;
-                DSP_RST_POL = DFF_driven_DSP->getParam(RTLIL::escape_id("DSP_RST_POL"));
-                RTLIL::Const dsp_mode_bits_const = DFF_driven_DSP->getParam(RTLIL::escape_id("MODE_BITS"));
-                if ((dsp_mode_bits_const[1] == RTLIL::S1 || dsp_mode_bits_const[80] == RTLIL::S1) && DSP_RST_POL.as_int()!=0 && gen == false){
-                    // Apply clock and reset to DSP port 
-                    auto CLK_PORT = (DFF_driven_DSP->getParam(ID::DSP_CLK)).decode_string();
-                    auto RST_PORT = (DFF_driven_DSP->getParam(ID::DSP_RST)).decode_string();
-                    RTLIL::SigSpec _arst_;
-                    RTLIL::SigSpec _rst_;
-                    for (auto &module : design->selected_modules()) {
-                        for (auto wire : module->wires()){
-                            if (wire->name==CLK_PORT.c_str()){
-                                DFF_driven_DSP->setPort(RTLIL::escape_id("\\clk"), wire);
-                            }
-                            if (wire->name==RST_PORT.c_str()){
-                                _arst_ = wire;
-                            }
-                        }
-
-                    }
-
-                    // Handle the syncronous reset by adding DFF at its input
-                    if (DSP_RST_POL[2] == RTLIL::S1){
-                        RTLIL::SigSpec rst_sync = m_module->addWire(NEW_ID,GetSize(_arst_));
-                        m_module->addDff(NEW_ID, DFF_driven_DSP->getPort(RTLIL::escape_id("\\clk")), _arst_, rst_sync, DSP_RST_POL[3] == RTLIL::S1);
-                        _rst_ = rst_sync;
-                    }
-
-                    if (DSP_RST_POL[3] == RTLIL::S0 && DSP_RST_POL[1] == RTLIL::S1) {
-                        _rst_ = m_module->Not(NEW_ID, _arst_);
-                        DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
-                    }
-                    else if (DSP_RST_POL[3] == RTLIL::S1 && DSP_RST_POL[1] == RTLIL::S1){
-                        DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _arst_);
-                    }
-                    else if (DSP_RST_POL[3] == RTLIL::S0 && DSP_RST_POL[2] == RTLIL::S1){
-                        RTLIL::SigSpec rst_low = m_module->addWire(NEW_ID,GetSize(_rst_));
-                        rst_low = m_module->Not(NEW_ID, _rst_);
-                        DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), rst_low);
-                    }
-                    else{
-                        DFF_driven_DSP->setPort(RTLIL::escape_id("\\lreset"), _rst_);
-                    }
-                    DFF_REGOUT = true;
-                    // Unset the temporary parameter
-                    DFF_driven_DSP->unsetParam(ID::DSP_CLK);
-                    DFF_driven_DSP->unsetParam(ID::DSP_RST);
-                    DFF_driven_DSP->unsetParam(ID::DSP_RST_POL);
-
-                    // Set the MODEBITS for REGOUT
-                    if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP2")){
-                        DFF_driven_DSP->setPort(RTLIL::escape_id("output_select"),sig_f);
-                    }
-                    else if (DFF_driven_DSP->type.c_str() == RTLIL::escape_id("RS_DSP3")){
-
-                        // Changing RS_DSP3 MODE_BITS param with index 92, which is REGISTER_INPUTS
-                        dsp_mode_bits_const[MODE_BITS_OUTPUT_SELECT_START_ID] = RTLIL::S1;
-                        DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
-                    } else {  
-                        if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S0){
-                            dsp_mode_bits_const[1] = RTLIL::S1;
-                            dsp_mode_bits_const[2] = RTLIL::S0;
-                            dsp_mode_bits_const[3] = RTLIL::S0;
-                        }
-                        else if (!gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
-                            dsp_mode_bits_const[1] = RTLIL::S1;
-                            dsp_mode_bits_const[2] = RTLIL::S0;
-                            dsp_mode_bits_const[3] = RTLIL::S1;
-                        }
-                        else if(gen3 && DFF_driven_DSP->getPort(RTLIL::escape_id("\\load_acc")) == RTLIL::S1){
-                            dsp_mode_bits_const[80] = RTLIL::S1;
-                            dsp_mode_bits_const[81] = RTLIL::S0;
-                            dsp_mode_bits_const[82] = RTLIL::S0;
-                        }
-                        else {
-                            dsp_mode_bits_const[80] = RTLIL::S0;
-                            dsp_mode_bits_const[81] = RTLIL::S0;
-                            dsp_mode_bits_const[82] = RTLIL::S1;
-                        }
-                        DFF_driven_DSP->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
-                    }
-                }
-
+               merge_regout(gen,gen3,DFF_driven_DSP,design);
             }
         }  
     
