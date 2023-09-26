@@ -352,10 +352,25 @@ struct RsDspMultAddWorker
                     }
                 }
 
+                auto sh_rem = std::find(shl_cells.begin(), shl_cells.end(), shift_left_cell);
+                if (sh_rem != shl_cells.end()) {
+                    int indexToRemove = std::distance(shl_cells.begin(), sh_rem);
+                    shl_cells.erase(shl_cells.begin()+indexToRemove);
+                }
+                auto mul_rem = std::find(mul_cells.begin(), mul_cells.end(), mult_coeff);
+                if (mul_rem != mul_cells.end()) {
+                    int indexToRemove = std::distance(mul_cells.begin(), mul_rem);
+                    mul_cells.erase(mul_cells.begin()+indexToRemove);
+                }
 	            m_module->remove(mult_add_cell);
 	            m_module->remove(shift_left_cell);
 	            m_module->remove(mult_coeff);
                 if (shiftl_PB_Reg){
+                    auto ff_rem = std::find(dff_cells_.begin(), dff_cells_.end(), shiftl_PB_cell);
+                    if (ff_rem != dff_cells_.end()) {
+                        int indexToRemove = std::distance(dff_cells_.begin(), ff_rem);
+                        dff_cells_.erase(dff_cells_.begin()+indexToRemove);
+                    }
     	            m_module->remove(shiftl_PB_cell);
                 }
             }
