@@ -29,8 +29,28 @@ struct RsDspMaccWorker
         m_module(module), m_sigmap(module), m_initvals(&m_sigmap, module) {}
 
     bool run_opt_clean = false;
+    dict<SigBit, pool<Cell*>> sigusers;
+    void add_siguser(const SigSpec &sig, Cell *cell) {
+        for (auto bit : m_sigmap(sig)) {
+            if (bit.wire == nullptr) continue;
+                sigusers[bit].insert(cell);
+        }
+    }
+    int nusers(const SigSpec &sig) {
+        pool<Cell*> users;
+        for (auto bit : m_sigmap(sig))
+            for (auto user : sigusers[bit])
+                users.insert(user);
+        return GetSize(users);
+    }
 
     void run_scr (bool gen, bool gen3,RTLIL::Design *design) {
+        for (auto port : m_module->ports)
+            add_siguser(m_module->wire(port), nullptr);
+        for (auto cell : m_module->cells())
+            for (auto &conn : cell->connections())
+                add_siguser(conn.second, cell);
+
         SigMap sigmap(design->top_module());
         // $shl->InputA<<InputB (WIDTH <= 6) and ((MultInput * coefficient) || (MultInput * acc[19:0]) + $shl) could be the candidate for multadd cell
         std::vector<Cell *> mul_cells;
@@ -266,8 +286,15 @@ struct RsDspMaccWorker
                 sig_a = mul->getPort(ID(B));
                 sig_b = mul->getPort(ID(A));
             }
-
-            sig_z = add_regout ? ff->getPort(ID(Q)) : ff->getPort(ID(D));
+            int ff_d_nusers = nusers(ff->getPort(ID(D)));
+            int ff_q_nusers = nusers(ff->getPort(ID(Q)));
+            bool out_ff;
+            if (ff_d_nusers == 2 && ff_q_nusers > 2) {
+                out_ff = true;
+            } else if (ff_d_nusers == 3 && ff_q_nusers == 2) {
+                out_ff = false;
+            }
+            sig_z = out_ff ? ff->getPort(ID(Q)) : ff->getPort(ID(D));
 
             // Connect input data ports, sign extend / pad with zeros
             sig_a.extend_u0(tgt_a_width, a_signed);
@@ -358,7 +385,7 @@ struct RsDspMaccWorker
                 cell->setParam(RTLIL::escape_id("ROUND"), RTLIL::Const(RTLIL::S0));
                 cell->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
                 // 3 - output post acc; 1 - output pre acc
-                cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), add_regout ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
+                cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
             } else {
                 cell->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
                 cell->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
@@ -366,15 +393,15 @@ struct RsDspMaccWorker
                 if (is_genesis2) {
                     cell->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
                     // 4 - output post acc; 5 - output pre acc
-                    cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), add_regout ? RTLIL::Const(4, 3) : RTLIL::Const(5, 3));
+                    cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(4, 3) : RTLIL::Const(5, 3));
                 } else if (is_genesis3) {
                     cell->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
                     // 3 - output post acc; 1 - output pre acc
-                    cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), add_regout ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
+                    cell->setParam(RTLIL::escape_id("OUTPUT_SELECT"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
                 } else {
                     cell->setPort(RTLIL::escape_id("register_inputs_i"), RTLIL::SigSpec(RTLIL::S0));
                     // 3 - output post acc; 1 - output pre acc
-                    cell->setPort(RTLIL::escape_id("output_select_i"), add_regout ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
+                    cell->setPort(RTLIL::escape_id("output_select_i"), out_ff ? RTLIL::Const(1, 3) : RTLIL::Const(3, 3));
                 }
             }
 
