@@ -221,7 +221,8 @@ struct RsPackDspRegsWorker
             }
             // pick next DSP
             if (ignore_dsp){
-                merge_regout(gen,gen3,it_dsp,design);
+                if (!gen)
+                    merge_regout(gen,gen3,it_dsp,design);
                 continue;
             }
             // Getting each DFF from all DFFs of our MODULE
