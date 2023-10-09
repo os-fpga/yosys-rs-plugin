@@ -56,9 +56,9 @@ end
 endmodule
 
 //------------------------------------------------------------------------------
-// 1 bit adder_carry
+// 1 bit ADDER_CARRY
 //------------------------------------------------------------------------------
-module adder_carry (p, g, cin, sumout, cout);
+module ADDER_CARRY (p, g, cin, sumout, cout);
     input p;
     input g;
     input cin;

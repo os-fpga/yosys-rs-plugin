@@ -243,13 +243,13 @@ begin
 end arch;
 
 --------------------------------------------------------------------------------
--- adder_carry : 1 bit adder_carry
+-- ADDER_CARRY : 1 bit ADDER_CARRY
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity adder_carry is
+entity ADDER_CARRY is
   port (
     sumout : out std_logic;
     cout : out std_logic;
@@ -257,9 +257,9 @@ entity adder_carry is
     g : in std_logic;
     cin : in std_logic
   );
-end adder_carry;
+end ADDER_CARRY;
 
-architecture arch of adder_carry is
+architecture arch of ADDER_CARRY is
 begin
   sumout <= p xor cin;
   cout <= cin when p else g;
