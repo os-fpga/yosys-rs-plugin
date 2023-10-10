@@ -675,6 +675,150 @@ struct SynthRapidSiliconPass : public ScriptPass {
         return (_design->top_module()->cells_.size());
     }
 
+    // Assume no carry chains with loops which is always the case
+    //
+    int getCarryChainLength(Cell* cell, dict<RTLIL::SigSpec, Cell*>& co2cell, 
+                            dict<Cell*, RTLIL::SigSpec>& cell2ci, int l) {
+
+       // cell is a carry adder. If it has no 'ci' net then return right away
+       //
+       if (!cell2ci.count(cell)) {
+         return l;
+       }
+
+       SigSpec ciSignal = cell2ci[cell];
+
+       // If the ci signal is not the carry out of another carry cell then return
+       // right away.
+       //
+       if (!co2cell.count(ciSignal)) {
+         return l;
+       }
+
+       // Compute the length recursively from the "nextCarryCell"
+       //
+       Cell* nextCarryCell = co2cell[ciSignal];
+
+       return (getCarryChainLength(nextCarryCell, co2cell, cell2ci, l+1));
+    }
+
+    void reportCarryChains() {
+
+       dict<RTLIL::SigSpec, Cell*> ci2cell; // from the 'ci' net gives the corresponding carry adder cell
+       dict<RTLIL::SigSpec, Cell*> co2cell; // from the 'co' net gives the corresponding carry adder cell
+       dict<Cell*, RTLIL::SigSpec> cell2ci; // from the carry cell gives its corresponding 'ci' net
+
+       // store the carry adders wich are the heads of a carry chain
+       //
+       vector<Cell*> carry_chain_head_cells; 
+
+       int nbCarryAdders = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+
+           //log("Cell = %s\n", (cell->type).c_str());
+
+           if(cell->type != RTLIL::escape_id("ADDER_CARRY")) {
+             continue;
+           }
+
+           nbCarryAdders++;
+
+           bool noCo = true;
+
+           for (auto &conn : cell->connections()) {
+
+               IdString portName = conn.first;
+               RTLIL::SigSpec actual = conn.second;
+
+               //log("     Port = %s\n", (portName).c_str());
+
+               if (portName == RTLIL::escape_id("cin")) {
+                 ci2cell[actual] = cell;
+                 cell2ci[cell] = actual;
+                 continue;
+               }
+
+               if (portName == RTLIL::escape_id("cout")) {
+                 noCo = false;
+                 co2cell[actual] = cell;
+                 continue;
+               }
+           }
+
+           // If carry adder has no "co" port then it is a carry chain head cell
+           //
+           if (noCo) {
+             carry_chain_head_cells.push_back(cell);
+           }
+       }
+
+       vector<RTLIL::SigSpec> carry_chain_head_co2cell; 
+
+       for (auto &co_signal : co2cell) {
+
+          // If 'co_signal" corresponds to a ci signal then it cannot be a top head CO
+          // signal of a carry chain
+          //
+          RTLIL::SigSpec signal = co_signal.first;
+
+          if (ci2cell.count(signal)) { // co signal is also a ci signal
+            continue;
+          }
+
+          // this co signal does not drive any carry cell so it is a carry chain head cell.
+          // get its associated cell and add it.
+          Cell* cell = co_signal.second;
+
+          carry_chain_head_cells.push_back(cell);
+       }
+
+#if 0
+       log ("NB carry = %d\n", nbCarryAdders);
+       log ("NB CI signals = %lu\n", ci2cell.size());
+       log ("NB CO signals = %lu\n", co2cell.size());
+       log ("NB CC heads = %lu\n", carry_chain_head_cells.size());
+#endif
+
+       dict<int /* ccarry chain length */, int /* number of arry chains with that length */> carry_chains_stat;
+
+       for (auto &headCarryCell : carry_chain_head_cells) {
+
+         // Get the length of the chain starting from head cell "headCarryCell"
+         //
+         int length = getCarryChainLength (headCarryCell, co2cell, cell2ci, 1);
+
+         //log ("Length = %d\n", length);
+
+         // Group chains of same length with same counter
+         //
+         if (!carry_chains_stat.count(length)) {
+           carry_chains_stat[length] = 1; // first occurence case
+          } else {
+           carry_chains_stat[length] += 1;
+         }
+       }
+
+       log ("   Number of CARRY ADDERs:       %5d\n", nbCarryAdders);
+
+       if (carry_chains_stat.size() == 0) {
+         return;
+       }
+
+       log ("   Number of CARRY CHAINs:       %5d (", (int)carry_chain_head_cells.size());
+
+       bool first = true;
+       for (auto &stat : carry_chains_stat) {
+          if (!first) {
+            log(", ");
+          }
+          log("%dx%d", stat.second, stat.first);
+          first = false;
+       }
+
+       log (")\n");
+    }
+
     int getNumberOfLUTx() {
 
        int nb = 0;
@@ -2504,6 +2648,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         log("   Number of LUTs:               %5d\n", nbLUTx);
         log("   Number of REGs:               %5d\n", nbREGs);
+
+        reportCarryChains();
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
