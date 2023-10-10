@@ -41,8 +41,18 @@ PRIVATE_NAMESPACE_BEGIN
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
-#define LUTx_SIM_FILE LUT.v
+#define LUT1_SIM_FILE LUT1.v
+#define LUT2_SIM_FILE LUT2.v
+#define LUT3_SIM_FILE LUT3.v
+#define LUT4_SIM_FILE LUT4.v
+#define LUT5_SIM_FILE LUT5.v
+#define LUT6_SIM_FILE LUT6.v
+#define CLK_BUF_SIM_FILE CLK_BUF.v
+#define I_BUF_SIM_FILE I_BUF.v
+#define O_BUF_SIM_FILE O_BUF.v
 #define LUT_FINAL_MAP_FILE lut_map.v
+#define DSP_38_MAP_FILE dsp38_map.v
+#define DSP_38_SIM_FILE DSP38.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
@@ -55,12 +65,11 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_MAP_NEW_FILE brams_map_new.v
 #define BRAM_FINAL_MAP_FILE brams_final_map.v
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
+#define IO_cells_FILE io_cells_map1.v
+#define IO_CELLs_final_map io_cell_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
-#define IO_cells_FILE io_cells_primitives_new.sv
-#define IO_MODEL_FILE io_model_map_new.v
-#define GET_FILE_PATH_RS_LUTx_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/LUT/" STR(file)
-#define GET_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/IO/" STR(file)
-#define GET_TECHMAP_FILE_PATH_RS_PRIMITVES(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/TECHMAP/" STR(file)
+#define GET_FILE_PATH_RS_FPGA_SIM(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/sim_models/verilog/" STR(file)
+#define GET_TECHMAP_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
 #define BRAM_WIDTH_9 9
@@ -1783,7 +1792,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE)
-                                GET_FILE_PATH_RS_LUTx_PRIMITVES(GENESIS_3_DIR, LUTx_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT1_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT2_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT3_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT4_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT5_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT6_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, CLK_BUF_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, O_BUF_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DSP_38_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
@@ -1896,6 +1913,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if(!nodsp){
                 std::string dspMapFile;
                 std::string dspFinalMapFile;
+                std::string dsp38MapFile;
                 std::string genesis2;
                 std::string genesis3;
 
@@ -1914,6 +1932,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                     case Technologies::GENESIS_3: {
                         dspMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_MAP_FILE);
                         dspFinalMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_FINAL_MAP_FILE);
+                        dsp38MapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_38_MAP_FILE);
                         genesis3 = " -genesis3";
                         break;
                     }
@@ -2037,7 +2056,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
-
+#if 1
+                        run("stat");
+                        run("techmap -map " + dsp38MapFile);
+                        run("stat");
+#endif
                         break;
                     }
 
@@ -2459,20 +2482,20 @@ struct SynthRapidSiliconPass : public ScriptPass {
            run("opt_clean -purge");
 #endif
            string readIOArgs;
-           readIOArgs=GET_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_cells_FILE);// RS_IO_BUF_Primitives
+           readIOArgs=GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_cells_FILE);
            
            if (!no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
-                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -tinoutpad rs__IOBUF ~T:O:I:IO");
-                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
 
            }
 
            run("stat");
 #if 1
-           string techMaplutArgs = GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
+           string techMaplutArgs = GET_TECHMAP_FILE_PATH(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
            run("techmap -map" + techMaplutArgs);
 #endif
         }
