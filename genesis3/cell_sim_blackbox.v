@@ -1391,7 +1391,6 @@ module RS_TDP36K (
     RDATA_B2,
     FLUSH2
 );
-);
     parameter [80:0] MODE_BITS = 81'd0;
     parameter [36863:0] INIT_i = 36864'h0;
 
