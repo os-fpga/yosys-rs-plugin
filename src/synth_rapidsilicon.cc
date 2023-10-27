@@ -83,7 +83,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 198
+#define VERSION_PATCH 199
 
 enum Strategy {
     AREA,
@@ -1135,6 +1135,38 @@ struct SynthRapidSiliconPass : public ScriptPass {
           top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
         }
     }
+
+// return 1 if the design has at least one DFF with Clock enable
+// 0 otherwise.
+//
+int designWithDFFce()
+{
+    for (auto &mod : _design->selected_modules()) {
+
+       SigMap sigmap(mod);
+
+       FfInitVals initvals(&sigmap, mod);
+
+       for (auto cell : mod->selected_cells()) {
+
+           if (!RTLIL::builtin_ff_cell_types().count(cell->type)) {
+              continue;
+           }
+
+           FfData ff(&initvals, cell);
+
+           if (!ff.has_clk) {
+              continue;
+           }
+
+           if (ff.has_ce) {
+             return 1;
+           }
+       }
+    }
+
+    return 0;
+}
 
     // Perform a small loop of successive "abc -dff" calls.  
     // This "simplify" pass may have some big QoR impact on this list of designs:
@@ -2396,50 +2428,60 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 int nbGenericREGs1 = getNumberOfGenericREGs();
                 int nbOfLogic1 = getNumberOfLogic();
 
-                // re-start from original design
+                int hasDFFce = designWithDFFce();
+
+                // if design has any DFF with clock enable explore also
+                // solution by dissolving clock enables
                 //
-                run("design -load original");
+                if (hasDFFce) {
 
-                // Simplify without clock enables
-                //
-                simplify(1 /* unmap_dff_ce */);
-                run("design -save unmap_dff_ce");
+                  // re-start from original design
+                  //
+                  run("design -load original");
 
-                int nbcells_strategy2 = getNumberOfInstances();
-                int nbGenericREGs2 = getNumberOfGenericREGs();
-                int nbOfLogic2 = getNumberOfLogic();
+                  // Simplify without clock enables
+                  //
+                  simplify(1 /* unmap_dff_ce */);
+                  run("design -save unmap_dff_ce");
 
-                if (0) {   
-                   log("****************************\n");
-                   log(" NB cells strategy 1 : %d\n", nbcells_strategy1);
-                   log(" NB REGs strategy 1  : %d\n", nbGenericREGs1);
-                   log(" NB LOGs strategy 1  : %d\n", nbOfLogic1);
-                   log(" NB cells strategy 2 : %d\n", nbcells_strategy2);
-                   log(" NB REGs strategy 2  : %d\n", nbGenericREGs2);
-                   log(" NB LOGs strategy 2  : %d\n", nbOfLogic2);
-                   log("****************************\n");
+                  int nbcells_strategy2 = getNumberOfInstances();
+                  int nbGenericREGs2 = getNumberOfGenericREGs();
+                  int nbOfLogic2 = getNumberOfLogic();
 
-                   //getchar();
-                }
+                  if (0) {   
+                     log("****************************\n");
+                     log(" NB cells strategy 1 : %d\n", nbcells_strategy1);
+                     log(" NB REGs strategy 1  : %d\n", nbGenericREGs1);
+                     log(" NB LOGs strategy 1  : %d\n", nbOfLogic1);
+                     log(" NB cells strategy 2 : %d\n", nbcells_strategy2);
+                     log(" NB REGs strategy 2  : %d\n", nbGenericREGs2);
+                     log(" NB LOGs strategy 2  : %d\n", nbOfLogic2);
+                     log("****************************\n");
+  
+                     //getchar();
+                  }
 
-                // Pick up second strategy only if total number of logic 
-                // cells increase is limited.
-                //
-                float thresh = 0.92;
+                  // Pick up second strategy only if :
+                  //      - total number of logic cells increase is limited .
+                  //      - OR there is a nice DFF reduction number (ex: oc_aquarius).
+                  //
+                  float thresh = 0.92;
 
-                if (1 && (nbOfLogic2 * thresh <= nbOfLogic1)) {
+                  if ((nbOfLogic2 * thresh <= nbOfLogic1) ||
+                      (nbGenericREGs2 <= thresh * nbGenericREGs1)) {
 
-                   log("select CE dissolving strategy (tresh=%f)\n", thresh);
+                     log("select CE dissolving strategy (tresh=%f)\n", thresh);
 
-                   run("design -save unmap_dff_ce");
-                   run("design -pop");
-                   run("design -load unmap_dff_ce");
+                     run("design -save unmap_dff_ce");
+                     run("design -pop");
+                     run("design -load unmap_dff_ce");
 
-                } else {
+                  } else {
 
-                   log("select CE preserving strategy (tresh=%f)\n", thresh);
+                     log("select CE preserving strategy (tresh=%f)\n", thresh);
 
-                   run("design -pop");
+                     run("design -pop");
+                  }
                 }
 
                 postSimplify();
