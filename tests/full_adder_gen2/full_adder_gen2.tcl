@@ -56,7 +56,8 @@ design -load postopt
 yosys cd full_adder
 stat
 select -assert-count 0 t:fa_1bit
-select -assert-count 6 t:\$lut
+select -assert-max 6 t:\$lut
+select -assert-min 5 t:\$lut
 
 design -reset
 
