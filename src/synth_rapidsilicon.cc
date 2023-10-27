@@ -270,7 +270,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Specifying this switch turns it off.\n");
         log("\n");
         log("    -max_device_ios <num>\n");
-        log("        Specify the number of available package pin resources for the targe device.\n");
+        log("        Specify the number of available package pin resources for the target device.\n");
         log("\n");
         log("    -max_device_bram <num>\n");
         log("        Specify the number of available Block RAM resources for the targe device.\n");
