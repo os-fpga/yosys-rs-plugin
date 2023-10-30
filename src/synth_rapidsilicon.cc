@@ -269,6 +269,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -max_device_ios <num>\n");
+        log("        Specify the number of available package pin resources for the target device.\n");
+        log("\n");
         log("    -max_device_bram <num>\n");
         log("        Specify the number of available Block RAM resources for the targe device.\n");
         log("\n");
@@ -338,6 +341,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     int max_bram;
     int max_carry_length;
     int max_dsp;
+    int max_device_ios;
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
@@ -360,6 +364,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_flatten = false;
         no_iobuf= false;
         nobram = false;
+        max_device_ios=-1;
         max_lut = -1;
         max_reg = -1;
         max_bram = -1;
@@ -480,6 +485,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-max_device_dsp" && argidx + 1 < args.size()) {
                 max_device_dsp = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_ios" && argidx + 1 < args.size()) {
+                max_device_ios = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-max_carry_length" && argidx + 1 < args.size()) {
@@ -2651,7 +2660,7 @@ int designWithDFFce()
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
-                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -tinoutpad rs__IOBUF ~T:O:I:IO");
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
 
            }
