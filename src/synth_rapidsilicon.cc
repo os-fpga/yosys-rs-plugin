@@ -92,7 +92,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 196
+#define VERSION_PATCH 200
 
 enum Strategy {
     AREA,
@@ -278,6 +278,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default use Block RAM in output netlist.\n");
         log("        Specifying this switch turns it off.\n");
         log("\n");
+        log("    -max_device_ios <num>\n");
+        log("        Specify the number of available package pin resources for the target device.\n");
+        log("\n");
         log("    -max_device_bram <num>\n");
         log("        Specify the number of available Block RAM resources for the targe device.\n");
         log("\n");
@@ -347,6 +350,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     int max_bram;
     int max_carry_length;
     int max_dsp;
+    int max_device_ios;
     RTLIL::Design *_design;
     string nosdff_str;
     ClockEnableStrategy clke_strategy;
@@ -369,6 +373,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_flatten = false;
         no_iobuf= false;
         nobram = false;
+        max_device_ios=-1;
         max_lut = -1;
         max_reg = -1;
         max_bram = -1;
@@ -489,6 +494,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-max_device_dsp" && argidx + 1 < args.size()) {
                 max_device_dsp = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-max_device_ios" && argidx + 1 < args.size()) {
+                max_device_ios = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-max_carry_length" && argidx + 1 < args.size()) {
@@ -682,6 +691,150 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     int getNumberOfInstances() {
         return (_design->top_module()->cells_.size());
+    }
+
+    // Assume no carry chains with loops which is always the case
+    //
+    int getCarryChainLength(Cell* cell, dict<RTLIL::SigSpec, Cell*>& co2cell, 
+                            dict<Cell*, RTLIL::SigSpec>& cell2ci, int l) {
+
+       // cell is a carry adder. If it has no 'ci' net then return right away
+       //
+       if (!cell2ci.count(cell)) {
+         return l;
+       }
+
+       SigSpec ciSignal = cell2ci[cell];
+
+       // If the ci signal is not the carry out of another carry cell then return
+       // right away.
+       //
+       if (!co2cell.count(ciSignal)) {
+         return l;
+       }
+
+       // Compute the length recursively from the "nextCarryCell"
+       //
+       Cell* nextCarryCell = co2cell[ciSignal];
+
+       return (getCarryChainLength(nextCarryCell, co2cell, cell2ci, l+1));
+    }
+
+    void reportCarryChains() {
+
+       dict<RTLIL::SigSpec, Cell*> ci2cell; // from the 'ci' net gives the corresponding carry adder cell
+       dict<RTLIL::SigSpec, Cell*> co2cell; // from the 'co' net gives the corresponding carry adder cell
+       dict<Cell*, RTLIL::SigSpec> cell2ci; // from the carry cell gives its corresponding 'ci' net
+
+       // store the carry adders wich are the heads of a carry chain
+       //
+       vector<Cell*> carry_chain_head_cells; 
+
+       int nbCarryAdders = 0;
+
+       for (auto cell : _design->top_module()->cells()) {
+
+           //log("Cell = %s\n", (cell->type).c_str());
+
+           if(cell->type != RTLIL::escape_id("ADDER_CARRY")) {
+             continue;
+           }
+
+           nbCarryAdders++;
+
+           bool noCo = true;
+
+           for (auto &conn : cell->connections()) {
+
+               IdString portName = conn.first;
+               RTLIL::SigSpec actual = conn.second;
+
+               //log("     Port = %s\n", (portName).c_str());
+
+               if (portName == RTLIL::escape_id("cin")) {
+                 ci2cell[actual] = cell;
+                 cell2ci[cell] = actual;
+                 continue;
+               }
+
+               if (portName == RTLIL::escape_id("cout")) {
+                 noCo = false;
+                 co2cell[actual] = cell;
+                 continue;
+               }
+           }
+
+           // If carry adder has no "co" port then it is a carry chain head cell
+           //
+           if (noCo) {
+             carry_chain_head_cells.push_back(cell);
+           }
+       }
+
+       vector<RTLIL::SigSpec> carry_chain_head_co2cell; 
+
+       for (auto &co_signal : co2cell) {
+
+          // If 'co_signal" corresponds to a ci signal then it cannot be a top head CO
+          // signal of a carry chain
+          //
+          RTLIL::SigSpec signal = co_signal.first;
+
+          if (ci2cell.count(signal)) { // co signal is also a ci signal
+            continue;
+          }
+
+          // this co signal does not drive any carry cell so it is a carry chain head cell.
+          // get its associated cell and add it.
+          Cell* cell = co_signal.second;
+
+          carry_chain_head_cells.push_back(cell);
+       }
+
+#if 0
+       log ("NB carry = %d\n", nbCarryAdders);
+       log ("NB CI signals = %lu\n", ci2cell.size());
+       log ("NB CO signals = %lu\n", co2cell.size());
+       log ("NB CC heads = %lu\n", carry_chain_head_cells.size());
+#endif
+
+       dict<int /* ccarry chain length */, int /* number of arry chains with that length */> carry_chains_stat;
+
+       for (auto &headCarryCell : carry_chain_head_cells) {
+
+         // Get the length of the chain starting from head cell "headCarryCell"
+         //
+         int length = getCarryChainLength (headCarryCell, co2cell, cell2ci, 1);
+
+         //log ("Length = %d\n", length);
+
+         // Group chains of same length with same counter
+         //
+         if (!carry_chains_stat.count(length)) {
+           carry_chains_stat[length] = 1; // first occurence case
+          } else {
+           carry_chains_stat[length] += 1;
+         }
+       }
+
+       log ("   Number of CARRY ADDERs:       %5d\n", nbCarryAdders);
+
+       if (carry_chains_stat.size() == 0) {
+         return;
+       }
+
+       log ("   Number of CARRY CHAINs:       %5d (", (int)carry_chain_head_cells.size());
+
+       bool first = true;
+       for (auto &stat : carry_chains_stat) {
+          if (!first) {
+            log(", ");
+          }
+          log("%dx%d", stat.second, stat.first);
+          first = false;
+       }
+
+       log (")\n");
     }
 
     int getNumberOfLUTx() {
@@ -1000,6 +1153,38 @@ struct SynthRapidSiliconPass : public ScriptPass {
           top_run_opt(0 /* nodffe */, 1 /* sat */, 0 /* force nosdff */, 1, 4, 0);
         }
     }
+
+// return 1 if the design has at least one DFF with Clock enable
+// 0 otherwise.
+//
+int designWithDFFce()
+{
+    for (auto &mod : _design->selected_modules()) {
+
+       SigMap sigmap(mod);
+
+       FfInitVals initvals(&sigmap, mod);
+
+       for (auto cell : mod->selected_cells()) {
+
+           if (!RTLIL::builtin_ff_cell_types().count(cell->type)) {
+              continue;
+           }
+
+           FfData ff(&initvals, cell);
+
+           if (!ff.has_clk) {
+              continue;
+           }
+
+           if (ff.has_ce) {
+             return 1;
+           }
+       }
+    }
+
+    return 0;
+}
 
     // Perform a small loop of successive "abc -dff" calls.  
     // This "simplify" pass may have some big QoR impact on this list of designs:
@@ -2275,50 +2460,60 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 int nbGenericREGs1 = getNumberOfGenericREGs();
                 int nbOfLogic1 = getNumberOfLogic();
 
-                // re-start from original design
+                int hasDFFce = designWithDFFce();
+
+                // if design has any DFF with clock enable explore also
+                // solution by dissolving clock enables
                 //
-                run("design -load original");
+                if (hasDFFce) {
 
-                // Simplify without clock enables
-                //
-                simplify(1 /* unmap_dff_ce */);
-                run("design -save unmap_dff_ce");
+                  // re-start from original design
+                  //
+                  run("design -load original");
 
-                int nbcells_strategy2 = getNumberOfInstances();
-                int nbGenericREGs2 = getNumberOfGenericREGs();
-                int nbOfLogic2 = getNumberOfLogic();
+                  // Simplify without clock enables
+                  //
+                  simplify(1 /* unmap_dff_ce */);
+                  run("design -save unmap_dff_ce");
 
-                if (0) {   
-                   log("****************************\n");
-                   log(" NB cells strategy 1 : %d\n", nbcells_strategy1);
-                   log(" NB REGs strategy 1  : %d\n", nbGenericREGs1);
-                   log(" NB LOGs strategy 1  : %d\n", nbOfLogic1);
-                   log(" NB cells strategy 2 : %d\n", nbcells_strategy2);
-                   log(" NB REGs strategy 2  : %d\n", nbGenericREGs2);
-                   log(" NB LOGs strategy 2  : %d\n", nbOfLogic2);
-                   log("****************************\n");
+                  int nbcells_strategy2 = getNumberOfInstances();
+                  int nbGenericREGs2 = getNumberOfGenericREGs();
+                  int nbOfLogic2 = getNumberOfLogic();
 
-                   //getchar();
-                }
+                  if (0) {   
+                     log("****************************\n");
+                     log(" NB cells strategy 1 : %d\n", nbcells_strategy1);
+                     log(" NB REGs strategy 1  : %d\n", nbGenericREGs1);
+                     log(" NB LOGs strategy 1  : %d\n", nbOfLogic1);
+                     log(" NB cells strategy 2 : %d\n", nbcells_strategy2);
+                     log(" NB REGs strategy 2  : %d\n", nbGenericREGs2);
+                     log(" NB LOGs strategy 2  : %d\n", nbOfLogic2);
+                     log("****************************\n");
+  
+                     //getchar();
+                  }
 
-                // Pick up second strategy only if total number of logic 
-                // cells increase is limited.
-                //
-                float thresh = 0.92;
+                  // Pick up second strategy only if :
+                  //      - total number of logic cells increase is limited .
+                  //      - OR there is a nice DFF reduction number (ex: oc_aquarius).
+                  //
+                  float thresh = 0.92;
 
-                if (1 && (nbOfLogic2 * thresh <= nbOfLogic1)) {
+                  if ((nbOfLogic2 * thresh <= nbOfLogic1) ||
+                      (nbGenericREGs2 <= thresh * nbGenericREGs1)) {
 
-                   log("select CE dissolving strategy (tresh=%f)\n", thresh);
+                     log("select CE dissolving strategy (tresh=%f)\n", thresh);
 
-                   run("design -save unmap_dff_ce");
-                   run("design -pop");
-                   run("design -load unmap_dff_ce");
+                     run("design -save unmap_dff_ce");
+                     run("design -pop");
+                     run("design -load unmap_dff_ce");
 
-                } else {
+                  } else {
 
-                   log("select CE preserving strategy (tresh=%f)\n", thresh);
+                     log("select CE preserving strategy (tresh=%f)\n", thresh);
 
-                   run("design -pop");
+                     run("design -pop");
+                  }
                 }
 
                 postSimplify();
@@ -2487,9 +2682,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
            if (!no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
-                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
-                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -tinoutpad rs__IOBUF ~T:O:I:IO");
-                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
+                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -limit "+ std::to_string(max_device_ios));
+                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
 
            }
 
@@ -2527,6 +2722,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         log("   Number of LUTs:               %5d\n", nbLUTx);
         log("   Number of REGs:               %5d\n", nbREGs);
+
+        reportCarryChains();
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");

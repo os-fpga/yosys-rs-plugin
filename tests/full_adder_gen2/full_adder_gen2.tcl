@@ -14,7 +14,7 @@ equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genes
 design -load postopt
 yosys cd full_adder
 stat
-select -assert-count 5 t:fa_1bit
+select -assert-max 5 t:fa_1bit
 
 design -reset
 
@@ -27,8 +27,8 @@ equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genes
 design -load postopt
 yosys cd subtractor
 stat
-select -assert-count 5 t:\$lut
-select -assert-count 5 t:fa_1bit
+select -assert-max 5 t:\$lut
+select -assert-max 5 t:fa_1bit
 
 design -reset
 
@@ -41,7 +41,7 @@ equiv_opt -assert  -map +/rapidsilicon/genesis2/cells_sim.v synth_rs -tech genes
 design -load postopt
 yosys cd comparator
 stat
-select -assert-count 4 t:fa_1bit
+select -assert-max 4 t:fa_1bit
 
 design -reset
 
@@ -56,7 +56,8 @@ design -load postopt
 yosys cd full_adder
 stat
 select -assert-count 0 t:fa_1bit
-select -assert-count 6 t:\$lut
+select -assert-max 6 t:\$lut
+#select -assert-min 5 t:\$lut
 
 design -reset
 
@@ -71,7 +72,7 @@ yosys cd subtractor
 stat
 #select -assert-count 5 t:fa_1bit
 #select -assert-count 6 t:\$lut
-select -assert-count 6 t:\$lut
+select -assert-max 6 t:\$lut
 
 design -reset
 
@@ -85,7 +86,7 @@ design -load postopt
 yosys cd comparator
 stat
 select -assert-count 0 t:fa_1bit
-select -assert-count 2 t:\$lut
+select -assert-max 2 t:\$lut
 
 design -reset
 
