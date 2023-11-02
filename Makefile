@@ -88,7 +88,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/TDP18K_FIFO.v \
 				  $(GENESIS3)/sram1024x18.v \
 				  $(GENESIS3)/ufifo_ctl.v \
-				  $(GENESIS3)/RS_PRIMITIVES/blackbox_models/cell_sim_blackbox.v \
+				  $(GENESIS3)/cell_sim_blackbox.v \
 				  $(GENESIS3)/llatches_sim.v \
 				  $(GENESIS3)/io_cells_map1.v \
 				  $(GENESIS3)/io_cell_final_map.v \
