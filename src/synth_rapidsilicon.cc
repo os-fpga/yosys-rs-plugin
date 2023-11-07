@@ -92,7 +92,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 200
+#define VERSION_PATCH 201
 
 enum Strategy {
     AREA,
@@ -2682,9 +2682,9 @@ int designWithDFFce()
            if (!no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
-                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -limit "+ std::to_string(max_device_ios));
-                run("techmap -map " GET_TECHMAP_FILE_PATH_RS_PRIMITVES(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
 
            }
 
