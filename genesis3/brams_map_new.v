@@ -82,6 +82,10 @@ wire [35:0] D1DATA_TOTAL;
 wire [ABITS-1:0] 		A_ADDR;
 wire [ABITS-1:0] 		B_ADDR;
 
+// assign A_ADDR = PORT_A_RD_EN ? PORT_A_ADDR : (PORT_B_WR_EN ? PORT_B_ADDR : 15'd0);
+// assign B_ADDR = PORT_C_RD_EN ? PORT_C_ADDR : (PORT_D_WR_EN ? PORT_D_ADDR : 15'd0);
+
+// Awais: If address for read and write ports are same then extra logic for adress collision is not needed
 assign A_ADDR = PORT_A_ADDR == PORT_B_ADDR ? PORT_A_ADDR : PORT_A_RD_EN ? PORT_A_ADDR : (PORT_B_WR_EN ? PORT_B_ADDR : 15'd0);
 assign B_ADDR = PORT_C_ADDR == PORT_D_ADDR ? PORT_C_ADDR : PORT_C_RD_EN ? PORT_C_ADDR : (PORT_D_WR_EN ? PORT_D_ADDR : 15'd0);
 
