@@ -90,12 +90,22 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/ufifo_ctl.v \
 				  $(GENESIS3)/cell_sim_blackbox.v \
 				  $(GENESIS3)/llatches_sim.v \
-				  $(GENESIS3)/RS_PRIMITIVES/IO/io_cells_primitives_new.sv \
-				  $(GENESIS3)/RS_PRIMITIVES/IO/io_cells_primitives.sv \
-				  $(GENESIS3)/RS_PRIMITIVES/IO/io_cells_sims.sv \
-				  $(GENESIS3)/RS_PRIMITIVES/TECHMAP/io_model_map_new.v \
-				  $(GENESIS3)/RS_PRIMITIVES/LUT/LUT.v \
-				  $(GENESIS3)/RS_PRIMITIVES/TECHMAP/lut_map.v
+				  $(GENESIS3)/io_cells_map1.v \
+				  $(GENESIS3)/io_cell_final_map.v \
+				  $(GENESIS3)/lut_map.v \
+				  $(GENESIS3)/dsp38_map.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT1.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT2.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT3.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT4.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT5.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT6.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/CLK_BUF.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/I_BUF.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/O_BUF.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DFFRE.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DFFNRE.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DSP38.v 
 
 
 NAME = synth-rs
