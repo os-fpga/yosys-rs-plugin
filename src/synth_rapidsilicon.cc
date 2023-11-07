@@ -1415,7 +1415,14 @@ int designWithDFFce()
                     FfData ff(&initvals, _dff_);
                     bool ignore_dsp = false;
                     if (sigmap(ff.sig_d) == sigmap(mult->getPort(ID::Y))){
-                        if (ff.has_ce || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk) {
+                        if ((ff.has_ce || ff.has_srst || ff.has_sr || ff.has_aload || ff.has_gclk || !ff.has_clk) && tech != Technologies::GENESIS) {
+                            if (ff.has_srst){
+                                std::stringstream buf;
+                                for (auto &it : _dff_->attributes) {
+                                    RTLIL_BACKEND::dump_const(buf, it.second);
+                                }
+                                log_warning("The synchronous register element Generic DFF %s (type: %s) cannot be merged in RS_DSP due to architectural limitations. Please address this issue in the RTL at line %s\n",log_id(ff.name),log_id(ff.cell->type),buf.str().c_str());
+                            }
                             ignore_dsp = true;
                         }
                         if (!ignore_dsp){
