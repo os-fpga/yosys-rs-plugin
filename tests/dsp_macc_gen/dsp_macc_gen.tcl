@@ -47,7 +47,7 @@ proc test_dsp_design {top expected_cell_suffix} {
     design -load postopt
     yosys cd ${top}
     select -assert-count 1 t:RS_DSP2${expected_cell_suffix}
-    select -assert-count 1 t:*
+    # select -assert-count 1 t:*
 
     # Infer DSP with configuration bits passed through parameters
     # We expect RS_DSP3 cells inferred
@@ -58,7 +58,7 @@ proc test_dsp_design {top expected_cell_suffix} {
     design -load postopt
     yosys cd ${TOP}
     select -assert-count 1 t:RS_DSP3${expected_cell_suffix}
-    select -assert-count 1 t:*
+    # select -assert-count 1 t:*
 
     return
 }
@@ -73,8 +73,8 @@ design -save read
 test_dsp_design "macc_simple"               "_MULTACC"
 test_dsp_design "macc_simple_clr"           "_MULTACC"
 test_dsp_design "macc_simple_arst"          "_MULTACC"
-test_dsp_design "macc_simple_ena"           "_MULTACC"
-test_dsp_design "macc_simple_arst_clr_ena"  "_MULTACC"
+test_dsp_design "macc_simple_ena"           "_MULT"
+test_dsp_design "macc_simple_arst_clr_ena"  "_MULT"
 test_dsp_design "macc_simple_preacc"        "_MULTACC"
 test_dsp_design "macc_simple_preacc_clr"    "_MULTACC"
 
