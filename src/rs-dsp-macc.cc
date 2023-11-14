@@ -7,6 +7,7 @@
 #include "kernel/modtools.h"
 #include "kernel/ffinit.h"
 #include "kernel/ff.h"
+#include "backends/rtlil/rtlil_backend.h"
 
 extern int DSP_COUNTER;
 USING_YOSYS_NAMESPACE
@@ -99,6 +100,7 @@ struct RsDspMaccWorker
                     continue;
             }
         }
+
         for (auto &add_cell : add_cells_) {
             add = add_cell;
             add_mul = false;
@@ -109,8 +111,20 @@ struct RsDspMaccWorker
             muxY_valid = false;
             // shiftl_PB_Reg = false;
             for (auto dff_ : dff_cells_){
+                FfData ff_(&m_initvals, dff_);
                 if (((add_cell->getPort(ID::A) == dff_->getPort(ID::Q))||(add_cell->getPort(ID::B) == dff_->getPort(ID::Q))) && add_cell->getPort(ID::Y) == dff_->getPort(ID::D)){
                     add_regout = true;
+                    if ((ff_.has_ce || ff_.has_srst || ff_.has_sr || ff_.has_aload || ff_.has_gclk || !ff_.has_clk) && !gen) {
+                        add_regout = false;
+                        if (ff_.has_srst){
+                            std::stringstream buf;
+                            for (auto &it : dff_->attributes) {
+                                RTLIL_BACKEND::dump_const(buf, it.second);
+                            }
+                            log_warning("The synchronous register element Generic DFF %s (type: %s) cannot be merged in RS_DSP due to architectural limitations. Please address this issue in the RTL at line %s\n",log_id(ff_.name),log_id(ff_.cell->type),buf.str().c_str());
+                        }
+                        break;
+                    }
                     ff = dff_;
                     break;
                 }
@@ -119,6 +133,17 @@ struct RsDspMaccWorker
                         if ((mux_cell->getPort(ID::Y) == dff_->getPort(ID::D) && (mux_cell->getPort(ID::A) == add_cell->getPort(ID::Y) || mux_cell->getPort(ID::B) == add_cell->getPort(ID::Y)))){
                             ff = dff_;
                             add_regout = true;
+                            if ((ff_.has_ce || ff_.has_srst || ff_.has_sr || ff_.has_aload || ff_.has_gclk || !ff_.has_clk )&& !gen) {
+                                add_regout = false;
+                                if (ff_.has_srst){
+                                    std::stringstream buf;
+                                    for (auto &it : dff_->attributes) {
+                                        RTLIL_BACKEND::dump_const(buf, it.second);
+                                    }
+                                    log_warning("The synchronous register element Generic DFF %s (type: %s) cannot be merged in RS_DSP due to architectural limitations. Please address this issue in the RTL at line %s\n",log_id(ff_.name),log_id(ff_.cell->type),buf.str().c_str());
+                                }
+                                break;
+                            }
                             muxY_valid = true;
                             mux = mux_cell;
                             for (auto &mul_cell : mul_cells) {
@@ -135,6 +160,7 @@ struct RsDspMaccWorker
                         }
                     }
                 }
+                
             }
 
             if (add_regout && !mux_valid){
