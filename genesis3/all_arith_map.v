@@ -47,33 +47,33 @@ module _80_rs_alu (A, B, CI, BI, X, Y, CO);
         //assign CO[Y_WIDTH-1] = co;
 
 	generate
-	     ADDER_CARRY intermediate_adder (
-	       .cin     ( ),
-	       .cout    (C[0]),
-	       .p       (1'b0),
-	       .g       (CI),
-	       .sumout     ()
+	     CARRY intermediate_adder (
+	       .CIN     ( ),
+	       .COUT    (C[0]),
+	       .P       (1'b0),
+	       .G       (CI),
+	       .O     ()
 	     );
 	endgenerate
 	genvar i;
 	generate if (Y_WIDTH > 2) begin
 	  for (i = 0; i < Y_WIDTH-2; i = i + 1) begin:slice
-		ADDER_CARRY  my_adder (
-			.cin(C[i]),
-			.g(AA[i]),
-			.p(S[i]),
-			.cout(C[i+1]),
-		    .sumout(Y[i])
+		CARRY  my_adder (
+			.CIN(C[i]),
+			.G(AA[i]),
+			.P(S[i]),
+			.COUT(C[i+1]),
+		    .O(Y[i])
 		);
     end
 	end endgenerate
 	generate
-	     ADDER_CARRY final_adder (
-	       .cin     (C[Y_WIDTH-2]),
-	       .cout    (),
-	       .p       (1'b0),
-	       .g       (1'b0),
-	       .sumout     (co)
+	     CARRY final_adder (
+	       .CIN     (C[Y_WIDTH-2]),
+	       .COUT    (),
+	       .P       (1'b0),
+	       .G       (1'b0),
+	       .O     (co)
 	     );
 	endgenerate
 
