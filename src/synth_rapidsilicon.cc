@@ -1985,6 +1985,7 @@ int designWithDFFce()
                 }    
                 case Technologies::GENESIS_3: {
                     readArgs = GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, SIM_LIB_CARRY_FILE) 
+                                GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DFFRE_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DFFNRE_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT1_SIM_FILE)
