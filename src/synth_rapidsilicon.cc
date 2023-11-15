@@ -37,7 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
-#define SIM_LIB_adder_FILE ADDER_CARRY.v
+#define SIM_LIB_CHAIN_FILE CARRY.v
 #define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
@@ -1984,8 +1984,7 @@ int designWithDFFce()
                     break;
                 }    
                 case Technologies::GENESIS_3: {
-                    readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_adder_FILE) 
-                                GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
+                    readArgs = GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, SIM_LIB_CHAIN_FILE) 
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DFFRE_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DFFNRE_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT1_SIM_FILE)
