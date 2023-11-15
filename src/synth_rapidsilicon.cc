@@ -37,10 +37,13 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
+#define SIM_LIB_adder_FILE ADDER_CARRY.v
 #define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
 #define FFS_MAP_FILE ffs_map.v
+#define DFFRE_SIM_FILE DFFRE.v
+#define DFFNRE_SIM_FILE DFFNRE.v
 #define LUT1_SIM_FILE LUT1.v
 #define LUT2_SIM_FILE LUT2.v
 #define LUT3_SIM_FILE LUT3.v
@@ -1981,9 +1984,10 @@ int designWithDFFce()
                     break;
                 }    
                 case Technologies::GENESIS_3: {
-                    readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_FILE) 
+                    readArgs = GET_FILE_PATH(GENESIS_3_DIR, SIM_LIB_adder_FILE) 
                                 GET_FILE_PATH(GENESIS_3_DIR, LLATCHES_SIM_FILE)
-                                GET_FILE_PATH(GENESIS_3_DIR, DSP_SIM_LIB_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DFFRE_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DFFNRE_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT1_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT2_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, LUT3_SIM_FILE)
@@ -2689,9 +2693,9 @@ int designWithDFFce()
            if (!no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
-                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -limit "+ std::to_string(max_device_ios));
-                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_MODEL_FILE));// TECHMAP CELLS
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
            }
 
