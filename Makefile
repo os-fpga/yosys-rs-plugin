@@ -92,6 +92,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/io_cell_final_map.v \
 				  $(GENESIS3)/lut_map.v \
 				  $(GENESIS3)/dsp38_map.v \
+				  $(GENESIS3)/llatches_sim.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT1.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT2.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/LUT3.v \
