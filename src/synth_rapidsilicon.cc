@@ -739,7 +739,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
            //log("Cell = %s\n", (cell->type).c_str());
 
-           if(cell->type != RTLIL::escape_id("ADDER_CARRY")) {
+           if(cell->type != RTLIL::escape_id("CARRY")) {
              continue;
            }
 
@@ -754,13 +754,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
                //log("     Port = %s\n", (portName).c_str());
 
-               if (portName == RTLIL::escape_id("cin")) {
+               if (portName == RTLIL::escape_id("CIN")) {
                  ci2cell[actual] = cell;
                  cell2ci[cell] = actual;
                  continue;
                }
 
-               if (portName == RTLIL::escape_id("cout")) {
+               if (portName == RTLIL::escape_id("COUT")) {
                  noCo = false;
                  co2cell[actual] = cell;
                  continue;
