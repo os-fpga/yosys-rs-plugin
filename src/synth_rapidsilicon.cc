@@ -1778,8 +1778,8 @@ int designWithDFFce()
                         run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
                         
                         correctBramInitValues();
-                        run("rs_bram_split -new_mapping");
                         run("write_verilog -noattr -nohex after_lib_map.v");
+                        run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
                         run("stat");
                         run("write_verilog -noattr -nohex after_bram_map.v");
