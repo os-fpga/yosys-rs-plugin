@@ -41,6 +41,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
+#define BRAMS_SIM_NEW_LIB_FILE1 bram_map_rs.v
+#define BRAMS_SIM_NEW_LIB_FILE2 TDP_RAM36K.v
 #define FFS_MAP_FILE ffs_map.v
 #define DFFRE_SIM_FILE DFFRE.v
 #define DFFNRE_SIM_FILE DFFNRE.v
@@ -1774,9 +1776,13 @@ int designWithDFFce()
                         if (tech != Technologies::GENESIS)
                             run("memory_libmap -lib" + bramTxtSwap + " -tech genesis " + " -limit " + std::to_string(max_bram) + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
+                        
                         correctBramInitValues();
                         run("rs_bram_split -new_mapping");
+                        run("write_verilog -noattr -nohex after_lib_map.v");
                         run("techmap -autoproc -map" + bramMapFile);
+                        run("stat");
+                        run("write_verilog -noattr -nohex after_bram_map.v");
                         run("techmap -map" + bramFinalMapFile);
                     }
 
@@ -1997,6 +2003,7 @@ int designWithDFFce()
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, CLK_BUF_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, O_BUF_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DSP_38_SIM_FILE)
+                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_NEW_LIB_FILE1)
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
