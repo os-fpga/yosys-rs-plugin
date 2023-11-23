@@ -508,6 +508,10 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 	//parameter WIDTH = 1; 
     parameter PORT_A_WIDTH=1;
 	parameter PORT_B_WIDTH=1;
+
+	parameter PORT_A_DATA_WIDTH=1;
+	parameter PORT_B_DATA_WIDTH=1;
+
 	parameter PORT_B_WR_BE_WIDTH = 1;
 
     parameter [18431:0] INIT = 18432'bx;
@@ -532,6 +536,8 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 		.CFG_DBITS(),
 		.PORT_A_WIDTH(PORT_A_WIDTH),
 		.PORT_B_WIDTH(PORT_B_WIDTH),
+		.PORT_A_DATA_WIDTH(PORT_A_DATA_WIDTH),
+		.PORT_B_DATA_WIDTH(PORT_B_DATA_WIDTH),
 		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
