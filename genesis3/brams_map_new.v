@@ -95,6 +95,8 @@ assign B_ADDR = PORT_C_ADDR == PORT_D_ADDR ? PORT_C_ADDR : PORT_C_RD_EN ? PORT_C
 
 // Assign read/write data - handle special case for 9bit mode
 // parity bit for 9bit mode is placed in R/W port on bit #16
+
+
 // PORT A
 case (PORT_A_WIDTH)
 	9: begin
@@ -595,6 +597,8 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 	wire [CFG_ENABLE-1:PORT_B_WR_BE_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_B_WR_BE_WIDTH{1'b0}};
 	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_BE};
 
+	wire parity_bit_check = ({PORT_B_WR_DATA[35], PORT_B_WR_DATA[26],PORT_B_WR_DATA[17], PORT_B_WR_DATA[8]} == 4'bx)?1:0;
+
 	/*Adjusting the bit placement w.r.t new BRAM Primitve TDP_RAM36K*/
 	// PORT A
 case (PORT_A_WIDTH)
@@ -627,7 +631,8 @@ end
 			assign A1DATA_TOTAL = {PORT_A_RD_DATA[35],PORT_A_RD_DATA[26], PORT_A_RD_DATA[17], PORT_A_RD_DATA[8], PORT_A_RD_DATA[34:27], PORT_A_RD_DATA[25:18],PORT_A_RD_DATA[16:9], PORT_A_RD_DATA[7:0]};
 		end
 		default: begin
-			assign PORT_A_RD_DATA = A1DATA_TOTAL[PORT_A_WIDTH-1:0];
+			assign A1DATA_TOTAL = (!parity_bit_check)? PORT_A_RD_DATA[PORT_A_WIDTH-1:0]:
+								({PORT_A_RD_DATA[35],PORT_A_RD_DATA[26], PORT_A_RD_DATA[17], PORT_A_RD_DATA[8], PORT_A_RD_DATA[34:27], PORT_A_RD_DATA[25:18],PORT_A_RD_DATA[16:9], PORT_A_RD_DATA[7:0]});
 		end
 	endcase
 end
@@ -670,7 +675,8 @@ case (PORT_B_WIDTH)
 			assign B1DATA_TOTAL = {PORT_B_WR_DATA[35], PORT_B_WR_DATA[26],PORT_B_WR_DATA[17], PORT_B_WR_DATA[8],PORT_B_WR_DATA[34:27],PORT_B_WR_DATA[25:18], PORT_B_WR_DATA[16:9], PORT_B_WR_DATA[7:0]};
 		end
 		default: begin
-			assign B1DATA_TOTAL = {B1DATA_CMPL, PORT_B_WR_DATA};
+			assign B1DATA_TOTAL =(!parity_bit_check)? {B1DATA_CMPL, PORT_B_WR_DATA}:
+								({PORT_B_WR_DATA[35], PORT_B_WR_DATA[26],PORT_B_WR_DATA[17], PORT_B_WR_DATA[8],PORT_B_WR_DATA[34:27],PORT_B_WR_DATA[25:18], PORT_B_WR_DATA[16:9], PORT_B_WR_DATA[7:0]});
 		end
 	endcase
 	end
