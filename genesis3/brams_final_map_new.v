@@ -175,7 +175,7 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
         //assign PORT_A1_RDATA = {A1DATA[17], A1DATA[8], A1DATA[16:9], A1DATA[7:0]};
         case (PORT_A_DATA_WIDTH)
             18: assign PORT_A1_RDATA = {A1DATA[17], A1DATA[8], A1DATA[16:9], A1DATA[7:0]};
-            default: assign A1DATA = PORT_A1_RDATA[CFG_DBITS-1:0];
+            default: assign PORT_A1_RDATA = (PORT_A_DATA_WIDTH>18)?{A1DATA[17], A1DATA[8], A1DATA[16:9], A1DATA[7:0]}:A1DATA[CFG_DBITS-1:0];
         endcase
     end
     default: begin
@@ -196,7 +196,7 @@ endcase
         //assign PORT_A1_WDATA = {B1DATA[17], B1DATA[8], B1DATA[16:9], B1DATA[7:0]};
         case (PORT_B_DATA_WIDTH)
             18: assign PORT_A1_WDATA = {B1DATA[17], B1DATA[8], B1DATA[16:9], B1DATA[7:0]};
-            default: assign PORT_A1_WDATA = {B1_WDATA_CMPL, B1DATA};
+            default: assign PORT_A1_WDATA = (PORT_B_DATA_WIDTH>18)?{B1DATA[17], B1DATA[8], B1DATA[16:9], B1DATA[7:0]}:{B1_WDATA_CMPL, B1DATA};
         endcase
     end
     default: begin
@@ -217,7 +217,7 @@ endcase
         //assign PORT_B1_RDATA = {C1DATA[17], C1DATA[8], C1DATA[16:9], C1DATA[7:0]};
         case (PORT_C_DATA_WIDTH)
             18  : assign PORT_B1_RDATA = {C1DATA[17], C1DATA[8], C1DATA[16:9], C1DATA[7:0]};
-            default: assign C1DATA = PORT_B1_RDATA[CFG_DBITS-1:0];
+            default: assign PORT_B1_RDATA =(PORT_C_DATA_WIDTH>18)? {C1DATA[17], C1DATA[8], C1DATA[16:9], C1DATA[7:0]}:C1DATA[CFG_DBITS-1:0];
         endcase
     end
     default: begin
@@ -238,7 +238,7 @@ endcase
         //assign PORT_B1_WDATA = {D1DATA[17], D1DATA[8], D1DATA[16:9], D1DATA[7:0]};
         case (PORT_D_DATA_WIDTH)
            18 : assign PORT_B1_WDATA = {D1DATA[17], D1DATA[8], D1DATA[16:9], D1DATA[7:0]};
-            default: assign PORT_B1_WDATA = {D1_WDATA_CMPL, D1DATA};
+            default: assign PORT_B1_WDATA = (PORT_D_DATA_WIDTH>18)?{D1DATA[17], D1DATA[8], D1DATA[16:9], D1DATA[7:0]}:{D1_WDATA_CMPL, D1DATA};
         endcase
     end
     default: begin
@@ -259,7 +259,7 @@ endcase
         //assign PORT_A2_RDATA = {E1DATA[17], E1DATA[8], E1DATA[16:9], E1DATA[7:0]};
         case (PORT_E_DATA_WIDTH)
           18  : assign PORT_A2_RDATA = {E1DATA[17], E1DATA[8], E1DATA[16:9], E1DATA[7:0]};
-            default: assign E1DATA = PORT_A2_RDATA[CFG_DBITS-1:0];
+            default: assign PORT_A2_RDATA = (PORT_E_DATA_WIDTH>18)?{E1DATA[17], E1DATA[8], E1DATA[16:9], E1DATA[7:0]}: E1DATA[CFG_DBITS-1:0];
         endcase
     end
     default: begin
@@ -280,7 +280,7 @@ endcase
         //assign PORT_A2_WDATA = {F1DATA[17], F1DATA[8], F1DATA[16:9], F1DATA[7:0]};
         case (PORT_F_DATA_WIDTH)
            18 : assign PORT_A2_WDATA = {F1DATA[17], F1DATA[8], F1DATA[16:9], F1DATA[7:0]};
-            default: assign PORT_A2_WDATA = {F1_WDATA_CMPL, F1DATA};
+            default: assign PORT_A2_WDATA = (PORT_F_DATA_WIDTH>18)?{F1DATA[17], F1DATA[8], F1DATA[16:9], F1DATA[7:0]}:{F1_WDATA_CMPL, F1DATA};
         endcase
     end
     default: begin
@@ -301,7 +301,7 @@ endcase
         //assign PORT_B2_RDATA = {G1DATA[17], G1DATA[8], G1DATA[16:9], G1DATA[7:0]};
         case (PORT_G_DATA_WIDTH)
            18 : assign PORT_B2_RDATA = {G1DATA[17], G1DATA[8], G1DATA[16:9], G1DATA[7:0]};
-            default: assign G1DATA = PORT_B2_RDATA[CFG_DBITS-1:0];
+            default: assign PORT_B2_RDATA = (PORT_G_DATA_WIDTH>18)?{G1DATA[17], G1DATA[8], G1DATA[16:9], G1DATA[7:0]}:G1DATA[CFG_DBITS-1:0];
         endcase
     end
     default: begin
@@ -322,7 +322,7 @@ endcase
         //assign PORT_B2_WDATA = {H1DATA[17], H1DATA[8], H1DATA[16:9], H1DATA[7:0]};
         case (PORT_H_DATA_WIDTH)
           18: assign PORT_B2_WDATA = {H1DATA[17], H1DATA[8], H1DATA[16:9], H1DATA[7:0]};
-          default: assign PORT_B2_WDATA = {H1_WDATA_CMPL, H1DATA};
+          default: assign PORT_B2_WDATA = (PORT_H_DATA_WIDTH>18)?{H1DATA[17], H1DATA[8], H1DATA[16:9], H1DATA[7:0]}:{H1_WDATA_CMPL, H1DATA};
         endcase
     end
     default: begin
