@@ -621,7 +621,7 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 	wire [CFG_ENABLE-1:PORT_B_WR_BE_WIDTH] B1EN_CMPL = {CFG_ENABLE-PORT_B_WR_BE_WIDTH{1'b0}};
 	wire [CFG_ENABLE-1:0] B1EN = {B1EN_CMPL, PORT_B_WR_BE};
 
-	//wire parity_bit_check = ({PORT_B_WR_DATA[35], PORT_B_WR_DATA[26],PORT_B_WR_DATA[17], PORT_B_WR_DATA[8]} == 4'bx)?1:0;
+
 
 	/*Adjusting the bit placement w.r.t new BRAM Primitve TDP_RAM36K*/
 	// PORT A
