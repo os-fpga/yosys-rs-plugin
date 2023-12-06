@@ -12,7 +12,8 @@
 `define MODE_1  3'b101	// 32-bit
 
 module \$__RS_FACTOR_BRAM36_TDP (...);
-parameter INIT = 0;
+parameter [32767:0] INIT = {32768{1'b0}};
+parameter [4095:0] INIT_PARITY = {4096{1'b0}};
 parameter WIDTH = 1;
 parameter PORT_D_DATA_WIDTH = 1;
 parameter PORT_B_DATA_WIDTH = 1;
@@ -297,110 +298,13 @@ endcase
 
 
 
-
-
-// Assigning MODE BITS with respect to Port WIDTHS
-/* Commented for new TDP_RAM36k Primitive
-	defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		PORT_A_MODE, PORT_A_MODE, PORT_B_MODE, PORT_B_MODE, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-		PORT_C_MODE, PORT_C_MODE, PORT_D_MODE, PORT_D_MODE, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-	};
-
-*/
-/*case (WIDTH)
-	1: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-
-	2: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-
-	4: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-
-	8, 9: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-
-	16, 18: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-
-	32, 36: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-	default: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0,
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-	end
-endcase*/
-
-
 assign SPLIT = 1'b0;
 assign FLUSH1 = 1'b0;
 assign FLUSH2 = 1'b0;
-/*
-RS_TDP36K #(
-	.INIT_i(INIT)
-	) _TECHMAP_REPLACE_ (
-	.WDATA_A1(B1DATA_TOTAL[17:0]),
-	.WDATA_A2(B1DATA_TOTAL[35:18]),
-	.RDATA_A1(A1DATA_TOTAL[17:0]),
-	.RDATA_A2(A1DATA_TOTAL[35:18]),
-	.ADDR_A1(A_ADDR),
-	.ADDR_A2(A_ADDR),
-	.CLK_A1(PORT_A_CLK),
-	.CLK_A2(PORT_A_CLK),
-	.REN_A1(PORT_A_RD_EN),
-	.REN_A2(PORT_A_RD_EN),
-	.WEN_A1(PORT_B_WR_EN),
-	.WEN_A2(PORT_B_WR_EN),
-	.BE_A1(B1EN[1:0]),
-	.BE_A2(B1EN[3:2]),
 
-	.WDATA_B1(D1DATA_TOTAL[17:0]),
-	.WDATA_B2(D1DATA_TOTAL[35:18]),
-	.RDATA_B1(C1DATA_TOTAL[17:0]),
-	.RDATA_B2(C1DATA_TOTAL[35:18]),
-	.ADDR_B1(B_ADDR),
-	.ADDR_B2(B_ADDR),
-	.CLK_B1(PORT_C_CLK),
-	.CLK_B2(PORT_C_CLK),
-	.REN_B1(PORT_C_RD_EN),
-	.REN_B2(PORT_C_RD_EN),
-	.WEN_B1(PORT_D_WR_EN),
-	.WEN_B2(PORT_D_WR_EN),
-	.BE_B1(D1EN[1:0]),
-	.BE_B2(D1EN[3:2]),
-
-	.FLUSH1(FLUSH1),
-	.FLUSH2(FLUSH2)
-);*/
 TDP_RAM36K #(
   .INIT (INIT), // Initial Contents of memory
-  .INIT_PARITY (), // Initial Contents of memory
+  .INIT_PARITY (INIT_PARITY), // Initial Contents of memory
   .WRITE_WIDTH_A (PORT_B_WIDTH), // Write data width on port A (1-36)
   .READ_WIDTH_A (PORT_A_WIDTH), // Read data width on port A (1-36)
   .WRITE_WIDTH_B (PORT_D_WIDTH), // Write data width on port B (1-36)
@@ -430,7 +334,8 @@ endmodule
 // ------------------------------------------------------------------------
 
 module \$__RS_FACTOR_BRAM18_TDP (...);
-	parameter INIT = 0;
+	parameter [32767:0] INIT = {32768{1'b0}};
+	parameter [2047:0] INIT_PARITY = {2048{1'b0}};
 	//parameter WIDTH = 1;
 
 	parameter PORT_D_WIDTH = 1;
@@ -486,11 +391,16 @@ module \$__RS_FACTOR_BRAM18_TDP (...);
 		.PORT_B_WIDTH(PORT_B_WIDTH),
 		.PORT_C_WIDTH(PORT_C_WIDTH),
 		.PORT_D_WIDTH(PORT_D_WIDTH),
+		.PORT_A_DATA_WIDTH(PORT_A_DATA_WIDTH),
+		.PORT_B_DATA_WIDTH(PORT_B_DATA_WIDTH),
+		.PORT_C_DATA_WIDTH(PORT_C_DATA_WIDTH),
+		.PORT_D_DATA_WIDTH(PORT_D_DATA_WIDTH),
 		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
 		.CFG_ENABLE_D(PORT_D_WR_BE_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
-		.INIT0(INIT)
+		.INIT0(INIT),
+		.INIT0_PARITY(INIT_PARITY)
 	) _TECHMAP_REPLACE_ (
 		.A1ADDR(PORT_A_ADDR),
 		.A1DATA(PORT_A_RD_DATA),
@@ -540,7 +450,8 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 
 	parameter PORT_B_WR_BE_WIDTH = 1;
 
-    parameter [18431:0] INIT = 18432'bx;
+	parameter [32767:0] INIT = {32768{1'b0}};
+	parameter [2047:0] INIT_PARITY = {2048{1'b0}};
 	
     localparam CLKPOL2 = 1;
 	localparam CLKPOL3 = 1;
@@ -573,7 +484,8 @@ module \$__RS_FACTOR_BRAM18_SDP (...);
 		.CFG_ENABLE_B(PORT_B_WR_BE_WIDTH),
 		.CLKPOL2(CLKPOL2),
 		.CLKPOL3(CLKPOL3),
-		.INIT0(INIT)
+		.INIT0(INIT),
+		.INIT0_PARITY(INIT_PARITY)
 	) _TECHMAP_REPLACE_ (
 		.A1ADDR(PORT_A_ADDR),
 		.A1DATA(A1DATA),
@@ -600,7 +512,8 @@ module \$__RS_FACTOR_BRAM36_SDP (...);
 
 	parameter PORT_B_WR_BE_WIDTH = 1;
 
-	parameter [36863:0] INIT = 36864'bx;
+	parameter [32767:0] INIT = {32768{1'b0}};
+	parameter [4095:0] INIT_PARITY = {4096{1'b0}};
 	
     localparam ABITS = 15;
 	localparam CFG_ENABLE = 4;
@@ -739,7 +652,7 @@ endcase
 /*****************************************************************/
 	TDP_RAM36K #(
 		.INIT (INIT), // Initial Contents of memory
-		.INIT_PARITY (), // Initial Contents of memory
+		.INIT_PARITY (INIT_PARITY), // Initial Contents of memory
 		.WRITE_WIDTH_A (PORT_A_WIDTH), // Write data width on port A (1-36)
 		.READ_WIDTH_A (PORT_A_WIDTH), // Read data width on port A (1-36)
 		.WRITE_WIDTH_B (PORT_B_WIDTH), // Write data width on port B (1-36)
@@ -765,406 +678,5 @@ endcase
 		.RPARITY_A ({A1DATA_TOTAL[35], A1DATA_TOTAL[34], A1DATA_TOTAL[33], A1DATA_TOTAL[32]}) // Read parity port A
 	  );
 
-	/*case (PORT_B_WIDTH)
-		1: begin
-			case (PORT_A_WIDTH)
-			1: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_1, `MODE_1, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-
-			2: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_2, `MODE_2, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-
-			4: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_4, `MODE_4, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-
-			8, 9: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_9, `MODE_9, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-
-			16, 18: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_18, `MODE_18, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-
-			32, 36: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_36, `MODE_36, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_36, `MODE_36, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-			default: begin
-				defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_36, `MODE_36, `MODE_1, `MODE_1, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_36, `MODE_36, `MODE_1, `MODE_1, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-			end
-			endcase
-		end
-
-	2: begin
-		case (PORT_A_WIDTH)
-		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_1, `MODE_1, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_2, `MODE_2, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_4, `MODE_4, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_9, `MODE_9, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_18, `MODE_18, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		32, 36: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_36, `MODE_36, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_36, `MODE_36, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_36, `MODE_36, `MODE_2, `MODE_2, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_36, `MODE_36, `MODE_2, `MODE_2, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-	endcase
-
-	end
-
-	4: begin
-		case (PORT_A_WIDTH)
-		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_1, `MODE_1, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_2, `MODE_2, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_4, `MODE_4, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_9, `MODE_9, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_18, `MODE_18, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		32, 36: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_36, `MODE_36, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_36, `MODE_36, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_4, `MODE_4, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_4, `MODE_4, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-	endcase
-
-	end
-
-	8, 9: begin
-		case (PORT_A_WIDTH)
-		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-				`MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-				`MODE_1, `MODE_1, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-			};
-		end
-
-		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_2, `MODE_2, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_4, `MODE_4, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_9, `MODE_9, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		32, 36: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_9, `MODE_9, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_9, `MODE_9, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-	endcase
-
-	end
-
-	16, 18: begin
-		case (PORT_A_WIDTH)
-		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_1, `MODE_1, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_2, `MODE_2, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_4, `MODE_4, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_9, `MODE_9, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		32, 36: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_18, `MODE_18, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-	endcase
-
-	end
-
-	32, 36: begin
-		case (PORT_A_WIDTH)
-		1: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_1, `MODE_1, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_1, `MODE_1, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		2: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_2, `MODE_2, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_2, `MODE_2, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		4: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_4, `MODE_4, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_4, `MODE_4, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		8, 9: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_9, `MODE_9, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_9, `MODE_9, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		16, 18: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_18, `MODE_18, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_18, `MODE_18, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-
-		32, 36: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-		default: begin
-			defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-			`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-		};
-		end
-	endcase
-
-	end
-	default: begin
-		defparam _TECHMAP_REPLACE_.MODE_BITS = { 1'd0,
-		`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 12'b010100000000, 12'b010100000000, 1'd0, //(A1R,B1R,A1W,B1W)
-		`MODE_36, `MODE_36, `MODE_36, `MODE_36, 4'd0, 11'b01010000000, 11'b01010000000, 1'b0
-	};
-	end
-endcase
-	// Assign read/write data - handle special case for 9bit mode
-		// parity bit for 9bit mode is placed in R/W port on bit #16
-	case (PORT_A_WIDTH)
-		9: begin
-			assign PORT_A_RD_DATA = {A1DATA_TOTAL[16], A1DATA_TOTAL[7:0]};
-		
-		end
-		18: begin
-			assign A1DATA_TOTAL = {A1DATA_TOTAL[35:18],PORT_A_RD_DATA[17], PORT_A_RD_DATA[8],PORT_A_RD_DATA[16:9], PORT_A_RD_DATA[7:0]};
-		
-		end
-		36: begin
-			assign A1DATA_TOTAL = {PORT_A_RD_DATA[35], PORT_A_RD_DATA[26], PORT_A_RD_DATA[34:27], PORT_A_RD_DATA[25:18], PORT_A_RD_DATA[17], PORT_A_RD_DATA[8], PORT_A_RD_DATA[16:9], PORT_A_RD_DATA[7:0]};
-		
-		end
-		default: begin
-			assign PORT_A_RD_DATA = A1DATA_TOTAL[PORT_A_WIDTH-1:0];
-
-		end
-	endcase
-	case (PORT_B_WIDTH)
-		9: begin
-
-			assign B1DATA_TOTAL = {B1DATA_CMPL[35:17], PORT_B_WR_DATA[8], B1DATA_CMPL[16:9], PORT_B_WR_DATA[7:0]};
-		end
-		18: begin
-
-			assign B1DATA_TOTAL = {B1DATA_CMPL[35:18], PORT_B_WR_DATA[17], PORT_B_WR_DATA[8], PORT_B_WR_DATA[16:9], PORT_B_WR_DATA[7:0]};
-		end
-		36: begin
-
-			assign B1DATA_TOTAL = {PORT_B_WR_DATA[35], PORT_B_WR_DATA[26], PORT_B_WR_DATA[34:27], PORT_B_WR_DATA[25:18], PORT_B_WR_DATA[17], PORT_B_WR_DATA[8], PORT_B_WR_DATA[16:9], PORT_B_WR_DATA[7:0]};
-		end
-		default: begin
-
-			assign B1DATA_TOTAL = {B1DATA_CMPL, PORT_B_WR_DATA};
-		end
-	endcase
-
-	assign FLUSH1 = 1'b0;
-	assign FLUSH2 = 1'b0;
-
-	RS_TDP36K #(
-        .INIT_i(INIT)
-         ) _TECHMAP_REPLACE_ (
-		.WDATA_A1(18'h3FFFF),
-		.WDATA_A2(18'h3FFFF),
-		.RDATA_A1(A1DATA_TOTAL[17:0]),
-		.RDATA_A2(A1DATA_TOTAL[35:18]),
-		.ADDR_A1(PORT_A_ADDR),
-		.ADDR_A2(PORT_A_ADDR),
-		.CLK_A1(PORT_A_CLK),
-		.CLK_A2(PORT_A_CLK),
-		.REN_A1(PORT_A_RD_EN),
-		.REN_A2(PORT_A_RD_EN),
-		.WEN_A1(1'b0),
-		.WEN_A2(1'b0),
-		.BE_A1(2'b0),
-		.BE_A2(2'b0),
-
-		.WDATA_B1(B1DATA_TOTAL[17:0]),
-		.WDATA_B2(B1DATA_TOTAL[35:18]),
-		.RDATA_B1(DOBDO[17:0]),
-		.RDATA_B2(DOBDO[35:18]),
-		.ADDR_B1(PORT_B_ADDR),
-		.ADDR_B2(PORT_B_ADDR),
-		.CLK_B1(PORT_B_CLK),
-		.CLK_B2(PORT_B_CLK),
-		.REN_B1(1'b0),
-		.REN_B2(1'b0),
-		.WEN_B1(PORT_B_WR_EN),
-		.WEN_B2(PORT_B_WR_EN),
-		.BE_B1(B1EN[1:0]),
-		.BE_B2(B1EN[3:2]),
-
-		.FLUSH1(FLUSH1),
-		.FLUSH2(FLUSH2)
-	);*/
+	
 endmodule
