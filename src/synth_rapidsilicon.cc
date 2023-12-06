@@ -1606,7 +1606,7 @@ int designWithDFFce()
         }
     }
 
-    bool get_parity_36_mode(RTLIL::Const port_width) {
+    bool get_parity_36_mode(RTLIL::Const port_width, RTLIL::Const port_data_width) {
         bool set_parity;
         if (port_width == BRAM_WIDTH_1) {
             set_parity = true;
@@ -1626,7 +1626,7 @@ int designWithDFFce()
         else if ( port_width == 27) {
             set_parity = true;
         }
-        else if ( port_width == BRAM_WIDTH_36) {
+        else if ( (port_width == BRAM_WIDTH_36) && (port_data_width == BRAM_WIDTH_36)) {
             set_parity = true;
         }
         else 
@@ -1648,7 +1648,7 @@ int designWithDFFce()
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    bool set_parity = get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                    bool set_parity = get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"))) );
                     if (set_parity){
                         for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
                             for (int j = 0; j <BRAM_WIDTH_36; ++j)
@@ -1688,7 +1688,8 @@ int designWithDFFce()
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    bool set_parity = (get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))) && get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))));
+                    bool set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
+                     get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
                     if (set_parity){
                         for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
                             for (int j = 0; j <BRAM_WIDTH_36; ++j)
@@ -1730,7 +1731,7 @@ int designWithDFFce()
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    bool set_parity = get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                    bool set_parity = get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"))) );
                     if (set_parity){
                         for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
                             for (int j = 0; j <BRAM_WIDTH_18; ++j)
@@ -1765,7 +1766,8 @@ int designWithDFFce()
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    bool set_parity = (get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))) && get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))));
+                    bool set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
+                     get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
                     if (set_parity){
                         for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                             for (int j = 0; j <BRAM_WIDTH_18; ++j)
