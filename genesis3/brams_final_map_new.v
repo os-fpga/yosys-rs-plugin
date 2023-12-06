@@ -48,8 +48,14 @@ module BRAM2x18_TDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
-	parameter [18431:0] INIT0 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
-	parameter [18431:0] INIT1 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+	//parameter [18431:0] INIT0 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+	//parameter [18431:0] INIT1 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+    parameter [16383:0] INIT0 = 16384'b0;
+    parameter [2047:0] INIT0_PARITY = 2048'b0;
+
+    parameter [16383:0] INIT1 = 16384'b0;
+    parameter [2047:0] INIT1_PARITY = 2048'b0;
+
 
 	localparam CFG_ABITS = 14;    
 
@@ -352,14 +358,14 @@ endcase
 	wire [CFG_ENABLE_H-1:0] PORT_B2_BE = H1BE;
 
 TDP_RAM18KX2 #(
-        .INIT1 (INIT0[0*18432+:18432]), // Initial Contents of data memory, RAM 1
-        .INIT1_PARITY ({2048{1'b0}}), // Initial Contents of parity memory, RAM 1
+        .INIT1 (INIT0), // Initial Contents of data memory, RAM 1
+        .INIT1_PARITY (INIT0_PARITY), // Initial Contents of parity memory, RAM 1
         .WRITE_WIDTH_A1 (PORT_B_WIDTH), // Write data width on port A, RAM 1 (1-18)
         .WRITE_WIDTH_B1 (PORT_D_WIDTH), // Write data width on port B, RAM 1 (1-18)
         .READ_WIDTH_A1 (PORT_A_WIDTH), // Read data width on port A, RAM 1 (1-18)
         .READ_WIDTH_B1 (PORT_C_WIDTH), // Read data width on port B, RAM     .
-        .INIT2 (INIT1[0*18432+:18432]), // Initial Contents of memory, RAM 2
-        .INIT2_PARITY  ({2048{1'b0}}), // Initial Contents of memory, RAM 2
+        .INIT2 (INIT1), // Initial Contents of memory, RAM 2
+        .INIT2_PARITY  (INIT1_PARITY), // Initial Contents of memory, RAM 2
         .WRITE_WIDTH_A2 (PORT_F_WIDTH), // Write data width on port A, RAM 2 (1-18)
         .WRITE_WIDTH_B2 (PORT_H_WIDTH), // Write data width on port B, RAM 2 (1-18)
         .READ_WIDTH_A2 (PORT_E_WIDTH), // Read data width on port A, RAM 2 (1-18)
@@ -404,44 +410,7 @@ TDP_RAM18KX2 #(
    .RDATA_B2(PORT_B2_RDATA[15:0]),
    .RPARITY_B2(PORT_B2_RDATA[17:16])
 );
-	/*RS_TDP36K #(
-		.INIT_i({INIT1[0*18432+:18432],INIT0[0*18432+:18432]})
-	)_TECHMAP_REPLACE_(
-		.WDATA_A1(PORT_A1_WDATA),
-		.RDATA_A1(PORT_A1_RDATA),
-		.ADDR_A1(PORT_A1_ADDR),
-		.CLK_A1(PORT_A1_CLK),
-		.REN_A1(PORT_A1_REN),
-		.WEN_A1(PORT_A1_WEN),
-		.BE_A1(PORT_A1_BE),
 
-		.WDATA_A2(PORT_A2_WDATA),
-		.RDATA_A2(PORT_A2_RDATA),
-		.ADDR_A2(PORT_A2_ADDR),
-		.CLK_A2(PORT_A2_CLK),
-		.REN_A2(PORT_A2_REN),
-		.WEN_A2(PORT_A2_WEN),
-		.BE_A2(PORT_A2_BE),
-
-		.WDATA_B1(PORT_B1_WDATA),
-		.RDATA_B1(PORT_B1_RDATA),
-		.ADDR_B1(PORT_B1_ADDR),
-		.CLK_B1(PORT_B1_CLK),
-		.REN_B1(PORT_B1_REN),
-		.WEN_B1(PORT_B1_WEN),
-		.BE_B1(PORT_B1_BE),
-
-		.WDATA_B2(PORT_B2_WDATA),
-		.RDATA_B2(PORT_B2_RDATA),
-		.ADDR_B2(PORT_B2_ADDR),
-		.CLK_B2(PORT_B2_CLK),
-		.REN_B2(PORT_B2_REN),
-		.WEN_B2(PORT_B2_WEN),
-		.BE_B2(PORT_B2_BE),
-
-		.FLUSH1(FLUSH1),
-		.FLUSH2(FLUSH2)
-	);*/
 
 endmodule
 
@@ -464,8 +433,13 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 
 	parameter CLKPOL2 = 1;
 	parameter CLKPOL3 = 1;
-	parameter [18431:0] INIT0 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
-	parameter [18431:0] INIT1 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+	//parameter [18431:0] INIT0 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+	//parameter [18431:0] INIT1 = 18432'b0;   // Komal: Initialize invalid bits of memory to zero as per EDA-1635
+    parameter [16383:0] INIT0 = 16384'b0;
+    parameter [2047:0] INIT0_PARITY = 2048'b0;
+
+    parameter [16383:0] INIT1 = 16384'b0;
+    parameter [2047:0] INIT1_PARITY = 2048'b0;
 	
 	localparam CFG_ABITS = 14;
 
@@ -656,14 +630,14 @@ module BRAM2x18_SDP (A1ADDR, A1DATA, A1EN, B1ADDR, B1DATA, B1EN, B1BE, C1ADDR, C
 	wire [CFG_ENABLE_D-1:0] PORT_B2_BE = D1BE;
 
     TDP_RAM18KX2 #(
-        .INIT1 (INIT0[0*18432+:18432]), // Initial Contents of data memory, RAM 1
-        .INIT1_PARITY ({2048{1'b0}}), // Initial Contents of parity memory, RAM 1
+        .INIT1 (INIT0), // Initial Contents of data memory, RAM 1
+        .INIT1_PARITY (INIT0_PARITY), // Initial Contents of parity memory, RAM 1
         .WRITE_WIDTH_A1 (PORT_B_WIDTH), // Write data width on port A, RAM 1 (1-18)
         .WRITE_WIDTH_B1 (PORT_B_WIDTH), // Write data width on port B, RAM 1 (1-18)
         .READ_WIDTH_A1 (PORT_A_WIDTH), // Read data width on port A, RAM 1 (1-18)
         .READ_WIDTH_B1 (PORT_A_WIDTH), // Read data width on port B, RAM     .
-        .INIT2 (INIT1[0*18432+:18432]), // Initial Contents of memory, RAM 2
-        .INIT2_PARITY  ({2048{1'b0}}), // Initial Contents of memory, RAM 2
+        .INIT2 (INIT1), // Initial Contents of memory, RAM 2
+        .INIT2_PARITY  (INIT1_PARITY), // Initial Contents of memory, RAM 2
         .WRITE_WIDTH_A2 (PORT_D_WIDTH), // Write data width on port A, RAM 2 (1-18)
         .WRITE_WIDTH_B2 (PORT_D_WIDTH), // Write data width on port B, RAM 2 (1-18)
         .READ_WIDTH_A2 (PORT_C_WIDTH), // Read data width on port A, RAM 2 (1-18)
