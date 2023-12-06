@@ -87,8 +87,11 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define BRAM_first_byte_parity_bit 8
 #define BRAM_second_byte_parity_bit 17
-#define BRAM_MAX_ADDRESS_FOR_36_WIDTH 2048
-#define BRAM_MAX_ADDRESS_FOR_18_WIDTH 1024
+#define BRAM_third_byte_parity_bit 26
+#define BRAM_fourth_byte_parity_bit 35
+#define BRAM_data_bits 32
+#define BRAM_MAX_ADDRESS_FOR_36_WIDTH 1024
+#define BRAM_MAX_ADDRESS_FOR_18_WIDTH 2048
 
 #define VERSION_MAJOR 0 // 0 - beta 
 // 0 - initial version 
@@ -1603,27 +1606,33 @@ int designWithDFFce()
         }
     }
 
-    int get_width_mode(int port_width) {
-        int width_mode;
+    bool get_parity_36_mode(RTLIL::Const port_width) {
+        bool set_parity;
         if (port_width == BRAM_WIDTH_1) {
-            width_mode = BRAM_WIDTH_1;
+            set_parity = true;
         }
-        else if (port_width ==BRAM_WIDTH_2) {
-            width_mode = BRAM_WIDTH_2;
+        else if (port_width == BRAM_WIDTH_2) {
+            set_parity = true;
         }
-        else if (port_width > BRAM_WIDTH_2 && port_width<=BRAM_WIDTH_4) {
-            width_mode = BRAM_WIDTH_4;
+        else if (port_width == BRAM_WIDTH_4) {
+            set_parity = true;
         }
-        else if ( port_width > BRAM_WIDTH_4 && port_width <= BRAM_WIDTH_9) {
-            width_mode = BRAM_WIDTH_9;
+        else if (  port_width == BRAM_WIDTH_9) {
+            set_parity = true;
         }
-        else if ( port_width >BRAM_WIDTH_9 && port_width <= BRAM_WIDTH_18) {
-            width_mode = BRAM_WIDTH_18;
+        else if ( port_width == BRAM_WIDTH_18) {
+            set_parity = true;
+        }
+        else if ( port_width == 27) {
+            set_parity = true;
+        }
+        else if ( port_width == BRAM_WIDTH_36) {
+            set_parity = true;
         }
         else 
-            width_mode = BRAM_WIDTH_36;
+            set_parity = false;
 
-        return width_mode;
+        return set_parity;
     }
     /* Lia: When data width is greater than 18 bits reading is performed from 
      * two 18K RAMs, so we need to split Init bits to 2x18 bit pairs, first half
@@ -1632,66 +1641,157 @@ int designWithDFFce()
     void correctBramInitValues() {
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
-                //For $__RS_FACTOR_BRAM36_TDP and $__RS_FACTOR_BRAM36_SDP
-                if (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
-                   (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP")))
+                //For  $__RS_FACTOR_BRAM36_SDP
+                if (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))
                 {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
-                    std::vector<RTLIL::State> init_value2;
+                    std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    std::vector<RTLIL::State> init_temp2;
-
-                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-
-                        if (i % 2 == 0){
-                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                                init_value1.push_back(init_temp[k]);
+                    bool set_parity = get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                    if (set_parity){
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                            for (int j = 0; j <BRAM_WIDTH_36; ++j)
+                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
+                            for (int m = 0; m < BRAM_first_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);
                             for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
                                 init_value1.push_back(init_temp[m]);
-                            init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
-                            init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                            init_parity_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                            for (int m = 18; m < BRAM_third_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_third_byte_parity_bit]);
+                            for (int m = 27; m < BRAM_fourth_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_fourth_byte_parity_bit]);
                             init_temp.clear();
                         }
-                        else
-                        {
-                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                                init_temp2.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                                init_value2.push_back(init_temp2[k]);
-                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
-                                init_value2.push_back(init_temp2[m]);
-                            init_value2.push_back(init_temp2[BRAM_first_byte_parity_bit]);//placed at location [16]
-                            init_value2.push_back(init_temp2[BRAM_second_byte_parity_bit]);
-                            init_temp2.clear();
-                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
                     }
-                    init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
-                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-
+                    else {
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                            for (int j = 0; j <32; ++j)
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
+                            for (int k = 33; k < BRAM_WIDTH_36; k++)
+                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + k]);
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                    }
                 }
-                /// For 18/9/4/2/1 bit modes in case of $__RS_FACTOR_BRAM18_TDP and $__RS_FACTOR_BRAM18_SDP
-                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) ||
-                         (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) 
+                //For $__RS_FACTOR_BRAM36_TDP 
+                if (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP"))
                 {
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    int width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
-                    for (int i = 0; i < width_size; ++i) {
-                        for (int j = 0; j <BRAM_WIDTH_18; ++j)
-                            init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                        for (int k = 0; k < BRAM_first_byte_parity_bit; k++)
-                            init_value1.push_back(init_temp[k]);
-                        for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
-                            init_value1.push_back(init_temp[m]);
-                        init_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//placed at location [16]
-                        init_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
-                        init_temp.clear();
+                    bool set_parity = (get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))) && get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))));
+                    if (set_parity){
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                            for (int j = 0; j <BRAM_WIDTH_36; ++j)
+                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
+                            for (int m = 0; m < BRAM_first_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);
+                            for (int m = 18; m < BRAM_third_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_third_byte_parity_bit]);
+                            for (int m = 27; m < BRAM_fourth_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);
+                            init_parity_value1.push_back(init_temp[BRAM_fourth_byte_parity_bit]);
+                            init_temp.clear();
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                        //init_value1.insert(std::end(init_value1), std::begin(init_value2), std::end(init_value2));
+                        //cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                     }
-                    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                    else {
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                            for (int j = 0; j <32; ++j)
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
+                            for (int k = 33; k < BRAM_WIDTH_36; k++)
+                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + k]);
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                    }
+                }
+                /// For  $__RS_FACTOR_BRAM18_SDP
+                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))) 
+                {
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_parity_value1;
+                    std::vector<RTLIL::State> init_temp;
+                    bool set_parity = get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                    if (set_parity){
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+
+                            for (int m = 0; m < BRAM_first_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);//[7:0]
+                            init_parity_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//[8]
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);//[16:9]
+                            init_parity_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);//[17]
+                            init_temp.clear();
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                    }
+                    else{
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                            for (int j = 0; j <16; ++j)
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            for (int k = 16; k < BRAM_WIDTH_18; k++)
+                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                    }
+                }
+                /// For  $__RS_FACTOR_BRAM18_TDP
+                else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))) 
+                {
+                    RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+                    std::vector<RTLIL::State> init_value1;
+                    std::vector<RTLIL::State> init_parity_value1;
+                    std::vector<RTLIL::State> init_temp;
+                    bool set_parity = (get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))) && get_parity_36_mode(cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))));
+                    if (set_parity){
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                            for (int j = 0; j <BRAM_WIDTH_18; ++j)
+                                init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+
+                            for (int m = 0; m < BRAM_first_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);//[7:0]
+                            init_parity_value1.push_back(init_temp[BRAM_first_byte_parity_bit]);//[8]
+                            for (int m = 9; m < BRAM_second_byte_parity_bit; m++) 
+                                init_value1.push_back(init_temp[m]);//[16:9]
+                            init_parity_value1.push_back(init_temp[BRAM_second_byte_parity_bit]);//[17]
+                            init_temp.clear();
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                    }
+                    else{
+                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                            for (int j = 0; j <16; ++j)
+                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                            for (int k = 16; k < BRAM_WIDTH_18; k++)
+                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
+                        }
+                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+                    }
                 }
             }
         }
@@ -1776,13 +1876,9 @@ int designWithDFFce()
                         if (tech != Technologies::GENESIS)
                             run("memory_libmap -lib" + bramTxtSwap + " -tech genesis " + " -limit " + std::to_string(max_bram) + " a:read_swapped");
                         run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
-                        
                         correctBramInitValues();
-                        run("write_verilog -noattr -nohex after_lib_map.v");
                         run("rs_bram_split -new_mapping");
                         run("techmap -autoproc -map" + bramMapFile);
-                        run("stat");
-                        run("write_verilog -noattr -nohex after_bram_map.v");
                         run("techmap -map" + bramFinalMapFile);
                     }
 
