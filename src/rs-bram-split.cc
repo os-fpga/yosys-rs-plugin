@@ -314,11 +314,16 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
                     }
                 }
-
+                // Data bit initialization
                 if (bram_0->hasParam(RTLIL::escape_id("INIT")))
                     bram_2x18->setParam(RTLIL::escape_id("INIT0"), bram_0->getParam(RTLIL::escape_id("INIT")));
                 if (bram_1->hasParam(RTLIL::escape_id("INIT")))
                     bram_2x18->setParam(RTLIL::escape_id("INIT1"), bram_1->getParam(RTLIL::escape_id("INIT")));
+                // Parity bits initialization
+                if (bram_0->hasParam(RTLIL::escape_id("INIT_PARITY")))
+                    bram_2x18->setParam(RTLIL::escape_id("INIT0_PARITY"), bram_0->getParam(RTLIL::escape_id("INIT_PARITY")));
+                if (bram_1->hasParam(RTLIL::escape_id("INIT_PARITY")))
+                    bram_2x18->setParam(RTLIL::escape_id("INIT1_PARITY"), bram_1->getParam(RTLIL::escape_id("INIT_PARITY")));
 
                 // Mark BRAM parts for removal
                 cellsToRemove.push_back(bram_0);
