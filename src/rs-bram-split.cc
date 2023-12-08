@@ -59,10 +59,13 @@ struct RsBramSplitPass : public Pass {
     // BRAM parameters for new mapping
     const std::vector<std::pair<std::string,std::string>> m_BramParamsNew = {
         std::make_pair("PORT_B_WIDTH", "PORT_B_WIDTH"),std::make_pair("PORT_A_WIDTH", "PORT_A_WIDTH"),
+        std::make_pair("PORT_B_DATA_WIDTH", "PORT_B_DATA_WIDTH"),std::make_pair("PORT_A_DATA_WIDTH", "PORT_A_DATA_WIDTH")
         };
     const std::vector<std::pair<std::string,std::string>> m_BramParamsNewtdp = {
         std::make_pair("PORT_B_WIDTH", "PORT_B_WIDTH"),std::make_pair("PORT_A_WIDTH", "PORT_A_WIDTH"),
-        std::make_pair("PORT_D_WIDTH", "PORT_D_WIDTH"),std::make_pair("PORT_C_WIDTH", "PORT_C_WIDTH")
+        std::make_pair("PORT_D_WIDTH", "PORT_D_WIDTH"),std::make_pair("PORT_C_WIDTH", "PORT_C_WIDTH"),
+        std::make_pair("PORT_B_DATA_WIDTH", "PORT_B_DATA_WIDTH"),std::make_pair("PORT_A_DATA_WIDTH", "PORT_A_DATA_WIDTH"),
+        std::make_pair("PORT_D_DATA_WIDTH", "PORT_D_DATA_WIDTH"),std::make_pair("PORT_C_DATA_WIDTH", "PORT_C_DATA_WIDTH")
         };
     // TDP BRAM 1x18 data ports for subcell #1 and how to map them to ports of the target TDP BRAM 2x18 cell
     const std::vector<std::pair<std::string, std::string>> m_BramTDPDataPorts_0 = {
@@ -249,11 +252,21 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("PORT_B_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_C_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_C_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_D_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_D_WIDTH")));
+                        
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
                         //Cell#1
                         bram_2x18->setParam(RTLIL::escape_id("PORT_E_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_F_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_G_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_C_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_H_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_D_WIDTH")));
+                        
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_E_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_F_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_G_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_H_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
                     }
                     else{
                         // for (const auto &it : m_BramParamsNew) {
@@ -265,6 +278,11 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("PORT_B_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_C_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_D_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                        bram_2x18->setParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
                     }    
                 } else { 
                     // Set bram parameters
@@ -296,11 +314,16 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("CFG_ENABLE_D"), bram_1->getParam(RTLIL::escape_id("CFG_ENABLE_B")));
                     }
                 }
-
+                // Data bit initialization
                 if (bram_0->hasParam(RTLIL::escape_id("INIT")))
                     bram_2x18->setParam(RTLIL::escape_id("INIT0"), bram_0->getParam(RTLIL::escape_id("INIT")));
                 if (bram_1->hasParam(RTLIL::escape_id("INIT")))
                     bram_2x18->setParam(RTLIL::escape_id("INIT1"), bram_1->getParam(RTLIL::escape_id("INIT")));
+                // Parity bits initialization
+                if (bram_0->hasParam(RTLIL::escape_id("INIT_PARITY")))
+                    bram_2x18->setParam(RTLIL::escape_id("INIT0_PARITY"), bram_0->getParam(RTLIL::escape_id("INIT_PARITY")));
+                if (bram_1->hasParam(RTLIL::escape_id("INIT_PARITY")))
+                    bram_2x18->setParam(RTLIL::escape_id("INIT1_PARITY"), bram_1->getParam(RTLIL::escape_id("INIT_PARITY")));
 
                 // Mark BRAM parts for removal
                 cellsToRemove.push_back(bram_0);
