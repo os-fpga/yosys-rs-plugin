@@ -78,6 +78,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/arith_map.v \
 				  $(GENESIS3)/all_arith_map.v \
 				  $(GENESIS3)/brams_map.v \
+				  $(GENESIS3)/bram_map_rs.v \
 				  $(GENESIS3)/brams_map_new.v \
 				  $(GENESIS3)/brams_final_map.v \
 				  $(GENESIS3)/brams_final_map_new.v \
@@ -104,6 +105,8 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/O_BUF.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DFFRE.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DFFNRE.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/TDP_RAM36K.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/TDP_RAM18KX2.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DSP38.v 
 
 
