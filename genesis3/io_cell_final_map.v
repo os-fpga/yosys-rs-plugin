@@ -41,6 +41,16 @@ module rs__O_BUF(...);
       O_BUF _TECHMAP_REPLACE_ (.I(I),.O(O));
 endmodule
 
+// -----------------------------------------
+module rs__O_BUFT(...);
+  parameter WEAK_KEEPER = "NONE"; // Enable pull-up/pull-down on output (NONE/PULLUP/PULLDOWN)
+  
+  input  I;
+  input  T;
+  output O;
+
+  O_BUFT #(.WEAK_KEEPER(WEAK_KEEPER )) _TECHMAP_REPLACE_(.I(I),.T(T),.O(O));
+endmodule
 /*/ ----------------------------------------
 module rs__IO_BUF(...);
     input   I;     

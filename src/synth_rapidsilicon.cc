@@ -2877,7 +2877,7 @@ int designWithDFFce()
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
-                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -limit "+ std::to_string(max_device_ios));
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
            }
