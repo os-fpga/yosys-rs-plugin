@@ -121,7 +121,7 @@ struct RsBramSplitPass : public Pass {
     SigMap m_SigMap;
 
     bool m_newMapping;
-
+    std::string technology = "";
     // ..........................................
 
     void map_ports(const std::vector<std::pair<std::string, std::string>> mapping, const RTLIL::Cell *bram_1x18, RTLIL::Cell *bram_2x18)
@@ -252,21 +252,23 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("PORT_B_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_C_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_C_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_D_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_D_WIDTH")));
-                        
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
+                        if (technology == "genesis3"){
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
+                        }
                         //Cell#1
                         bram_2x18->setParam(RTLIL::escape_id("PORT_E_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_F_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_G_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_C_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_H_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_D_WIDTH")));
-                        
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_E_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_F_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_G_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_H_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
+                        if (technology == "genesis3"){
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_E_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_F_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_G_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_H_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
+                        }
                     }
                     else{
                         // for (const auto &it : m_BramParamsNew) {
@@ -278,11 +280,12 @@ struct RsBramSplitPass : public Pass {
                         bram_2x18->setParam(RTLIL::escape_id("PORT_B_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_C_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
                         bram_2x18->setParam(RTLIL::escape_id("PORT_D_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
-
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
-                        bram_2x18->setParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        if (technology == "genesis3"){
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"), bram_0->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")));
+                            bram_2x18->setParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"), bram_1->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        }
                     }    
                 } else { 
                     // Set bram parameters
@@ -320,11 +323,12 @@ struct RsBramSplitPass : public Pass {
                 if (bram_1->hasParam(RTLIL::escape_id("INIT")))
                     bram_2x18->setParam(RTLIL::escape_id("INIT1"), bram_1->getParam(RTLIL::escape_id("INIT")));
                 // Parity bits initialization
-                if (bram_0->hasParam(RTLIL::escape_id("INIT_PARITY")))
-                    bram_2x18->setParam(RTLIL::escape_id("INIT0_PARITY"), bram_0->getParam(RTLIL::escape_id("INIT_PARITY")));
-                if (bram_1->hasParam(RTLIL::escape_id("INIT_PARITY")))
-                    bram_2x18->setParam(RTLIL::escape_id("INIT1_PARITY"), bram_1->getParam(RTLIL::escape_id("INIT_PARITY")));
-
+                if (technology == "genesis3"){
+                    if (bram_0->hasParam(RTLIL::escape_id("INIT_PARITY")))
+                        bram_2x18->setParam(RTLIL::escape_id("INIT0_PARITY"), bram_0->getParam(RTLIL::escape_id("INIT_PARITY")));
+                    if (bram_1->hasParam(RTLIL::escape_id("INIT_PARITY")))
+                        bram_2x18->setParam(RTLIL::escape_id("INIT1_PARITY"), bram_1->getParam(RTLIL::escape_id("INIT_PARITY")));
+                }
                 // Mark BRAM parts for removal
                 cellsToRemove.push_back(bram_0);
                 cellsToRemove.push_back(bram_1);
@@ -344,7 +348,12 @@ struct RsBramSplitPass : public Pass {
                 m_newMapping = true;
                 continue;
             }
+			if (a_Args[argidx] == "-tech" && argidx+1 < a_Args.size()) {
+				technology = a_Args[++argidx];
+				continue;
+			}
         }
+        
         extra_args(a_Args, argidx, a_Design);
 
         // Process modules

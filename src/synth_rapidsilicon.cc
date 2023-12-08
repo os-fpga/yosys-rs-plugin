@@ -100,7 +100,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 207
+#define VERSION_PATCH 208
 
 enum Strategy {
     AREA,
@@ -1935,6 +1935,9 @@ int designWithDFFce()
             case Technologies::GENESIS:
             case Technologies::GENESIS_3:
             case Technologies::GENESIS_2: {
+                    std::string tech_device= "genesis";
+                    if (tech == Technologies::GENESIS_3)
+                            tech_device= "genesis3";
                     /* Aram: Disabled as it's not supported
                      *run("rs_bram_asymmetric");
                      */
@@ -1943,7 +1946,7 @@ int designWithDFFce()
                         if (areMemCellsLeft()) {
                             run("memory_bram -rules" + bramAsyncTxt);
                         }
-                        run("rs_bram_split");
+                        run("rs_bram_split -new_mapping -tech "+ tech_device);
                         run("techmap -autoproc -map" + bramMapFile);
                         run("techmap -map" + bramFinalMapFile);
                     }
@@ -1954,10 +1957,10 @@ int designWithDFFce()
                          * port mappings to get correct connections for the read ports.
                          */
                         if (tech != Technologies::GENESIS)
-                            run("memory_libmap -lib" + bramTxtSwap + " -tech genesis " + " -limit " + std::to_string(max_bram) + " a:read_swapped");
-                        run("memory_libmap -lib" + bramTxt + " -tech genesis " + " -limit " + std::to_string(max_bram));
+                            run("memory_libmap -lib" + bramTxtSwap + " -tech "+ tech_device +" -limit " + std::to_string(max_bram) + " a:read_swapped");
+                        run("memory_libmap -lib" + bramTxt + " -tech " + tech_device +" -limit " + std::to_string(max_bram));
                         correctBramInitValues();
-                        run("rs_bram_split -new_mapping");
+                        run("rs_bram_split -new_mapping -tech "+ tech_device);
                         run("techmap -autoproc -map" + bramMapFile);
                         run("techmap -map" + bramFinalMapFile);
                     }
