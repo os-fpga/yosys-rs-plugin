@@ -58,6 +58,8 @@ PRIVATE_NAMESPACE_BEGIN
 #define LUT_FINAL_MAP_FILE lut_map.v
 #define DSP_38_MAP_FILE dsp38_map.v
 #define DSP_38_SIM_FILE DSP38.v
+#define DSP19X2_MAP_FILE dsp19x2_map.v
+#define DSP19X2_SIM_FILE DSP19X2.v
 #define ARITH_MAP_FILE arith_map.v
 #define DSP_MAP_FILE dsp_map.v
 #define DSP_FINAL_MAP_FILE dsp_final_map.v
@@ -1393,7 +1395,7 @@ int designWithDFFce()
                         ff.emit();
                     }
                 }
-                if(cell_type_str == RTLIL::escape_id("RS_DSP")){
+                if(cell_type_str == RTLIL::escape_id("RS_DSP") || cell_type_str == RTLIL::escape_id("RS_DSPX2")){
                     RTLIL::Const MODE_BITS_ = cell->getParam(RTLIL::escape_id("MODE_BITS"));
                     if (MODE_BITS_[1] == RTLIL::S0 || MODE_BITS_[80] == RTLIL::S0){
                         cell->unsetParam(ID::DSP_CLK);
@@ -1515,8 +1517,10 @@ int designWithDFFce()
             }
             // Genesis3 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_3: {
-                dsp_rules_loop1.push_back({20, 18, 4, 4, "$__RS_MUL20X18"});
-                dsp_map_file = "+/mul2dsp.v";
+                dsp_rules_loop1.push_back({10, 9, 4, 4, "$__RS_MUL10X9"});
+                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                dsp_map_file = "+/mul2dsp_check_maxwidth.v";
+                //dsp_map_file = "+/mul2dsp.v";
                 break;
             }
             case Technologies::GENERIC: {
@@ -1536,7 +1540,7 @@ int designWithDFFce()
                                 rule.b_maxwidth, rule.a_minwidth, 
                                 rule.b_minwidth, rule.type.c_str(), max_dsp != -1 ? "a:valid_map" : ""));
                     run("stat");
-
+                    log("HELO\n");
                     if (cec)
                         run("write_verilog -noattr -nohex after_dsp_map1_" + std::to_string(rule.a_maxwidth) + ".v");
 
@@ -1545,8 +1549,8 @@ int designWithDFFce()
 
                 // Genesis2 technology doesn't support fractured mode for DSPs, so no need for second iteration.
                 // Genesis3 technology doesn't support fractured mode for DSPs, so no need for second iteration.
-                if ((tech != Technologies::GENESIS_2) && 
-                    (tech != Technologies::GENESIS_3)) {
+                if ((tech != Technologies::GENESIS_2)/* && 
+                    (tech != Technologies::GENESIS_3)*/) {
                     /* 
                        In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
                        The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
@@ -2182,6 +2186,7 @@ int designWithDFFce()
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, CLK_BUF_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, O_BUF_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DSP_38_SIM_FILE)
+                                GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DSP19X2_SIM_FILE)
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_NEW_LIB_FILE1)
                                 GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
@@ -2296,6 +2301,7 @@ int designWithDFFce()
                 std::string dspMapFile;
                 std::string dspFinalMapFile;
                 std::string dsp38MapFile;
+                std::string dsp19x2MapFile;
                 std::string genesis2;
                 std::string genesis3;
 
@@ -2315,6 +2321,7 @@ int designWithDFFce()
                         dspMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_MAP_FILE);
                         dspFinalMapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_FINAL_MAP_FILE);
                         dsp38MapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP_38_MAP_FILE);
+                        dsp19x2MapFile = GET_FILE_PATH(GENESIS_3_DIR, DSP19X2_MAP_FILE);
                         genesis3 = " -genesis3";
                         break;
                     }
@@ -2441,6 +2448,7 @@ int designWithDFFce()
 #if 1
                         run("stat");
                         run("techmap -map " + dsp38MapFile);
+                        run("techmap -map " + dsp19x2MapFile);
                         run("stat");
 #endif
                         break;
