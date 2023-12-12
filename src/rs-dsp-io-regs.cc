@@ -106,7 +106,8 @@ struct rsDspIORegs : public Pass {
 
         for (auto cell : module->cells_) {
             std::string cell_type = cell.second->type.str();
-            if (cell_type == RTLIL::escape_id("RS_DSP2") ||
+            if (cell_type == RTLIL::escape_id("RS_DSPX2") ||
+                    cell_type == RTLIL::escape_id("RS_DSP2")||
                     cell_type == RTLIL::escape_id("RS_DSP3") || 
                     cell_type == RTLIL::escape_id("RS_DSP")) {
                 auto dsp = cell.second;
