@@ -2211,20 +2211,24 @@ int designWithDFFce()
             //
             if (cec)
                run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
+            if(keep_tribuf) { //non defualt mode :we keep TRIBUF
+                run("tribuf -logic");
 
-            // specific Rapid Silicon merge with -rs_merge option
-            //
-            run("tribuf -rs_merge");
-
-            if (cec) {
-               run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
-               run("write_verilog -noattr -nohex after_tribuf_merge.v");
+            } else { // defualt mode : we replace TRIBUF by plain logic
+            
+                // specific Rapid Silicon merge with -rs_merge option
+                //
+                run("tribuf -rs_merge");
+    
+                if (cec) {
+                   run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
+                   run("write_verilog -noattr -nohex after_tribuf_merge.v");
+                }
+    
+                // specific Rapid Silicon logic with -rs_logic option
+                //
+                run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
             }
-
-            // specific Rapid Silicon logic with -rs_logic option
-            //
-            run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
-
             if (cec)
                run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
 
