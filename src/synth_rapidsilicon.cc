@@ -609,15 +609,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         if (!design->full_selection())
             log_cmd_error("This command only operates on fully selected designs!\n");
-        //Cheking gen3_model and sending it to LIBMAP via scratchpad
-        if (new_tdp36k){
-            gen3_model="NEW";
-            design->scratchpad_set_string("synth_rs.tech_rs", gen3_model); // Adding scratchpad to trach technology
-        }
-        else{
-            gen3_model="OLD";
-            design->scratchpad_set_string("synth_rs.tech_rs", gen3_model); // Adding scratchpad to trach technology
-        }
 
         if (tech_str == "generic")
             tech = Technologies::GENERIC;
@@ -639,6 +630,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         else if (tech_str != "")
             log_cmd_error("Invalid tech specified: '%s'\n", tech_str.c_str());
+
+        //Cheking gen3_model and sending it to LIBMAP via scratchpad
+        if (new_tdp36k && (tech == Technologies::GENESIS_3)){
+            gen3_model="NEW";
+            design->scratchpad_set_string("synth_rs.tech_rs", gen3_model); // Adding scratchpad to track technology
+        }
+        else{
+            gen3_model="OLD";
+            design->scratchpad_set_string("synth_rs.tech_rs", gen3_model); // Adding scratchpad to track technology
+        }
 
         if (goal_str == "area")
             goal = Strategy::AREA;
@@ -1903,7 +1904,7 @@ int designWithDFFce()
                  is handled such that data and parity bits are separated and assigned to INIT and 
                  INIT_PARITY parameters respectively.
                 */
-                if (new_tdp36k){
+                if (new_tdp36k && (tech == Technologies::GENESIS_3)){
                     Set_TDPBram_InitValues(); // set TDP BRAM
                     Set_SDPBram_InitValues(); // set SDP BRAM
                 }
@@ -2063,7 +2064,7 @@ int designWithDFFce()
                 log("\n"); // Skip line to make the warning more focused.
                 log_warning("Forcing to use BRAMs.\n");
                 //If (-new_tdp36 flag is given then it will run new mapping for Gensis3 primitves)
-                if (new_tdp36k){
+                if (new_tdp36k && (tech == Technologies::GENESIS_3)){
                     run_new_version_of_tdp36K_mapping();
                 }
                 //old mapping for Gensis3 primitves runs
@@ -2569,7 +2570,8 @@ int designWithDFFce()
         if (!nobram){
             identifyMemsWithSwappedReadPorts();
             //If (-new_tdp36 flag is given then it will run new mapping for Gensis3 primitves)
-            if (new_tdp36k){
+            if (new_tdp36k && (tech == Technologies::GENESIS_3)){
+                log("CONDITION IS TRUE\n");
                 run_new_version_of_tdp36K_mapping();
             }
             //else old mapping for Gensis3 primitves runs
