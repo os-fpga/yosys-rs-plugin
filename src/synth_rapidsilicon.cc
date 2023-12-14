@@ -1834,7 +1834,7 @@ int designWithDFFce()
                     std::vector<RTLIL::State> init_value2;
                     std::vector<RTLIL::State> init_temp;
                     std::vector<RTLIL::State> init_temp2;
-                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                         if (i % 2 == 0){
                             for (int j = 0; j <BRAM_WIDTH_18; ++j)
                                 init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
@@ -1869,7 +1869,7 @@ int designWithDFFce()
                     RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_temp;
-                    int width_size = BRAM_MAX_ADDRESS_FOR_18_WIDTH;
+                    int width_size = BRAM_MAX_ADDRESS_FOR_36_WIDTH;
                     for (int i = 0; i < width_size; ++i) {
                         for (int j = 0; j <BRAM_WIDTH_18; ++j)
                             init_temp.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
