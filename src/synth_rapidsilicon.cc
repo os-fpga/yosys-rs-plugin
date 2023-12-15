@@ -914,30 +914,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
        for (auto cell : _design->top_module()->cells()) {
           if (cell->type.in(ID($and), ID($_AND_), ID($_NAND_), ID($or), ID($_OR_),
                             ID($_NOR_), ID($xor), ID($xnor), ID($_XOR_), ID($_XNOR_),
-                            ID($_MUX_), ID($mux),
-                            ID($not), ID($_NOT_), ID($_ANDNOT_), ID($_ORNOT_))) {
-            nb++;
+                            ID($_ANDNOT_), ID($_ORNOT_))) {
+            nb += 2;
+          }
+          if (cell->type.in(ID($not), ID($_NOT_))) {
+            nb += 1;
+          }
+          if (cell->type.in(ID($_MUX_), ID($mux))) {
+            nb += 3;
           }
        }
 
        return nb;
-    }
-
-    // Decides the number of iteration when performing "abc -dff". More REGs means more logic 
-    // partitions and more runtime. So we need to reduce the number of iterations accordingly.
-    //
-    int getLoopNbIterations() {
-
-         int nbGenericREGs = getNumberOfGenericREGs();
-
-         if (nbGenericREGs > 60000) { // if more than 60 K registers
-           return 1;                  // only 1 iteration !
-         }
-         if (nbGenericREGs > 40000) {
-           return 2;
-         }
-
-         return 4; // by default we do 4 iterations
     }
 
     void run_opt(int nodffe, int sat, int nosdff, int share, int max_iter, int no_sdff_temp) {
@@ -1213,6 +1201,68 @@ int designWithDFFce()
     return 0;
 }
 
+
+// Check size of current design to eventually drive Synthesis flow
+//
+bool isHugeDesign(int nbRegs, int nbCells)
+{
+   if (nbRegs >= 50000) {
+     return true;
+   }
+
+   if (nbCells >= 400000) {
+     return true;
+   }
+
+   return false;
+}
+
+// Perform different ABC -dff optimization strategies according to "dfl" heuristice number
+//
+void abcDffOpt(int unmap_dff_ce, int n, int dfl)
+{
+    log("\nABC-DFF iteration : %d\n", n);
+
+    switch (dfl) {
+
+       case 2 : run("abc -dff -keepff -dfl 2");   // WARNING: "abc -dff" is very time consuming !!!
+                                                  // Use "-keepff" to preserve DFF output wire name
+                break;
+       case 0 : run("abc -dff -keepff -dfl 0");   // WARNING: "abc -dff" is very time consuming !!!
+                                                  // Use "-keepff" to preserve DFF output wire name
+                break;
+       default : run("abc -dff -keepff -dfl 1");   // WARNING: "abc -dff" is very time consuming !!!
+                                                   // Use "-keepff" to preserve DFF output wire name
+                break;
+    }
+
+    if (!unmap_dff_ce) {
+
+       top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 2, 0);
+
+    } else {
+            
+      run("opt_dff -nosdff -nodffe");
+      run("opt_expr");
+      run("opt_clean");
+
+      run("opt_dff -nosdff -nodffe");
+      run("opt_expr");
+      run("opt_clean");
+
+      run("opt_dff -nosdff");
+      run("opt_expr");
+      run("opt_clean");
+
+      run("dffunmap -ce-only");
+    }
+
+    if (cec)
+        run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
+
+}
+
+
     // Perform a small loop of successive "abc -dff" calls.  
     // This "simplify" pass may have some big QoR impact on this list of designs:
     //     - wrapper_io_reg_max 
@@ -1223,70 +1273,84 @@ int designWithDFFce()
     //     - alu4 
     //     - s38417
     //
-    void simplify(int unmap_dff_ce) 
+    void simplify(int unmap_dff_ce, int &dfl) 
     {
 
-#if 0
-        preSimplify();
-#endif
+        dfl = 0; // will return "dfl" best mode info to the caller (0 -> no value yet)
 
+        int nbcells = getNumberOfInstances();
         int nbGenericREGs = getNumberOfGenericREGs();
+
         log("   Number of Generic REGs:          %d\n", nbGenericREGs);
 
-        int maxLoop = getLoopNbIterations();
+        //run("design -save design_before_abc_dff");
 
-        int nbInst = getNumberOfInstances();
+        if (isHugeDesign (nbGenericREGs, nbcells)) {
 
-        //log(" Nb instances = %d\n", nbInst);
+          abcDffOpt(unmap_dff_ce, 1 /* step */, 0 /* dfl */); // fast version
 
-        if (nbInst > 800000) { // skip "abc -dff" for very big designs
-           maxLoop = 0;
+        } else {
+
+          abcDffOpt(unmap_dff_ce, 1 /* step */, 1 /* dfl */);
+          abcDffOpt(unmap_dff_ce, 2 /* step */, 1 /* dfl */);
         }
-
-        if (nbInst > 400000) { // minimum call to "abc -dff" for medium designs
-           maxLoop = 1;
-        }
-
-        //log(" Max loop = %d\n", maxLoop);
         
-        for (int n=1; n <= maxLoop; n++) { 
+        // Save this first simplify solution (with default "dfl")
+        //
+        run("design -push-copy");
 
-            log("\nABC-DFF iteration : %d\n", n);
+        int nbcells1 = getNumberOfInstances();
+        int nbGenericREGs1 = getNumberOfGenericREGs();
+        int nbOfLogic1 = getNumberOfLogic();
 
-            run("abc -dff -keepff");   // WARNING: "abc -dff" is very time consuming !!!
-                                       // Use "-keepff" to preserve DFF output wire name
+        if (isHugeDesign (nbGenericREGs1, nbcells1)) {
 
-#if 0
-            top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 0, 1, 0, 0);
-#else
-            if (!unmap_dff_ce) {
-               top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 2, 0);
-            } else {
-            
-              run("opt_dff -nosdff -nodffe");
-              run("opt_expr");
-              run("opt_clean");
+          abcDffOpt(unmap_dff_ce, 2 /* step */, 0 /* dfl */); // fast version
+        } else {
 
-              run("opt_dff -nosdff -nodffe");
-              run("opt_expr");
-              run("opt_clean");
-
-              run("opt_dff -nosdff");
-              run("opt_expr");
-              run("opt_clean");
-
-              run("dffunmap -ce-only");
-            }
-#endif
-
-            if (cec)
-                run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
+          abcDffOpt(unmap_dff_ce, 3 /* step */, 2 /* dfl */);
+          abcDffOpt(unmap_dff_ce, 4 /* step */, 2 /* dfl */);
         }
-        run("opt_ffinv");
 
-#if 0
-        postSimplify();
-#endif
+        int nbcells2 = getNumberOfInstances();
+        int nbGenericREGs2 = getNumberOfGenericREGs();
+        int nbOfLogic2 = getNumberOfLogic();
+
+        float thresh_logic = 0.92;
+        float thresh_dff = 0.98;
+
+        if (0) {   
+           log("****************************\n");
+           log(" NB cells DFL1 : %d\n", nbcells1);
+           log(" NB REGs DFL1  : %d\n", nbGenericREGs1);
+           log(" NB LOGs DFL1  : %d\n\n", nbOfLogic1);
+           log(" NB cells DFL2 : %d\n", nbcells2);
+           log(" NB REGs DFL2  : %d\n", nbGenericREGs2);
+           log(" NB LOGs DFL2  : %d\n", nbOfLogic2);
+           log("****************************\n");
+        }
+
+        if ((nbOfLogic2 <= thresh_logic * nbOfLogic1) ||
+            (nbGenericREGs2 <= thresh_dff * nbGenericREGs1)) {
+
+           dfl = 2;
+
+           log("select with DFL2 synthesis (thresh-logic=%f, thresh_dff=%f)\n", thresh_logic, thresh_dff);
+
+           run("design -save dfl");
+           run("design -pop");
+           run("design -load dfl");
+
+        } else {
+
+           dfl = 1;
+
+          log("select with DFL1 synthesis (thresh_logic=%f, thresh_dff=%f)\n", thresh_logic, thresh_dff);
+
+          run("design -pop");
+        }
+
+        run("opt_ffinv");
     }
 
     void transform(int bmuxmap)
@@ -2734,6 +2798,8 @@ int designWithDFFce()
                 if (cec)
                     run("write_verilog -noattr -nohex before_simplify.v");
 
+                int dfl = 0;
+
                 preSimplify();
 
                 // Explore two strategies :
@@ -2749,7 +2815,7 @@ int designWithDFFce()
 
                 // Simplify wit clock enables if any
                 //
-                simplify(0 /* unmap_dff_ce */);
+                simplify(0 /* unmap_dff_ce */, dfl);
                 run("design -push-copy");
 
                 int nbcells_strategy1 = getNumberOfInstances();
@@ -2761,7 +2827,8 @@ int designWithDFFce()
                 // if design has any DFF with clock enable explore also
                 // solution by dissolving clock enables
                 //
-                if (hasDFFce) {
+                if (hasDFFce &&
+                    !isHugeDesign (nbGenericREGs1, nbcells_strategy1)) {
 
                   // re-start from original design
                   //
@@ -2769,7 +2836,8 @@ int designWithDFFce()
 
                   // Simplify without clock enables
                   //
-                  simplify(1 /* unmap_dff_ce */);
+                  int with_no_ce_dfl = 0;
+                  simplify(1 /* unmap_dff_ce */, with_no_ce_dfl);
                   run("design -save unmap_dff_ce");
 
                   int nbcells_strategy2 = getNumberOfInstances();
@@ -2778,12 +2846,12 @@ int designWithDFFce()
 
                   if (0) {   
                      log("****************************\n");
-                     log(" NB cells strategy 1 : %d\n", nbcells_strategy1);
-                     log(" NB REGs strategy 1  : %d\n", nbGenericREGs1);
-                     log(" NB LOGs strategy 1  : %d\n", nbOfLogic1);
-                     log(" NB cells strategy 2 : %d\n", nbcells_strategy2);
-                     log(" NB REGs strategy 2  : %d\n", nbGenericREGs2);
-                     log(" NB LOGs strategy 2  : %d\n", nbOfLogic2);
+                     log(" NB cells keep CE   : %d\n", nbcells_strategy1);
+                     log(" NB REGs keep CE    : %d\n", nbGenericREGs1);
+                     log(" NB LOGs keep CE    : %d\n\n", nbOfLogic1);
+                     log(" NB cells remove CE : %d\n", nbcells_strategy2);
+                     log(" NB REGs remove CE  : %d\n", nbGenericREGs2);
+                     log(" NB LOGs remove CE  : %d\n", nbOfLogic2);
                      log("****************************\n");
   
                      //getchar();
@@ -2791,14 +2859,18 @@ int designWithDFFce()
 
                   // Pick up second strategy only if :
                   //      - total number of logic cells increase is limited .
-                  //      - OR there is a nice DFF reduction number (ex: oc_aquarius).
+                  //      - OR there is a nice DFF reduction number.
                   //
-                  float thresh = 0.92;
+                  float thresh_logic = 0.92;
+                  float thresh_dff = 0.98;
 
-                  if ((nbOfLogic2 * thresh <= nbOfLogic1) ||
-                      (nbGenericREGs2 <= thresh * nbGenericREGs1)) {
+                  if ((nbOfLogic2 * thresh_logic <= nbOfLogic1) ||
+                      (nbGenericREGs2 <= thresh_dff * nbGenericREGs1)) {
 
-                     log("select CE dissolving strategy (tresh=%f)\n", thresh);
+                     dfl = with_no_ce_dfl;
+
+                     log("select CE remove strategy (thresh_logic=%f, thresh_dff=%f, dfl=%d)\n",
+                         thresh_logic, thresh_dff, dfl);
 
                      run("design -save unmap_dff_ce");
                      run("design -pop");
@@ -2806,7 +2878,8 @@ int designWithDFFce()
 
                   } else {
 
-                     log("select CE preserving strategy (tresh=%f)\n", thresh);
+                     log("select CE keep strategy (thresh_logic=%f, thresh_dff=%f, dfl=%d)\n",
+                         thresh_logic, thresh_dff, dfl);
 
                      run("design -pop");
                   }
