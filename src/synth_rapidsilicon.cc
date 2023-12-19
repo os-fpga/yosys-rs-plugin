@@ -1559,7 +1559,6 @@ int designWithDFFce()
                                 rule.b_maxwidth, rule.a_minwidth, 
                                 rule.b_minwidth, rule.type.c_str(), max_dsp != -1 ? "a:valid_map" : ""));
                     run("stat");
-                    log("HELO\n");
                     if (cec)
                         run("write_verilog -noattr -nohex after_dsp_map1_" + std::to_string(rule.a_maxwidth) + ".v");
 
@@ -2446,7 +2445,6 @@ int designWithDFFce()
                             check_mult_regout();
 
                         processDsp(cec);
-
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
                         else
@@ -2519,11 +2517,12 @@ int designWithDFFce()
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
 
-                        // Fractuated mode has been disabled for Genesis3
-                        if (tech != Technologies::GENESIS_3)
-                            run("rs_dsp_simd");
-                        run("techmap -map " + dspFinalMapFile);
+                        // Fractuated mode has been enabled for Genesis3
+                        if (tech == Technologies::GENESIS_3)
+                            run("rs_dsp_simd -tech genesis3");
 
+                        run("techmap -map " + dspFinalMapFile); // For RS_DSP mapping
+                        run("techmap -map " + dsp19x2MapFile); // Convert RS_DSP3_cfg_param to RS_DSP2X for DSP19x2 mapping
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
