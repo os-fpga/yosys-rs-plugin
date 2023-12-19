@@ -83,3 +83,27 @@ module TDP_RAM18KX2 #(
 );
 endmodule
 `endcelldefine
+
+module RS_DSP3 ( // TODO: Name subject to change
+    input  wire [19:0] a,
+    input  wire [17:0] b,
+    input  wire [ 5:0] acc_fir,
+    output wire [37:0] z,
+    output wire [17:0] dly_b,
+
+    (* clkbuf_sink *)
+    input  wire       clk,
+    input  wire       reset,
+
+    input  wire [2:0] feedback,
+    input  wire       load_acc,
+    input  wire       unsigned_a,
+    input  wire       unsigned_b,
+    input  wire       subtract
+);
+
+    parameter [92:0] MODE_BITS = 93'b0;
+    parameter DSP_CLK = "";
+    parameter DSP_RST = "";
+    parameter DSP_RST_POL = "";
+endmodule
