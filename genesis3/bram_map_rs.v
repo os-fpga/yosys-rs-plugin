@@ -84,7 +84,9 @@ module TDP_RAM18KX2 #(
 endmodule
 `endcelldefine
 
-module RS_DSP3 ( // TODO: Name subject to change
+
+// TODO:Added as blackbox subject to change
+module RS_DSP3 ( 
     input  wire [19:0] a,
     input  wire [17:0] b,
     input  wire [ 5:0] acc_fir,
@@ -107,3 +109,42 @@ module RS_DSP3 ( // TODO: Name subject to change
     parameter DSP_RST = "";
     parameter DSP_RST_POL = "";
 endmodule
+
+
+// TODO: Added(as blackbox subject to change) to clear the hierarchy pass (As current DSP19X2.v giving syntax error for yosys read_verilog)
+`celldefine
+module DSP19X2 #(
+  parameter DSP_MODE = "MULTIPLY_ACCUMULATE", // DSP arithmetic mode (MULTIPLY/MULTIPLY_ACCUMULATE)
+  parameter [9:0] COEFF1_0 = 10'h000, // Multiplier 1 10-bit A input coefficient 0
+  parameter [9:0] COEFF1_1 = 10'h000, // Multiplier 1 10-bit A input coefficient 1
+  parameter [9:0] COEFF1_2 = 10'h000, // Multiplier 1 10-bit A input coefficient 2
+  parameter [9:0] COEFF1_3 = 10'h000, // Multiplier 1 10-bit A input coefficient 3
+  parameter [9:0] COEFF2_0 = 10'h000, // Multiplier 2 10-bit A input coefficient 0
+  parameter [9:0] COEFF2_1 = 10'h000, // Multiplier 2 10-bit A input coefficient 1
+  parameter [9:0] COEFF2_2 = 10'h000, // Multiplier 2 10-bit A input coefficient 2
+  parameter [9:0] COEFF2_3 = 10'h000, // Multiplier 2 10-bit A input coefficient 3
+  parameter OUTPUT_REG_EN = "TRUE", // Enable output register (TRUE/FALSE)
+  parameter INPUT_REG_EN = "TRUE" // Enable input register (TRUE/FALSE)
+  ) (
+  input  [9:0] A1,
+  input  [8:0] B1,
+  output  [18:0] Z1,
+  output  [8:0] DLY_B1,
+  input  [9:0] A2,
+  input  [8:0] B2,
+  output  [18:0] Z2,
+  output  [8:0] DLY_B2,
+  input  CLK,
+  input  RESET,
+  input  [4:0] ACC_FIR,
+  input  [2:0] FEEDBACK,
+  input  LOAD_ACC,
+  input  UNSIGNED_A,
+  input  UNSIGNED_B,
+  input  SATURATE,
+  input  [4:0] SHIFT_RIGHT,
+  input  ROUND,
+  input  SUBTRACT
+);
+endmodule
+`endcelldefine
