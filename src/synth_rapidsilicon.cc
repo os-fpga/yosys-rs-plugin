@@ -311,6 +311,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        By default call memory_libmap for Block RAM mapping.\n");
         log("        Specifying this switch turns it to memory_bram.\n");
         log("\n");
+        log("    -new_tdp36k\n");
+        log("        By default OLD Block RAM mapping will run.\n");
+        log("        Specifying this switch turns it to new bram mapping primitives.\n");
+        log("\n");
+        log("    -new_dsp19x2\n");
+        log("        By default new DSP19X2 primitve is off.\n");
+        log("        Specifying this switch turns on DSP19X2 primitive mapping.\n");
+        log("\n");
         log("    -keep_tribuf\n");
         log("        By default translate TBUF into logic.\n");
         log("        Specify this to keep TBUF primitives.\n");
@@ -344,6 +352,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string abc_script;
     bool cec;
     bool new_tdp36k;
+    bool new_dsp19x2;
     bool nodsp;
     bool nobram;
     bool de;
@@ -387,6 +396,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_iobuf= false;
         nobram = false;
         new_tdp36k = false;
+        new_dsp19x2 =false;
         max_device_ios=-1;
         max_lut = -1;
         max_reg = -1;
@@ -480,6 +490,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
 			}
             if (args[argidx] == "-new_tdp36k") {
 				new_tdp36k = true;
+				continue;
+			}
+            if (args[argidx] == "-new_dsp19x2") {
+				new_dsp19x2 = true;
 				continue;
 			}
 #ifdef DEV_BUILD
@@ -1600,10 +1614,19 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             }
             // Genesis3 technology doesn't support fractured mode for DSPs
             case Technologies::GENESIS_3: {
-                dsp_rules_loop1.push_back({10, 9, 4, 4, "$__RS_MUL10X9"});
-                dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
-                dsp_map_file = "+/mul2dsp_check_maxwidth.v";
-                //dsp_map_file = "+/mul2dsp.v";
+                if (new_dsp19x2){
+                    dsp_rules_loop1.push_back({10, 9, 4, 4, "$__RS_MUL10X9"});
+                    dsp_rules_loop1.push_back({20, 18, 11, 10, "$__RS_MUL20X18"});
+                }
+                else
+                    dsp_rules_loop1.push_back({20, 18, 4, 4, "$__RS_MUL20X18"});
+            
+                // Run DSP19X2/DSP38 and map base on max width
+                if (new_dsp19x2)
+                    dsp_map_file = "+/mul2dsp_check_maxwidth.v";
+                else
+                    // Run DSP38 only 
+                    dsp_map_file = "+/mul2dsp.v";
                 break;
             }
             case Technologies::GENERIC: {
@@ -1631,34 +1654,68 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
                 // Genesis2 technology doesn't support fractured mode for DSPs, so no need for second iteration.
                 // Genesis3 technology doesn't support fractured mode for DSPs, so no need for second iteration.
-                if ((tech != Technologies::GENESIS_2)/* && 
-                    (tech != Technologies::GENESIS_3)*/) {
-                    /* 
-                       In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
-                       The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
-                       */
-                    const std::vector<DspParams> dsp_rules_loop2 = {
-                        {20, 18, 11, 10, "$__RS_MUL20X18"},
-                        {10, 9, 4, 4, "$__RS_MUL10X9"},
-                    };
-                    for (const auto &rule : dsp_rules_loop2) {
-                        if (max_dsp != -1)
-                            run(stringf("techmap -map +/mul2dsp.v "
-                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                        "-D DSP_NAME=%s a:valid_map",
-                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
-                        else
-                            run(stringf("techmap -map +/mul2dsp.v "
-                                        "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
-                                        "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
-                                        "-D DSP_NAME=%s",
-                                        rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                if (!new_dsp19x2){
+                    if ((tech != Technologies::GENESIS_2) && 
+                        (tech != Technologies::GENESIS_3)) {
+                        /* 
+                        In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
+                        The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
+                        */
+                        const std::vector<DspParams> dsp_rules_loop2 = {
+                            {20, 18, 11, 10, "$__RS_MUL20X18"},
+                            {10, 9, 4, 4, "$__RS_MUL10X9"},
+                        };
+                        for (const auto &rule : dsp_rules_loop2) {
+                            if (max_dsp != -1)
+                                run(stringf("techmap -map +/mul2dsp.v "
+                                            "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                            "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                            "-D DSP_NAME=%s a:valid_map",
+                                            rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                            else
+                                run(stringf("techmap -map +/mul2dsp.v "
+                                            "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                            "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                            "-D DSP_NAME=%s",
+                                            rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
 
-                        if (cec)
-                            run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
+                            if (cec)
+                                run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
 
-                        run("chtype -set $mul t:$__soft_mul");
+                            run("chtype -set $mul t:$__soft_mul");
+                        }
+                    }
+                }
+                else
+                {   // Genesis3 technology support fractured mode for DSPs, so need for second iteration.
+                    if ((tech != Technologies::GENESIS_2)) {
+                        /* 
+                        In loop2, We start from technology mapping of RTL operator that can be mapped to RS_DSP2.* on biggest DSP to smallest one. 
+                        The idea is that if a RTL operator that does not fully satisfies the "dsp_rules_loop1", it will be mapped on DSP in 2nd loop.
+                        */
+                        const std::vector<DspParams> dsp_rules_loop2 = {
+                            {20, 18, 11, 10, "$__RS_MUL20X18"},
+                            {10, 9, 4, 4, "$__RS_MUL10X9"},
+                        };
+                        for (const auto &rule : dsp_rules_loop2) {
+                            if (max_dsp != -1)
+                                run(stringf("techmap -map +/mul2dsp.v "
+                                            "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                            "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                            "-D DSP_NAME=%s a:valid_map",
+                                            rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+                            else
+                                run(stringf("techmap -map +/mul2dsp.v "
+                                            "-D DSP_A_MAXWIDTH=%zu -D DSP_B_MAXWIDTH=%zu "
+                                            "-D DSP_A_MINWIDTH=%zu -D DSP_B_MINWIDTH=%zu "
+                                            "-D DSP_NAME=%s",
+                                            rule.a_maxwidth, rule.b_maxwidth, rule.a_minwidth, rule.b_minwidth, rule.type.c_str()));
+
+                            if (cec)
+                                run("write_verilog -noattr -nohex after_dsp_map2_" + std::to_string(rule.a_maxwidth) + ".v");
+
+                            run("chtype -set $mul t:$__soft_mul");
+                        }
                     }
                 }
                 break;
@@ -2551,10 +2608,16 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                     case Technologies::GENESIS_3: {
 #ifdef DEV_BUILD
                         run("stat");
-#endif
-                        run("rs-dsp-multadd -genesis3");
+#endif                  
+                        if (new_dsp19x2) // RUN based on DSP19x2 mapping
+                            run("rs-dsp-multadd -genesis3 -new_dsp19x2");
+                        else 
+                            run("rs-dsp-multadd -genesis3");
                         run("wreduce t:$mul");
-                        run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
+                        if (!new_dsp19x2)
+                            run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
+                        else // RUN based on DSP19x2 mapping
+                            run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -new_dsp19x2" + " -max_dsp " + std::to_string(max_dsp));
                         if (max_dsp != -1)
                             for(auto& modules : _design->selected_modules()){
                                 for(auto& cells : modules->selected_cells()){
@@ -2581,11 +2644,14 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
 
                         // Fractuated mode has been enabled for Genesis3
-                        if (tech == Technologies::GENESIS_3)
+                        if (tech == Technologies::GENESIS_3  && new_dsp19x2)
                             run("rs_dsp_simd -tech genesis3");
 
                         run("techmap -map " + dspFinalMapFile); // For RS_DSP mapping
-                        run("techmap -map " + dsp19x2MapFile); // Convert RS_DSP3_cfg_param to RS_DSP2X for DSP19x2 mapping
+                        // Convert RS_DSP3_cfg_param to RS_DSP2X for DSP19x2 mapping
+                        if (new_dsp19x2)
+                            run("techmap -map " + dsp19x2MapFile); 
+
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
 
@@ -2601,7 +2667,8 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 #if 1
                         run("stat");
                         run("techmap -map " + dsp38MapFile);
-                        run("techmap -map " + dsp19x2MapFile);
+                        if (new_dsp19x2)
+                            run("techmap -map " + dsp19x2MapFile);
                         run("stat");
 #endif
                         break;
@@ -2641,7 +2708,6 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             identifyMemsWithSwappedReadPorts();
             //If (-new_tdp36 flag is given then it will run new mapping for Gensis3 primitves)
             if (new_tdp36k && (tech == Technologies::GENESIS_3)){
-                log("CONDITION IS TRUE\n");
                 run_new_version_of_tdp36K_mapping();
             }
             //else old mapping for Gensis3 primitves runs
