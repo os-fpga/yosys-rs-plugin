@@ -18,7 +18,7 @@ PRIVATE_NAMESPACE_BEGIN
 // ============================================================================
 bool use_dsp_cfg_params;
 bool is_genesis2;
-bool is_genesis3;
+bool is_genesis3,new_dsp19x2;
 int max_dsp;
 
 struct RsDspMaccWorker
@@ -248,8 +248,8 @@ struct RsDspMaccWorker
             if (min_width <= 2 && max_width <= 2 && z_width <= 4) {
                 // Too narrow
                 return;
-            } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && !is_genesis2) {
-                if (is_genesis3)
+            } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && !is_genesis2 && new_dsp19x2) {
+                if (is_genesis3 && new_dsp19x2)
                     use_dsp_cfg_params=true;
                 cell_size_name = "_10x9x32";
                 tgt_a_width = 10;
@@ -544,6 +544,10 @@ struct RSDspMacc : public Pass {
             }
             if (a_Args[argidx] == "-max_dsp"  && argidx + 1 < a_Args.size()) {
                 max_dsp = std::stoi(a_Args[++argidx]);
+                continue;
+            }
+            if (a_Args[argidx] == "-new_dsp19x2"  && argidx + 1 < a_Args.size()) {
+                new_dsp19x2 = true;
                 continue;
             }
 
