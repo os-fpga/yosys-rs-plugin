@@ -151,6 +151,7 @@ struct RsDspMultAddWorker
             }
             if (add_mul && add_shl && (mult_coef || acc_multA)){
                 RTLIL::IdString type;
+
                 string cell_base_name = "dsp_t1";
                 string cell_size_name = "_20x18x64";
                 string cell_cfg_name = "_cfg_ports";
@@ -172,8 +173,15 @@ struct RsDspMultAddWorker
                 if (min_width <= 2 && max_width <= 2 && z_width <= 4) {
                     // Too narrow
                     continue;
-                } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && is_genesis) {
+                } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && (is_genesis || is_genesis3)) {
+                    // Enabled support of Fracturable DSP MODE for Genesis3 for newly Added DSP19X2 Primitive 
                     cell_size_name = "_10x9x32";
+                    if (is_genesis3){
+                        cell_cfg_name = "_cfg_params";
+                        cell_full_name = cell_base_name + cell_size_name + cell_cfg_name;
+                        // Updating the cell type to "dsp_t1_10x9x32_cfg_params" for genesis3
+                        type = RTLIL::escape_id(cell_full_name); 
+                    }
                     tgt_a_width = 10;
                     tgt_b_width = 9;
                     tgt_z_width = 19;
@@ -300,9 +308,21 @@ struct RsDspMultAddWorker
                 // Connect control ports
                 if (!acc_multA)
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_a_i"),shift_left_cell->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
-                cell_muladd->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
-                cell_muladd->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
-                cell_muladd->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
+               
+                if ((cell_cfg_name == "_cfg_params") && is_genesis3){
+                    cell_muladd->setParam(RTLIL::escape_id("SATURATE_ENABLE"), RTLIL::Const(RTLIL::S0));
+                    cell_muladd->setParam(RTLIL::escape_id("SHIFT_RIGHT"), RTLIL::Const(RTLIL::S0, 6));
+                    cell_muladd->setParam(RTLIL::escape_id("ROUND"), RTLIL::Const(RTLIL::S0));
+                    cell_muladd->setParam(RTLIL::escape_id("REGISTER_INPUTS"), RTLIL::Const(RTLIL::S0));
+                    cell_muladd->setParam(RTLIL::escape_id("DSP_RST_POL"), RTLIL::Const(RTLIL::S0));
+                    cell_muladd->setParam(RTLIL::escape_id("DSP_RST"),  RTLIL::Const(RTLIL::S0));
+                    cell_muladd->setParam(RTLIL::escape_id("DSP_CLK"), RTLIL::Const(RTLIL::S0));
+                }
+                else{
+                    cell_muladd->setPort(RTLIL::escape_id("saturate_enable_i"), RTLIL::SigSpec(RTLIL::S0));
+                    cell_muladd->setPort(RTLIL::escape_id("shift_right_i"), RTLIL::SigSpec(RTLIL::S0, 6));
+                    cell_muladd->setPort(RTLIL::escape_id("round_i"), RTLIL::SigSpec(RTLIL::S0));
+                }
                 
                 RTLIL::SigSpec clk;
                 RTLIL::SigSpec reset;
