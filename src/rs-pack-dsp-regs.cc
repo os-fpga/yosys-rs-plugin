@@ -130,6 +130,7 @@ struct RsPackDspRegsWorker
             // Get name of DSP for checking type
             std::string cell_type_str = cell->type.str();
             if (cell_type_str == RTLIL::escape_id("RS_DSP2") ||
+                    cell_type_str == RTLIL::escape_id("RS_DSPX2") ||
                     cell_type_str == RTLIL::escape_id("RS_DSP3") ||
                     cell_type_str == RTLIL::escape_id("RS_DSP")) {
                 //adding all DSP cells of design
@@ -489,11 +490,11 @@ struct RsPackDspRegsWorker
                         rst_inv = true;
                         _arst_ = m_module->Not(NEW_ID, DFF_rst);
                     }
-                    if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv){
+                    if (((DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP")) || (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSPX2"))) and rst_inv){
                         DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), _arst_);
                     }
                     // END: Awais: inverter added at ouput of reset as active low rest is not supported by DSP architecture.
-                    else if (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP") and rst_inv == 0){
+                    else if (((DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSP")) || (DSP_driven_DFF->type.c_str() == RTLIL::escape_id("RS_DSPX2"))) and rst_inv == 0){
                         DSP_driven_DFF->setPort(RTLIL::escape_id("\\lreset"), DFF_rst);
                     }
                     else{
