@@ -22,6 +22,7 @@ PRIVATE_NAMESPACE_BEGIN
 bool is_genesis;
 bool is_genesis2;
 bool is_genesis3;
+bool new_dsp19x2;
 struct RsDspMultAddWorker
 {
     RTLIL::Module *m_module;
@@ -173,10 +174,10 @@ struct RsDspMultAddWorker
                 if (min_width <= 2 && max_width <= 2 && z_width <= 4) {
                     // Too narrow
                     continue;
-                } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && (is_genesis || is_genesis3)) {
+                } else if (min_width <= 9 && max_width <= 10 && z_width <= 19 && (is_genesis || (is_genesis3 && new_dsp19x2))) {
                     // Enabled support of Fracturable DSP MODE for Genesis3 for newly Added DSP19X2 Primitive 
                     cell_size_name = "_10x9x32";
-                    if (is_genesis3){
+                    if (is_genesis3 && new_dsp19x2){
                         cell_cfg_name = "_cfg_params";
                         cell_full_name = cell_base_name + cell_size_name + cell_cfg_name;
                         // Updating the cell type to "dsp_t1_10x9x32_cfg_params" for genesis3
@@ -309,7 +310,7 @@ struct RsDspMultAddWorker
                 if (!acc_multA)
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_a_i"),shift_left_cell->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                
-                if ((cell_cfg_name == "_cfg_params") && is_genesis3){
+                if ((cell_cfg_name == "_cfg_params") && is_genesis3 && new_dsp19x2){
                     cell_muladd->setParam(RTLIL::escape_id("SATURATE_ENABLE"), RTLIL::Const(RTLIL::S0));
                     cell_muladd->setParam(RTLIL::escape_id("SHIFT_RIGHT"), RTLIL::Const(RTLIL::S0, 6));
                     cell_muladd->setParam(RTLIL::escape_id("ROUND"), RTLIL::Const(RTLIL::S0));
@@ -423,6 +424,8 @@ struct RSDspMultAddPass : public Pass {
                 is_genesis2 = true;
             if (a_Args[argidx] == "-genesis")
                 is_genesis = true;
+            if (a_Args[argidx] == "-new_dsp19x2")
+                new_dsp19x2 = true;
         }
         
         extra_args(a_Args, argidx, design);
