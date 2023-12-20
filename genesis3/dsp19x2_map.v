@@ -24,19 +24,19 @@ input  wire [ 5:0] shift_right;
 input  wire        round;
 input  wire        subtract;
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTACC
 localparam        ACCUMULATOR = 1'h1;
@@ -44,11 +44,11 @@ localparam        ADDER       = 1'h0;
 localparam        OUTPUT_REG  = 1'h0;
 
 //localparam [0:2] output_select = 3'b100={ACCUMULATOR, ADDER, OUTPUT_REG};
-localparam register_inputs = 1'b0;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -98,19 +98,19 @@ input  wire       unsigned_b;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULT
 localparam        ACCUMULATOR = 1'h0;
@@ -118,11 +118,11 @@ localparam        ADDER       = 1'h0;
 localparam        OUTPUT_REG  = 1'h0;
 
 //localparam [0:2] output_select = 3'b000={ACCUMULATOR, ADDER, OUTPUT_REG};
-localparam register_inputs = 1'b0;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -178,19 +178,19 @@ input  wire       unsigned_b;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULT_REGIN
 localparam        ACCUMULATOR = 1'h0;
@@ -199,10 +199,10 @@ localparam        OUTPUT_REG  = 1'h0;
 
 //localparam [0:2] output_select = 3'b000={ACCUMULATOR, ADDER, OUTPUT_REG};
 localparam register_inputs = 1'b1;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -259,19 +259,19 @@ input  wire       unsigned_b;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULT_REGOUT
 localparam        ACCUMULATOR = 1'h0;
@@ -279,11 +279,11 @@ localparam        ADDER       = 1'h0;
 localparam        OUTPUT_REG  = 1'h1;
 
 //localparam [0:2] output_select = 3'b001;={ACCUMULATOR, ADDER, OUTPUT_REG};
-localparam register_inputs = 1'b0;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -339,19 +339,19 @@ input  wire       unsigned_b;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULT_REGIN_REGOUT
 localparam        ACCUMULATOR = 1'h0;
@@ -361,10 +361,10 @@ localparam        OUTPUT_REG  = 1'h1;
 
 //localparam [0:2] output_select = 3'b001={ACCUMULATOR, ADDER, OUTPUT_REG};
 localparam register_inputs = 1'b1;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -427,19 +427,19 @@ input  wire        subtract;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTADD
 localparam        ACCUMULATOR = 1'h0;
@@ -447,11 +447,11 @@ localparam        ADDER       = 1'h1;
 localparam        OUTPUT_REG  = 1'h0;
 
 //localparam [0:2] output_select = 3'b010;={ACCUMULATOR, ADDER, OUTPUT_REG};
-localparam register_inputs = 1'b0;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -514,19 +514,19 @@ input  wire        subtract;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTADD_REGIN
 localparam        ACCUMULATOR = 1'h0;
@@ -535,10 +535,10 @@ localparam        OUTPUT_REG  = 1'h0;
 
  //localparam [0:2] output_select = 3'b010;={ACCUMULATOR, ADDER, OUTPUT_REG};
  localparam register_inputs = 1'b1;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
  
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -600,30 +600,30 @@ input  wire        round;
 input  wire        subtract;
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTADD_REGOUT
 localparam        ACCUMULATOR = 1'h0;
 localparam        ADDER       = 1'h1;
 localparam        OUTPUT_REG  = 1'h1;
 //localparam [0:2] output_select = 3'b011;={ACCUMULATOR, ADDER, OUTPUT_REG};
-localparam register_inputs = 1'b0;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -686,19 +686,19 @@ input  wire        subtract;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTADD_REGIN_REGOUT
 localparam        ACCUMULATOR = 1'h0;
@@ -707,10 +707,10 @@ localparam        OUTPUT_REG  = 1'h1;
 
 //localparam [0:2] output_select = 3'b011;={ACCUMULATOR, ADDER, OUTPUT_REG};
 localparam register_inputs = 1'b1;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -772,19 +772,19 @@ input  wire        subtract;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTACC_REGIN
 localparam        ACCUMULATOR = 1'h1;
@@ -793,10 +793,10 @@ localparam        OUTPUT_REG  = 1'h0;
 
 //localparam [0:2] output_select = 3'b100;={ACCUMULATOR, ADDER, OUTPUT_REG};
 localparam register_inputs = 1'b1;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -859,19 +859,19 @@ input  wire        subtract;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTACC_REGOUT
 localparam        ACCUMULATOR = 1'h1;
@@ -879,11 +879,11 @@ localparam        ADDER       = 1'h0;
 localparam        OUTPUT_REG  = 1'h1;
 
 //localparam [0:2] output_select = 3'b101;
-localparam register_inputs = 1'b0;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -946,19 +946,19 @@ input  wire        subtract;
 
 
 
-parameter [0:83] MODE_BITS = 84'd0;
+parameter [0:79] MODE_BITS = 80'd0;
 
-localparam [0:9] COEFF1_0 = MODE_BITS[0:9];
-localparam [0:9] COEFF2_0 = MODE_BITS[10:19];
+localparam [0:9] COEFF1_0 = MODE_BITS[70:79];
+localparam [0:9] COEFF2_0 = MODE_BITS[60:69];
 
-localparam [0:9] COEFF1_1 = MODE_BITS[20:29];
-localparam [0:9] COEFF2_1 = MODE_BITS[30:39];
+localparam [0:9] COEFF1_1 = MODE_BITS[50:59];
+localparam [0:9] COEFF2_1 = MODE_BITS[40:49];
 
-localparam [0:9] COEFF1_2 = MODE_BITS[40:49];
-localparam [0:9] COEFF2_2 = MODE_BITS[50:59];
+localparam [0:9] COEFF1_2 = MODE_BITS[30:39];
+localparam [0:9] COEFF2_2 = MODE_BITS[20:29];
 
-localparam [0:9] COEFF1_3 = MODE_BITS[60:69];
-localparam [0:9] COEFF2_3 = MODE_BITS[70:79];
+localparam [0:9] COEFF1_3 = MODE_BITS[10:19];
+localparam [0:9] COEFF2_3 = MODE_BITS[0:9];
 
 // RS_DSPX2_MULTACC_REGIN_REGOUT
 localparam        ACCUMULATOR = 1'h1;
@@ -966,10 +966,10 @@ localparam        ADDER       = 1'h0;
 localparam        OUTPUT_REG  = 1'h1;
 //localparam [0:2] output_select = 3'b101;
 localparam register_inputs = 1'b1;
-wire [9:0] a2 = 10'hx;
-wire [8:0] b2 = 9'hx;
-wire [8:0] dly_b2;
-wire [18:0] z2; 
+
+
+
+
 
 DSP19X2 #(
     .COEFF1_0(COEFF1_0), 
@@ -1066,7 +1066,9 @@ module RS_DSP3 (
         .saturate_enable    (MODE_BITS[84]),
         .shift_right        (MODE_BITS[90:85]),
         .round              (MODE_BITS[91]),
+        //.output_select(OUTPUT_SELECT),
         .subtract           (subtract),
+        //.register_inputs(REGISTER_INPUTS)
     );
 
 endmodule
