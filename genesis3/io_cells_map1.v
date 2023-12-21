@@ -62,3 +62,19 @@ module rs__IO_BUF
   //IO_BUF iobuf_inst (.I(I),.IO(IO),.T(T),.O(O));
   
 endmodule 
+//--------------------------------------- 
+// 
+//    Copyright (c) 2023 Rapid Silicon 
+//    All Right Reserved.
+//--------------------------------------- 
+module rs__O_BUFT#(
+  parameter WEAK_KEEPER = "NONE" // Specify Pull-up/Pull-down on input (NONE/PULLUP/PULLDOWN)
+)(
+    input   I,     
+    input   T,
+    output  O
+  );
+  
+  O_BUFT #(.WEAK_KEEPER(WEAK_KEEPER)) obuft_inst (.I(I),.T(T),.O(O));
+  
+endmodule 

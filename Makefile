@@ -105,6 +105,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/CLK_BUF.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/I_BUF.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/O_BUF.v \
+				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/O_BUFT.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DFFRE.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/DFFNRE.v \
 				  $(GENESIS3)/RS_PRIMITIVES/sim_models/verilog/TDP_RAM36K.v \
