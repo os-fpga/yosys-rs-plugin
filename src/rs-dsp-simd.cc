@@ -73,6 +73,8 @@ struct RSDspSimdPass : public Pass {
 
     // For RS_DSP3 use parameters instead
     const std::vector<std::string> m_DspParams2Mode = {"OUTPUT_SELECT", "SATURATE_ENABLE", "SHIFT_RIGHT", "ROUND", "REGISTER_INPUTS"};
+    //For Genesis3 newly added PARAMS
+    const std::vector<std::string> m_DspParamsGen3 = {"DSP_CLK", "DSP_RST", "DSP_RST_POL"};
 
     // DSP data ports and how to map them to ports of the target DSP cell
     const std::vector<std::pair<std::string, std::string>> m_DspDataPorts = {
@@ -94,15 +96,22 @@ struct RSDspSimdPass : public Pass {
 
     /// Temporary SigBit to SigBit helper map.
     SigMap m_SigMap;
-
+    std::string technology ="";
     // ..........................................
 
     void execute(std::vector<std::string> a_Args, RTLIL::Design *a_Design) override
     {
         log_header(a_Design, "Executing RS_DSP_SIMD pass.\n");
+        size_t argidx;
+        for (argidx = 1; argidx < a_Args.size(); argidx++) {
 
+            if (a_Args[argidx] == "-tech" && argidx+1 < a_Args.size()) {
+				technology = a_Args[++argidx]; 
+				continue;
+			}
+        }
         // Parse args
-        extra_args(a_Args, 1, a_Design);
+        extra_args(a_Args, argidx, a_Design);
 
         // Process modules
         for (auto module : a_Design->selected_modules()) {
@@ -246,7 +255,12 @@ struct RSDspSimdPass : public Pass {
                     }
                     simd->setParam(RTLIL::escape_id("MODE_BITS"), RTLIL::Const(mode_bits));
                     log_assert(mode_bits.size() == mode_bits_size);
-
+                    if (technology == "genesis3"){
+                        for (auto &it : m_DspParamsGen3) {
+                            log_assert(dsp_a->getParam(RTLIL::escape_id(it)) == dsp_b->getParam(RTLIL::escape_id(it)));
+                            simd->setParam(RTLIL::escape_id(it), dsp_a->getParam(RTLIL::escape_id(it)));
+                        }
+                    }
                     // Handle the "is_inferred" attribute. If one of the fragments
                     // is not inferred mark the whole DSP as not inferred
                     bool is_inferred_a =
