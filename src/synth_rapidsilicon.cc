@@ -102,7 +102,7 @@ PRIVATE_NAMESPACE_BEGIN
 // 3 - dsp inference
 // 4 - bram inference
 #define VERSION_MINOR 4
-#define VERSION_PATCH 211
+#define VERSION_PATCH 212
 
 enum Strategy {
     AREA,
@@ -2370,22 +2370,28 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             if (cec)
                run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
 
-            // specific Rapid Silicon merge with -rs_merge option
-            //
-            run("tribuf -rs_merge");
+            /*Added to support OBUFT  if keep_tribuf flag is given*/
+            if(keep_tribuf) { //non defualt mode :we keep TRIBUF
 
-            if (cec) {
-               run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
-               run("write_verilog -noattr -nohex after_tribuf_merge.v");
+                run("tribuf -logic");
+
+            }else { // defualt mode : we replace TRIBUF by plain logic
+                // specific Rapid Silicon merge with -rs_merge option
+                //
+                run("tribuf -rs_merge");
+
+                if (cec) {
+                   run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
+                   run("write_verilog -noattr -nohex after_tribuf_merge.v");
+                }
+
+                // specific Rapid Silicon logic with -rs_logic option
+                //
+                run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
             }
-
-            // specific Rapid Silicon logic with -rs_logic option
-            //
-            run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
-
-            if (cec)
-               run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
-
+                if (cec)
+                   run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
+            
 #else
             // Old tri-state handling
             //
@@ -3052,7 +3058,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
-                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -limit "+ std::to_string(max_device_ios));
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
            }
