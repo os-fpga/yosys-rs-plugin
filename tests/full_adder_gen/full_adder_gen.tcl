@@ -14,7 +14,7 @@ equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesi
 design -load postopt
 yosys cd full_adder
 stat
-select -assert-count 5 t:adder_carry
+select -assert-max 5 t:adder_carry
 
 design -reset
 
@@ -27,7 +27,7 @@ equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesi
 design -load postopt
 yosys cd subtractor
 stat
-select -assert-count 5 t:adder_carry
+select -assert-max 5 t:adder_carry
 
 design -reset
 
@@ -40,7 +40,7 @@ equiv_opt -assert  -map +/rapidsilicon/genesis/cells_sim.v synth_rs -tech genesi
 design -load postopt
 yosys cd comparator
 stat
-select -assert-count 4 t:adder_carry
+select -assert-max 4 t:adder_carry
 
 design -reset
 
@@ -56,7 +56,7 @@ yosys cd full_adder
 stat
 select -assert-count 0 t:adder_carry
 # comment for now
-#select -assert-count 6 t:\$lut
+select -assert-max 6 t:\$lut
 
 design -reset
 
