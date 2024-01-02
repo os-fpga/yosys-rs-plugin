@@ -1777,6 +1777,21 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
         return set_parity;
     }
+    /*  To check whether we have a missing param for TDP CASE, if yes then assign default value.
+        This condition occurs when we have two write ports and a single read port for TDP.
+        To avoid error this is needed so that we can easily merge two 18TDP RAMs for new RS_Primitives.
+    */
+    void CHECK_PARAM(){
+        for (auto &module : _design->selected_modules()) {
+            for (auto &cell : module->selected_cells()) {
+                if (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP") ||
+                    (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))){
+                        if (!(cell->hasParam(RTLIL::escape_id("PORT_C_DATA_WIDTH"))))
+                            cell->setParam(stringf("\\PORT_C_DATA_WIDTH"), cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")));
+                }
+            }
+        }
+    }
     void Set_SDPBram_InitValues(){
         for (auto &module : _design->selected_modules()) {
             for (auto &cell : module->selected_cells()) {
@@ -1871,8 +1886,21 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                     std::vector<RTLIL::State> init_value1; 
                     std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    bool set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
-                    get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+                    bool set_parity;
+                    /*To check whether we have single write-port or dual write-ports
+                      if we have single write-port and multiple read ports then we use
+                      "PORT_B_DATA_WIDTH" for both write-ports (B and D) otherwise we
+                      use respected params of each port.
+                    */
+                    if (cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))){
+                        set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
+                        get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+                    }
+                    else{
+                        cell->setParam(stringf("\\PORT_D_DATA_WIDTH"), cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
+                        get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+                    }
                     if (set_parity){
                         for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
                             for (int j = 0; j <BRAM_WIDTH_36; ++j)
@@ -1913,8 +1941,21 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                     std::vector<RTLIL::State> init_value1;
                     std::vector<RTLIL::State> init_parity_value1;
                     std::vector<RTLIL::State> init_temp;
-                    bool set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
-                    get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+                    bool set_parity;
+                    /*To check whether we have single write-port or dual write-ports
+                      if we have single write-port and multiple read ports then we use
+                      "PORT_B_DATA_WIDTH" for both write-ports (B and D) otherwise we
+                      will use respected param of each port.
+                    */
+                    if (cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))){
+                        set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
+                        get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+                    }
+                    else{
+                        cell->setParam(stringf("\\PORT_D_DATA_WIDTH"), cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
+                        set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
+                        get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+                    }
                     if (set_parity){
                         for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
                             for (int j = 0; j <BRAM_WIDTH_18; ++j)
@@ -1942,7 +1983,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
                     }
                 }
-                    
+                CHECK_PARAM();
             }
         }
     }
@@ -2083,7 +2124,6 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                 run("techmap -autoproc -map" + bramMapFile);
                 run("techmap -map" + bramFinalMapFile);
         }
-
     }
 
 
@@ -2171,7 +2211,6 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         run("techmap -autoproc -map" + bramMapFile);
                         run("techmap -map" + bramFinalMapFile);
                     }
-
                     if (cec)
                         run("write_verilog -noattr -nohex after_bram_map.v");
                 break;
