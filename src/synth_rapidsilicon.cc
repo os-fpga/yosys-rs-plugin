@@ -77,7 +77,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define IO_cells_FILE io_cells_map1.v
 #define IO_CELLs_final_map io_cell_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
-#define GET_FILE_PATH_RS_FPGA_SIM(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/RS_PRIMITIVES/sim_models/verilog/" STR(file)
+#define GET_FILE_PATH_RS_FPGA_SIM(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/FPGA_PRIMITIVES_MODELS/sim_models/verilog/" STR(file)
 #define GET_TECHMAP_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
@@ -1779,7 +1779,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
     }
     /*  To check whether we have a missing param for TDP CASE, if yes then assign default value.
         This condition occurs when we have two write ports and a single read port for TDP.
-        To avoid error this is needed so that we can easily merge two 18TDP RAMs for new RS_Primitives.
+        To avoid error this is needed so that we can easily merge two 18TDP RAMs for new FPGA_PRIMITIVES_MODELS.
     */
     void CHECK_PARAM(){
         for (auto &module : _design->selected_modules()) {
