@@ -1,3 +1,3 @@
-[submodule "genesis3/RS_PRIMITIVES"]
-	path = genesis3/RS_PRIMITIVES
-	url = git@github.com:RapidSilicon/RS_FPGA_PRIMITIVES.git
+[submodule "genesis3/FPGA_PRIMITIVES_MODELS"]
+	path = genesis3/FPGA_PRIMITIVES_MODELS
+	url = git@github.com:RapidSilicon/FPGA_PRIMITIVES_MODELS.git
