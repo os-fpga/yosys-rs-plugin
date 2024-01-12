@@ -37,6 +37,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_3_DIR genesis3
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
+#define BLACKBOX_SIM_LIB_FILE cell_sim_blackbox.v
 #define SIM_LIB_CARRY_FILE CARRY.v
 #define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
@@ -78,6 +79,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define IO_CELLs_final_map io_cell_final_map.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define GET_FILE_PATH_RS_FPGA_SIM(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/FPGA_PRIMITIVES_MODELS/sim_models/verilog/" STR(file)
+#define GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/FPGA_PRIMITIVES_MODELS/blackbox_models/" STR(file)
 #define GET_TECHMAP_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define BRAM_WIDTH_36 36
 #define BRAM_WIDTH_18 18
@@ -3163,7 +3165,8 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
            run("opt_clean -purge");
 #endif
            string readIOArgs;
-           readIOArgs=GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_cells_FILE);
+           readIOArgs=GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_cells_FILE)
+                      GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,BLACKBOX_SIM_LIB_FILE);
            
            if (!no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
