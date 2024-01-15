@@ -33,19 +33,19 @@ struct RsDspMultAddWorker
 
     bool run_opt_clean = false;
 
-    void run_scr (bool gen, bool gen3,RTLIL::Design *design) {
+    void run_scr (RTLIL::Design *design) {
         SigMap sigmap(design->top_module());
 
         std::vector<Cell *> mul_cells;
         std::vector<Cell *> shl_cells;
         std::vector<Cell *> add_cells_;
         std::vector<Cell *> dff_cells_;
-        RTLIL::Cell *shift_left_cell;
-        RTLIL::Cell *mult_coeff;
-        RTLIL::Cell *mult_add_cell;
-        RTLIL::Cell *regout_cell;
-        RTLIL::Cell *regout_mult_cell;
-        RTLIL::Cell *shiftl_PB_cell;
+        RTLIL::Cell *shift_left_cell = nullptr;
+        RTLIL::Cell *mult_coeff = nullptr;
+        RTLIL::Cell *mult_add_cell = nullptr;
+        RTLIL::Cell *regout_cell = nullptr;
+        RTLIL::Cell *regout_mult_cell = nullptr;
+        RTLIL::Cell *shiftl_PB_cell =nullptr;
 
         bool add_shl = false;
         bool add_mul = false;
@@ -152,7 +152,6 @@ struct RsDspMultAddWorker
             }
             if (add_mul && add_shl && (mult_coef || acc_multA)){
                 RTLIL::IdString type;
-
                 string cell_base_name = "dsp_t1";
                 string cell_size_name = "_20x18x64";
                 string cell_cfg_name = "_cfg_ports";
@@ -160,7 +159,6 @@ struct RsDspMultAddWorker
                 type = RTLIL::escape_id(cell_full_name);
                 size_t tgt_a_width;
                 size_t tgt_b_width;
-                size_t tgt_z_width;
                 size_t a_width = GetSize(mult_coeff->getPort(ID(A)));
                 size_t b_width = GetSize(mult_coeff->getPort(ID(B)));
                 size_t z_width = GetSize(mult_coeff->getPort(ID(Y)));
@@ -185,12 +183,10 @@ struct RsDspMultAddWorker
                     }
                     tgt_a_width = 10;
                     tgt_b_width = 9;
-                    tgt_z_width = 19;
                 } else if (min_width <= 18 && max_width <= 20 && z_width <= 38) {
                     cell_size_name = "_20x18x64";
                     tgt_a_width = 20;
                     tgt_b_width = 18;
-                    tgt_z_width = 38;
                 } else {
                     // Too wide
                     continue;
@@ -209,9 +205,9 @@ struct RsDspMultAddWorker
 
                 // Add the DSP cell
                 bool shiftl_A_valid_size = false;
-                bool valid_shiftl_chunk = false;
                 RTLIL::SigSpec chunk_msb;
                 #if 0 // if verific on-> verific append A input with MSB to match the size of Y output, so we have original value of A input in the chunk[0]
+                    bool valid_shiftl_chunk = false;
                     if (!(shift_left_cell->getPort(ID::A).is_chunk())){
                         int size_chunk = 0 ;
                         RTLIL::IdString chunk_id;
@@ -236,7 +232,7 @@ struct RsDspMultAddWorker
                         continue;
                     };
                 #endif
-                #if 1
+                #if 1 
                     if (GetSize(shift_left_cell->getPort(ID::A))<=20 && GetSize(shift_left_cell->getPort(ID::B))<=6){
                         shiftl_A_valid_size = true;
                         chunk_msb = shift_left_cell->getPort(ID::A);
@@ -414,8 +410,6 @@ struct RSDspMultAddPass : public Pass {
     void execute(std::vector<std::string> a_Args, RTLIL::Design *design) override
     {
         log_header(design, "Executing RS_DSP_MULTADD pass.\n");
-        bool gen3 = false;
-        bool gen = false;
         size_t argidx;
         for (argidx = 1; argidx < a_Args.size(); argidx++) {
             if (a_Args[argidx] == "-genesis3")
@@ -432,7 +426,7 @@ struct RSDspMultAddPass : public Pass {
 
         for (auto mod : design->selected_modules()) {
             RsDspMultAddWorker worker(mod);
-            worker.run_scr(gen,gen3,design);
+            worker.run_scr(design);
             // if (worker.run_opt_clean)
             //     Pass::call(design, "opt_clean");
         }
