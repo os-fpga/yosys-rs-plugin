@@ -583,6 +583,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-keep_tribuf") {
                 keep_tribuf = true;
+                no_iobuf = false;
                 continue;
             }
             if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
