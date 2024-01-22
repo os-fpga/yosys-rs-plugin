@@ -583,7 +583,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-keep_tribuf") {
                 keep_tribuf = true;
-                no_iobuf = false;
                 continue;
             }
             if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
@@ -2476,6 +2475,8 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             if(keep_tribuf) { //non defualt mode :we keep TRIBUF
 
                 run("tribuf -logic");
+                no_iobuf = false;
+                log_warning("Force/Overide -no_iobuf to FALSE.\n");
 
             }else { // defualt mode : we replace TRIBUF by plain logic
                 // specific Rapid Silicon merge with -rs_merge option
