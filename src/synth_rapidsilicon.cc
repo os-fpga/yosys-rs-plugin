@@ -2475,6 +2475,8 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             if(keep_tribuf) { //non defualt mode :we keep TRIBUF
 
                 run("tribuf -logic");
+                no_iobuf = false;
+                log_warning("Ignored -no_iobuf because -keep_tribuf is used.\n");
 
             }else { // defualt mode : we replace TRIBUF by plain logic
                 // specific Rapid Silicon merge with -rs_merge option
