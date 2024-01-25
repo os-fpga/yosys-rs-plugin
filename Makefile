@@ -50,7 +50,6 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/blackbox_models/cell_sim_blackbox.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/CARRY.v \
 				  $(GENESIS3)/cells_sim.vhd \
-				  $(GENESIS3)/brams_sim.v \
 				  $(GENESIS3)/ffs_map.v \
 				  $(GENESIS3)/dsp_map.v \
 				  $(GENESIS3)/dsp_final_map.v \
@@ -65,9 +64,6 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/brams_new.txt \
 				  $(GENESIS3)/brams_new_swap.txt \
 				  $(GENESIS3)/brams_async.txt \
-				  $(GENESIS3)/TDP18K_FIFO.v \
-				  $(GENESIS3)/sram1024x18.v \
-				  $(GENESIS3)/ufifo_ctl.v \
 				  $(GENESIS3)/io_cells_map1.v \
 				  $(GENESIS3)/io_cell_final_map.v \
 				  $(GENESIS3)/lut_map.v \
@@ -75,6 +71,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/dsp19x2_map.v \
 				  $(GENESIS3)/llatches_sim.v \
 				  $(GENESIS3)/brams_map_new_version.v \
+				  $(GENESIS3)/sim_includes.v \
 				  $(GENESIS3)/brams_final_map_new_version.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/LUT1.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/LUT2.v \

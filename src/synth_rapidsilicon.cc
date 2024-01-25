@@ -2438,8 +2438,8 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, CLK_BUF_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, O_BUF_SIM_FILE)
                                 GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, DSP_38_SIM_FILE)
-                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_NEW_LIB_FILE1)
-                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
+                                GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_NEW_LIB_FILE1);
+                                // GET_FILE_PATH(GENESIS_3_DIR, BRAMS_SIM_LIB_FILE);
                     break;
                 }    
                 // Just to make compiler happy
