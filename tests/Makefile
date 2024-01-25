@@ -26,6 +26,17 @@ TESTS_GEN2 = dffs_gen2\
              bram_sdp_split_gen2\
              bram_tdp_split_gen2
 
+TESTS_GEN3 = bram_sdp_split_gen3 \
+			 dffs_gen3\
+             latches_gen3\
+             full_adder_gen3\
+             dsp_macc_gen3\
+             dsp_mult_gen3\
+             pack_dsp_regs_gen3\
+             bram_tdp_gen3\
+             bram_sdp_gen3\
+             bram_tdp_split_gen3
+
 VALGRIND_TESTS_GEN = valgrind/dffs_gen\
                      valgrind/latches_gen\
                      valgrind/shreg_gen\
@@ -39,16 +50,29 @@ VALGRIND_TESTS_GEN = valgrind/dffs_gen\
                      valgrind/bram_sdp_split_gen\
                      valgrind/bram_tdp_split_gen
 
-VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2\
-                      valgrind/latches_gen2\
+VALGRIND_TESTS_GEN2 = valgrind/dffs_gen2 \
+                      valgrind/dsp_macc_gen2 \
+                      valgrind/latches_gen2 \
                       valgrind/full_adder_gen2\
-                      valgrind/dsp_macc_gen2\
                       valgrind/dsp_mult_gen2\
                       valgrind/pack_dsp_regs_gen2\
                       valgrind/bram_tdp_gen2\
                       valgrind/bram_sdp_gen2\
                       valgrind/bram_sdp_split_gen2\
                       valgrind/bram_tdp_split_gen2
+                 #valgrind/bram_asymmetric_wider_read\
+                 #valgrind/bram_asymmetric_wider_write
+
+VALGRIND_TESTS_GEN3 = valgrind/dffs_gen3 \
+                      valgrind/dsp_macc_gen3 \
+                      valgrind/latches_gen3 \
+                      valgrind/full_adder_gen3\
+                      valgrind/dsp_mult_gen3\
+                      valgrind/pack_dsp_regs_gen3\
+                      valgrind/bram_tdp_gen3\
+                      valgrind/bram_sdp_gen3\
+                      valgrind/bram_sdp_split_gen3\
+                      valgrind/bram_tdp_split_gen3
                  #valgrind/bram_asymmetric_wider_read\
                  #valgrind/bram_asymmetric_wider_write
 
@@ -116,14 +140,17 @@ $(1)/$(3)ok: $(1)/$$(notdir $(1).v)
 	rm -f $$(notdir $(1))_test$(3).tcl;
 endef
 
-all: tests_gen tests_gen2
+all: tests_gen tests_gen2 tests_gen3
 tests_gen: $(TESTS_GEN)
 tests_gen2: $(TESTS_GEN2)
+tests_gen3: $(TESTS_GEN3)
 
 .PHONY: all clean $(TESTS_GEN) $(TEST_GEN2)
 
+$(foreach test,$(TESTS_GEN3),$(eval $(call test_tpl,$(test))))
 $(foreach test,$(TESTS_GEN2),$(eval $(call test_tpl,$(test))))
 $(foreach test,$(TESTS_GEN),$(eval $(call test_tpl,$(test))))
+$(foreach test,$(TESTS_GEN3),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 $(foreach test,$(TESTS_GEN2),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 $(foreach test,$(TESTS_GEN),$(eval $(call test_tpl,$(test),/,valgrind, $(OPTION_1), $(OPTION_2))))
 
@@ -134,6 +161,7 @@ clean_tests:
 	@find . -name "*.eqn" | xargs rm -rf
 	@find . -name "*post_synth.v" | xargs rm -rf
 
-all_valgrind: valgrind_gen valgrind_gen2
+all_valgrind: valgrind_gen valgrind_gen2 valgrind_gen3
 valgrind_gen: $(VALGRIND_TESTS_GEN)
 valgrind_gen2: $(VALGRIND_TESTS_GEN2)
+valgrind_gen3: $(VALGRIND_TESTS_GEN3)

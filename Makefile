@@ -19,7 +19,7 @@ EXTRA_FLAGS ?=
 
 COMMON			= common
 GENESIS			= genesis
-GENESIS2		= genesis2
+# GENESIS2		= genesis2
 GENESIS3		= genesis3
 VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(COMMON)/simlib.v \
@@ -47,27 +47,6 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/latchsre.vhdl \
 				  $(GENESIS)/lut.vhdl \
 				  $(GENESIS)/shr.vhdl \
-				  $(GENESIS2)/cells_sim.v \
-				  $(GENESIS2)/cells_sim.vhd \
-				  $(GENESIS2)/dsp_sim.v \
-				  $(GENESIS2)/brams_sim.v \
-				  $(GENESIS2)/ffs_map.v \
-				  $(GENESIS2)/dsp_map.v \
-				  $(GENESIS2)/dsp_final_map.v \
-				  $(GENESIS2)/arith_map.v \
-				  $(GENESIS2)/all_arith_map.v \
-				  $(GENESIS2)/brams_map.v \
-				  $(GENESIS2)/brams_map_new.v \
-				  $(GENESIS2)/brams_final_map.v \
-				  $(GENESIS2)/brams_final_map_new.v \
-				  $(GENESIS2)/brams.txt \
-				  $(GENESIS2)/brams_new.txt \
-				  $(GENESIS2)/brams_new_swap.txt \
-				  $(GENESIS2)/brams_async.txt \
-				  $(GENESIS2)/TDP18K_FIFO.v \
-				  $(GENESIS2)/sram1024x18.v \
-				  $(GENESIS2)/ufifo_ctl.v \
-				  $(GENESIS2)/cell_sim_blackbox.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/blackbox_models/cell_sim_blackbox.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/CARRY.v \
 				  $(GENESIS3)/cells_sim.vhd \
@@ -172,13 +151,13 @@ valgrind_gen:
 	$(MAKE) -C tests valgrind_gen YOSYS_PATH=$(YOSYS_PATH)
 
 valgrind:
-	$(MAKE) -C tests valgrind_gen2 YOSYS_PATH=$(YOSYS_PATH)
+	$(MAKE) -C tests valgrind_gen3 YOSYS_PATH=$(YOSYS_PATH)
 
 test_gen:
 	$(MAKE) -C tests tests_gen YOSYS_PATH=$(YOSYS_PATH)
 
 test:
-	$(MAKE) -C tests tests_gen2 YOSYS_PATH=$(YOSYS_PATH)
+	$(MAKE) -C tests tests_gen3 YOSYS_PATH=$(YOSYS_PATH)
 
 clean:
 	rm -rf src/*.d src/*.o *.so pmgen/
