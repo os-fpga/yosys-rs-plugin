@@ -1765,10 +1765,10 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
         else if (  port_width == BRAM_WIDTH_9) {
             set_parity = true;
         }
-        else if ( port_width == BRAM_WIDTH_18) {
+        else if ( (port_width == BRAM_WIDTH_18) && (port_data_width == BRAM_WIDTH_18)) {
             set_parity = true;
         }
-        else if ( port_width == 27) {
+        else if ((port_width == BRAM_WIDTH_36) && (port_data_width == 27)) {
             set_parity = true;
         }
         else if ( (port_width == BRAM_WIDTH_36) && (port_data_width == BRAM_WIDTH_36)) {
