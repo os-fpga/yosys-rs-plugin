@@ -1754,23 +1754,23 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
     bool SetParityTDPmode(Cell* cell) {
         bool set_parity {false};
         /*Checking RAM condition with two write Ports*/
-        if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != 0)
-             && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != 0)) {
+        if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != State::S0)
+             && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0)) {
 
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
             get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
         }
         /*Checking RAM condition with single write Port*/
-        else if (!(cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != 0)
-            && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != 0)) {
+        else if (!(cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != State::S0)
+            && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0)) {
 
             cell->setParam(stringf("\\PORT_D_DATA_WIDTH"), cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
             get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
         }
         /*Checking ROM condition with only readports*/
-        else if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) == 0)
-            && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) == 0)) {
+        else if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) == State::S0)
+            && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) == State::S0)) {
 
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_C_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")))) &&
             get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_A_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")))));
@@ -1786,7 +1786,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
     bool SetParitySDPmode(Cell* cell) {
         bool set_parity {false};
         /*Checking RAM condition*/
-        if ((cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != 0))
+        if ((cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0))
             set_parity = get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"))) );
         /*ROM condition with only readport*/
         else
