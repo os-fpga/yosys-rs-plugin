@@ -1753,8 +1753,13 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
     bool SetParityTDPmode(Cell* cell) {
         bool set_parity {false};
+
+        /*Checking byte-write condition for write Ports*/
+        if ((cell->hasParam(RTLIL::escape_id("PORT_B_Parity")) && cell->getParam(RTLIL::escape_id("PORT_B_Parity")) == State::S1) ||
+            (cell->hasParam(RTLIL::escape_id("PORT_D_Parity")) && cell->getParam(RTLIL::escape_id("PORT_D_Parity")) == State::S1))
+            set_parity =true;
         /*Checking RAM condition with two write Ports*/
-        if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != State::S0)
+        else if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != State::S0)
              && (cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0)) {
 
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
@@ -1785,8 +1790,11 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
     bool SetParitySDPmode(Cell* cell) {
         bool set_parity {false};
+        /*Checking byte-write condition for write Port*/
+        if ((cell->hasParam(RTLIL::escape_id("PORT_B_Parity")) && cell->getParam(RTLIL::escape_id("PORT_B_Parity")) == State::S1))
+            set_parity =true;
         /*Checking RAM condition*/
-        if ((cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0))
+        else if ((cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0))
             set_parity = get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"))) );
         /*ROM condition with only readport*/
         else
