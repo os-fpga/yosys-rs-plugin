@@ -159,9 +159,19 @@ struct RSDspSimdPass : public Pass {
 
                     std::string name = stringf("simd_%s_%s", RTLIL::unescape_id(dsp_a->name).c_str(), RTLIL::unescape_id(dsp_b->name).c_str());
                     std::string SimdDspType;
-
-                    if (use_cfg_params)
+                    /*EDA-2528- Checking the condition for not merging DSP with reg-out with a DSP that dont have a reg-out*/
+                    bool conti = false;
+                    if (use_cfg_params && technology == "genesis3"){
+                        for (const auto &it : m_DspParams2Mode) {
+                            if (dsp_a->getParam(RTLIL::escape_id(it)) != dsp_b->getParam(RTLIL::escape_id(it))){ 
+                                conti = true;
+                                break;
+                            }
+                        }
+                        if (conti)continue;
+                    /*--------------------------------------------EDA-2528-----------------------------------------------------*/
                         SimdDspType = m_SimdDspType_cfg_params;
+                    }
                     else
                         SimdDspType = m_SimdDspType_cfg_ports;
 
