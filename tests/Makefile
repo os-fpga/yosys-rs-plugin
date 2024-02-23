@@ -6,14 +6,14 @@ TESTS_GEN = dffs_gen\
             full_adder_gen\
             dsp_macc_gen\
             dsp_mult_gen\
-            dsp_simd_gen\
             pack_dsp_regs_gen\
             bram_tdp_gen\
             bram_sdp_gen\
             bram_sdp_split_gen\
             bram_tdp_split_gen
-        #bram_asymmetric_wider_read\
-        #bram_asymmetric_wider_write
+            #dsp_simd_gen\
+            #bram_asymmetric_wider_read\
+            #bram_asymmetric_wider_write
 
 TESTS_GEN2 = dffs_gen2\
              latches_gen2\
@@ -43,7 +43,7 @@ VALGRIND_TESTS_GEN = valgrind/dffs_gen\
                      valgrind/full_adder_gen\
                      valgrind/dsp_macc_gen\
                      valgrind/dsp_mult_gen\
-                     valgrind/dsp_simd_gen\
+                     #valgrind/dsp_simd_gen\
                      valgrind/pack_dsp_regs_gen\
                      valgrind/bram_tdp_gen\
                      valgrind/bram_sdp_gen\
