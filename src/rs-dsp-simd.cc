@@ -168,6 +168,13 @@ struct RSDspSimdPass : public Pass {
                                 break;
                             }
                         }
+                        for (auto &it : m_DspParamsGen3) {
+                            if (dsp_a->getParam(RTLIL::escape_id(it)) != dsp_b->getParam(RTLIL::escape_id(it))){ 
+                                conti = true;
+                                log_warning("Can not merge two DSP19X2 due to different clock domains.\n");
+                                break;
+                            }
+                        }
                         if (conti)continue;
                     /*--------------------------------------------EDA-2528-----------------------------------------------------*/
                         SimdDspType = m_SimdDspType_cfg_params;
