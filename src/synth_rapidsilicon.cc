@@ -1750,6 +1750,73 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             }
         }
     }
+void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
+    
+    RTLIL::Const tmp_init;
+    std::vector<RTLIL::State> init_value1; 
+    std::vector<RTLIL::State> init_parity_value1;
+
+    if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_TDP")) || (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM36_SDP"))){
+        RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+        switch (mode.as_int()) {
+            case 9:
+            case 18:{
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                        for (int j = 0; j <16; ++j)
+                            init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                        for (int k = 16; k < BRAM_WIDTH_18; k++)
+                                    init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
+                    }
+                break;
+            }
+            case 36:{
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                        for (int j = 0; j <32; ++j)
+                            init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
+                        for (int k = 32; k < BRAM_WIDTH_36; k++)
+                            init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + k]);
+                    }
+                break;
+            }
+            default: {
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
+                        for (int j = 0; j <32; ++j)
+                            init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
+                        for (int k = 32; k < BRAM_WIDTH_36; k++)
+                            init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + k]);
+                    }
+                break;
+            }
+        }
+    }
+    else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP")) || (cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_SDP"))){
+        RTLIL::Const tmp_init = cell->getParam(RTLIL::escape_id("INIT"));
+        switch (mode.as_int()) {
+            case 9:
+            case 18:{
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                        for (int j = 0; j <16; ++j)
+                            init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                        for (int k = 16; k < BRAM_WIDTH_18; k++)
+                            init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
+                    }
+                break;
+            }
+            default: {
+                    for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
+                        for (int j = 0; j <16; ++j)
+                            init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
+                        for (int k = 16; k < BRAM_WIDTH_18; k++)
+                            init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
+                    }
+                break;
+            }
+        }
+    }
+    cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
+    cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
+}
+
 
     bool SetParityTDPmode(Cell* cell) {
         bool set_parity {false};
@@ -1764,6 +1831,12 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
             get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+            if (!set_parity) {
+                //Symmetric RAM INIT Condition without parity bits
+                if (cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")) == cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))){
+                    Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));  
+                }
+            }
         }
         /*Checking RAM condition with single write Port*/
         else if (!(cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) != State::S0)
@@ -1772,6 +1845,12 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
             cell->setParam(stringf("\\PORT_D_DATA_WIDTH"), cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")));
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")))) &&
             get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")))));
+            if (!set_parity) {
+                //Symmetric RAM INIT Condition without parity bits
+                if (cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")) == cell->getParam(RTLIL::escape_id("PORT_D_WIDTH"))){
+                    Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));  
+                }
+            }
         }
         /*Checking ROM condition with only readports*/
         else if ((cell->hasParam(RTLIL::escape_id("PORT_D_DATA_WIDTH"))) && (cell->getParam(RTLIL::escape_id("PORT_D_DATA_WIDTH")) == State::S0)
@@ -1779,6 +1858,12 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
             set_parity = (get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_C_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_C_DATA_WIDTH")))) &&
             get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_A_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH")))));
+            if (!set_parity) {
+                //Symmetric ROM INIT Condition without parity bits
+                if (cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")) == cell->getParam(RTLIL::escape_id("PORT_C_WIDTH"))){
+                    Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")));  
+                }
+            }
         }
         else
         {
@@ -1794,11 +1879,25 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
         if ((cell->hasParam(RTLIL::escape_id("PORT_B_Parity")) && cell->getParam(RTLIL::escape_id("PORT_B_Parity")) == State::S1))
             set_parity =true;
         /*Checking RAM condition*/
-        else if ((cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0))
+        else if ((cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH")) != State::S0)){
             set_parity = get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_B_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_B_DATA_WIDTH"))) );
+            if (!set_parity) {
+                //Symmetric RAM INIT Condition without parity bits
+                if (cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")) == cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")))
+                    Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+                //Asymmetric RAM INIT Condition without parity bits take the min width
+                else if (cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")) < cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")))
+                    Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
+                else
+                    Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_B_WIDTH")));
+            }
+        }
         /*ROM condition with only readport*/
-        else
+        else{
             set_parity = get_parity_36_mode((cell->getParam(RTLIL::escape_id("PORT_A_WIDTH"))),(cell->getParam(RTLIL::escape_id("PORT_A_DATA_WIDTH"))) );
+            if (!set_parity)
+                Set_INIT_PlacementWithNoParity_mode(cell,cell->getParam(RTLIL::escape_id("PORT_A_WIDTH")));
+        }
         return set_parity;
     }
 
@@ -1878,16 +1977,6 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                         cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
                     }
-                    else {
-                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-                            for (int j = 0; j <32; ++j)
-                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
-                            for (int k = 33; k < BRAM_WIDTH_36; k++)
-                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + k]);
-                        }
-                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
-                    }
                 }
                
                 /// For  $__RS_FACTOR_BRAM18_SDP
@@ -1914,18 +2003,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
                         cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
                     }
-                    else{
-                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-                            for (int j = 0; j <16; ++j)
-                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            for (int k = 16; k < BRAM_WIDTH_18; k++)
-                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
-                        }
-                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
-                    }
-                }
-                
+                }   
             }
         }
     }
@@ -1961,16 +2039,6 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1)); // Assigning data bits
                         cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1)); //Assigning parity bits
                     }
-                    else {
-                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_36_WIDTH; ++i) {
-                            for (int j = 0; j <32; ++j)
-                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + j]);
-                            for (int k = 33; k < BRAM_WIDTH_36; k++)
-                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_36 + k]);
-                        }
-                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1)); // Assigning data bits
-                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));//Assigning parity bits
-                    }
                 }
                 /// For  $__RS_FACTOR_BRAM18_TDP
                 else if ((cell->type == RTLIL::escape_id("$__RS_FACTOR_BRAM18_TDP"))) 
@@ -1994,16 +2062,6 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         }
                         cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));// Assigning data bits
                         cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));//Assigning parity bits
-                    }
-                    else{
-                        for (int i = 0; i < BRAM_MAX_ADDRESS_FOR_18_WIDTH; ++i) {
-                            for (int j = 0; j <16; ++j)
-                                init_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + j]);
-                            for (int k = 16; k < BRAM_WIDTH_18; k++)
-                                init_parity_value1.push_back(tmp_init.bits[i*BRAM_WIDTH_18 + k]);
-                        }
-                        cell->setParam(RTLIL::escape_id("INIT"), RTLIL::Const(init_value1));
-                        cell->setParam(RTLIL::escape_id("INIT_PARITY"), RTLIL::Const(init_parity_value1));
                     }
                 }
                 CHECK_PARAM();
@@ -2735,7 +2793,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
                         if (cec)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
 #if 1
-                        run("stat");
+                        //run("stat");
                         run("techmap -map " + dsp38MapFile);
                         if (new_dsp19x2)
                             run("techmap -map " + dsp19x2MapFile);
