@@ -3251,8 +3251,6 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
            
            if (!no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
-                // Alain: We don't know yet how to edit-out correctly the CLK_BUF, once that is fixed, we will uncomment the following line:
-                // run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
