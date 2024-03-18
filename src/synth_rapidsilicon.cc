@@ -380,6 +380,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
     ClockEnableStrategy clke_strategy;
     string use_dsp_cfg_params;
 
+    // For Ports properties extraction
+    //
+    std::set<SigSpec> pp_clocks;
+    std::set<SigSpec> pp_asyncSet;
+    std::set<SigSpec> pp_asyncReset;
+    std::set<SigSpec> pp_syncSet;
+    std::set<SigSpec> pp_syncReset;
+    std::set<SigSpec> pp_clkEnable;
+    std::set<SigSpec> pp_activeHigh;
+    std::set<SigSpec> pp_activeLow;
+    std::set<SigSpec> pp_fake;
+
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -2476,6 +2488,728 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
        }
     }
 
+static std::string id(RTLIL::IdString internal_id)
+{
+        const char *str = internal_id.c_str();
+        return std::string(str);
+}
+
+static void dump_const(const RTLIL::Const &data, int width = -1, int offset = 0, bool no_decimal = false, bool escape_comment = false)
+{
+        bool set_signed = (data.flags & RTLIL::CONST_FLAG_SIGNED) != 0;
+        if (width < 0)
+                width = data.bits.size() - offset;
+        if (width == 0) {
+                log("{0{1'b0}}");
+                return;
+        }
+#if 0
+        if (nostr)
+                goto dump_hex;
+#endif
+        if ((data.flags & RTLIL::CONST_FLAG_STRING) == 0 || width != (int)data.bits.size()) {
+                if (width == 32 && !no_decimal && 1) {
+                        int32_t val = 0;
+                        for (int i = offset+width-1; i >= offset; i--) {
+                                log_assert(i < (int)data.bits.size());
+                                if (data.bits[i] != State::S0 && data.bits[i] != State::S1)
+                                        goto dump_hex;
+                                if (data.bits[i] == State::S1)
+                                        val |= 1 << (i - offset);
+                        }
+                        if (1)
+                                log("%d", val);
+                        else if (set_signed && val < 0)
+                                log("-32'sd%u", -val);
+                        else
+                                log("32'%sd%u", set_signed ? "s" : "", val);
+                } else {
+        dump_hex:
+                        if (1)
+                                goto dump_bin;
+                        vector<char> bin_digits, hex_digits;
+                        for (int i = offset; i < offset+width; i++) {
+                                log_assert(i < (int)data.bits.size());
+                                switch (data.bits[i]) {
+                                case State::S0: bin_digits.push_back('0'); break;
+                                case State::S1: bin_digits.push_back('1'); break;
+                                case RTLIL::Sx: bin_digits.push_back('x'); break;
+                                case RTLIL::Sz: bin_digits.push_back('z'); break;
+                                case RTLIL::Sa: bin_digits.push_back('?'); break;
+                                case RTLIL::Sm: log_error("Found marker state in final netlist.");
+                                }
+                        }
+                        if (GetSize(bin_digits) == 0)
+                                goto dump_bin;
+                        while (GetSize(bin_digits) % 4 != 0)
+                                if (bin_digits.back() == '1')
+                                        bin_digits.push_back('0');
+                                else
+                                        bin_digits.push_back(bin_digits.back());
+                        for (int i = 0; i < GetSize(bin_digits); i += 4)
+                        {
+                                char bit_3 = bin_digits[i+3];
+                                char bit_2 = bin_digits[i+2];
+                                char bit_1 = bin_digits[i+1];
+                                char bit_0 = bin_digits[i+0];
+                                if (bit_3 == 'x' || bit_2 == 'x' || bit_1 == 'x' || bit_0 == 'x') {
+                                        if (bit_3 != 'x' || bit_2 != 'x' || bit_1 != 'x' || bit_0 != 'x')
+                                                goto dump_bin;
+                                        hex_digits.push_back('x');
+                                        continue;
+                                }
+                                if (bit_3 == 'z' || bit_2 == 'z' || bit_1 == 'z' || bit_0 == 'z') {
+                                        if (bit_3 != 'z' || bit_2 != 'z' || bit_1 != 'z' || bit_0 != 'z')
+                                                goto dump_bin;
+                                        hex_digits.push_back('z');
+                                        continue;
+                                }
+                                if (bit_3 == '?' || bit_2 == '?' || bit_1 == '?' || bit_0 == '?') {
+                                        if (bit_3 != '?' || bit_2 != '?' || bit_1 != '?' || bit_0 != '?')
+                                                goto dump_bin;
+                                        hex_digits.push_back('?');
+                                        continue;
+                                }
+                                int val = 8*(bit_3 - '0') + 4*(bit_2 - '0') + 2*(bit_1 - '0') + (bit_0 - '0');
+                                hex_digits.push_back(val < 10 ? '0' + val : 'a' + val - 10);
+                        }
+                        log("%d'%sh", width, set_signed ? "s" : "");
+                        for (int i = GetSize(hex_digits)-1; i >= 0; i--)
+                                log(hex_digits[i]);
+                }
+                if (0) {
+        dump_bin:
+                        log("%d'%sb", width, set_signed ? "s" : "");
+                        if (width == 0)
+                                log("0");
+                        for (int i = offset+width-1; i >= offset; i--) {
+                                log_assert(i < (int)data.bits.size());
+                                switch (data.bits[i]) {
+                                case State::S0: log("0"); break;
+                                case State::S1: log("1"); break;
+                                case RTLIL::Sx: log("x"); break;
+                                case RTLIL::Sz: log("z"); break;
+                                case RTLIL::Sa: log("?"); break;
+                                case RTLIL::Sm: log_error("Found marker state in final netlist.");
+                                }
+                        }
+                }
+        } else {
+                if ((data.flags & RTLIL::CONST_FLAG_REAL) == 0)
+                        log("\"");
+                std::string str = data.decode_string();
+                for (size_t i = 0; i < str.size(); i++) {
+                        if (str[i] == '\n')
+                                log("\\n");
+                        else if (str[i] == '\t')
+                                log("\\t");
+                        else if (str[i] < 32)
+                                log("\\%03o", str[i]);
+                        else if (str[i] == '"')
+                                log("\\\"");
+                        else if (str[i] == '\\')
+                                log("\\\\");
+                        else if (str[i] == '/' && escape_comment && i > 0 && str[i-1] == '*')
+                                log("\\/");
+                        else
+                                log(str[i]);
+                }
+                if ((data.flags & RTLIL::CONST_FLAG_REAL) == 0)
+                        log("\"");
+        }
+}
+
+static void dump_sigchunk(const RTLIL::SigChunk &chunk, bool no_decimal = false)
+{
+    if (chunk.wire == NULL) {
+        dump_const(chunk.data, chunk.width, chunk.offset, no_decimal);
+        return;
+    }
+
+    if (chunk.width == chunk.wire->width && chunk.offset == 0) {
+
+        log("%s", id(chunk.wire->name).c_str());
+
+    } else if (chunk.width == 1) {
+
+        if (chunk.wire->upto)
+            log("%s[%d]", id(chunk.wire->name).c_str(),
+                (chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
+        else
+            log("%s[%d]", id(chunk.wire->name).c_str(), chunk.offset + chunk.wire->start_offset);
+
+    } else {
+
+        if (chunk.wire->upto)
+             log("%s[%d:%d]", id(chunk.wire->name).c_str(),
+                 (chunk.wire->width - (chunk.offset + chunk.width - 1) - 1) + chunk.wire->start_offset,
+                 (chunk.wire->width - chunk.offset - 1) + chunk.wire->start_offset);
+        else
+             log("%s[%d:%d]", id(chunk.wire->name).c_str(),
+                 (chunk.offset + chunk.width - 1) + chunk.wire->start_offset,
+                 chunk.offset + chunk.wire->start_offset);
+    }
+}
+
+static void show_sig(const RTLIL::SigSpec &sig)
+{
+        if (GetSize(sig) == 0) {
+           log("{0{1'b0}}");
+           return;
+        }
+
+        if (sig.is_chunk()) {
+
+            dump_sigchunk(sig.as_chunk());
+
+        } else {
+
+            log("{ ");
+
+            for (auto it = sig.chunks().rbegin(); it != sig.chunks().rend(); ++it) {
+
+                 if (it != sig.chunks().rbegin())
+                    log(", ");
+
+                 dump_sigchunk(*it, true);
+            }
+            log(" }");
+        }
+}
+ 
+    void dumpSig(std::ofstream &json_file, const RTLIL::SigSpec &sig)
+    {
+        const RTLIL::SigChunk chunk = sig.as_chunk();
+
+        const char* name = "\\";
+
+        if (chunk.width == chunk.wire->width && chunk.offset == 0) {
+          name = id(chunk.wire->name).c_str();
+        }
+        // any name is prefixed with '\' so we need to remove it
+        name++;
+
+        json_file << "\"";
+        json_file << name;
+        json_file << "\"";
+    }
+
+    int checkCell(Cell* cell, const string cellName, 
+                  const string& port1, std::set<SigSpec>& pp_group1, std::set<SigSpec>& pp_activeValue1,
+                  const string& port2, std::set<SigSpec>& pp_group2, std::set<SigSpec>& pp_activeValue2)
+    {
+      if (cell->type != RTLIL::escape_id(cellName)) {
+        return 0;
+      }
+
+      for (auto &conn : cell->connections()) {
+
+          IdString portName = conn.first;
+          RTLIL::SigSpec actual = conn.second;
+
+          if (portName == RTLIL::escape_id(port1)) {
+             pp_group1.insert(actual);
+             pp_activeValue1.insert(actual);
+             continue;
+          }
+
+          if (portName == RTLIL::escape_id(port2)) {
+             pp_group2.insert(actual);
+             pp_activeValue2.insert(actual);
+             continue;
+          }
+      }
+
+      return 1;
+    }
+
+    void dumpPortProperties(string jsonFile)
+    {
+
+        log("\nDumping port properties into '%s' file.\n", jsonFile.c_str());
+
+        for (auto cell : _design->top_module()->cells()) {
+           
+           //log("Cell = %s\n", (cell->type).c_str());
+
+           if (cell->type == RTLIL::escape_id("$lut")) {
+              continue;
+           }
+
+           // Check simple DFF with no set/reset (but eventually with clock Enable 'E')
+           //
+           if (checkCell(cell, "$_DFF_P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "", pp_fake, pp_fake)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PP_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "", pp_fake, pp_fake)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PN_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "", pp_fake, pp_fake)) {
+              continue;
+           }
+
+           if (checkCell(cell, "$_DFF_N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "", pp_fake, pp_fake)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NP_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "", pp_fake, pp_fake)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NN_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "", pp_fake, pp_fake)) {
+              continue;
+           }
+
+           // Process DFF with only asynchromous set/reset
+           //
+           // Check DFF with negative clock and async set/reset
+           //
+           if (checkCell(cell, "$_DFF_NP0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFF_NP1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFF_NN0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFF_NN1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeLow)) {
+              continue;
+           }
+
+           // Check DFF with positive clock and async set/reset
+           //
+           if (checkCell(cell, "$_DFF_PP0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFF_PP1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFF_PN0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFF_PN1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeLow)) {
+              continue;
+           }
+
+           // Check DFF with positive clock with clock enable and async. set/reset
+           //
+           if (checkCell(cell, "$_DFFE_PN0P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PN0N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PP0P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PN0N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PN1P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PN1N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PP1P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_PP1N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncSet, pp_activeHigh)) {
+              continue;
+           }
+
+           // Check DFF with negative clock with clock enable and async. set/reset
+           //
+           if (checkCell(cell, "$_DFFE_NN0P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NN0N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NP0P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NN0N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NN1P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NN1N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NP1P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_DFFE_NP1N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncSet, pp_activeHigh)) {
+              continue;
+           }
+
+
+           // Process DFF with only synchromous set/reset
+           //
+           // Check DFF with negative clock and async set/reset
+           //
+           if (checkCell(cell, "$_SDFF_NP0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFF_NP1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFF_NN0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFF_NN1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeLow)) {
+              continue;
+           }
+
+           // Check DFF with positive clock and sync set/reset
+           //
+           if (checkCell(cell, "$_SDFF_PP0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFF_PP1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFF_PN0_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFF_PN1_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeLow)) {
+              continue;
+           }
+
+           // Check DFF with positive clock with clock enable and sync. set/reset
+           //
+           if (checkCell(cell, "$_SDFFE_PN0P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PN0N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PP0P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PN0N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PN1P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PN1N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PP1P_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_PP1N_", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_syncSet, pp_activeHigh)) {
+              continue;
+           }
+
+           // Check DFF with negative clock with clock enable and sync. set/reset
+           //
+           if (checkCell(cell, "$_SDFFE_NN0P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NN0N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NP0P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NN0N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncReset, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NN1P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NN1N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeLow)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NP1P_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeHigh)) {
+              continue;
+           }
+           if (checkCell(cell, "$_SDFFE_NP1N_", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_syncSet, pp_activeHigh)) {
+              continue;
+           }
+
+
+           // Processed DSP38 if clocked
+           //
+           if (checkCell(cell, "DSP38", 
+                         "CLK", pp_clocks, pp_activeHigh,
+                         "RESET", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+
+           // Process BRAM
+           //
+           if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
+
+             for (auto &conn : cell->connections()) {
+
+                IdString portName = conn.first;
+
+                RTLIL::SigSpec actual = conn.second;
+
+                if ((portName == RTLIL::escape_id("CLK_A")) || 
+                    (portName == RTLIL::escape_id("CLK_B"))) {
+
+                  pp_clocks.insert(actual);
+                  pp_activeHigh.insert(actual);
+                  continue;
+                }
+             }
+             continue;
+           }
+
+           if (cell->type == RTLIL::escape_id("TDP_RAM18KX2")) {
+
+             for (auto &conn : cell->connections()) {
+
+                IdString portName = conn.first;
+
+                RTLIL::SigSpec actual = conn.second;
+
+                if ((portName == RTLIL::escape_id("CLK_A1")) ||
+                    (portName == RTLIL::escape_id("CLK_A2")) ||
+                    (portName == RTLIL::escape_id("CLK_B1")) ||
+                    (portName == RTLIL::escape_id("CLK_B2"))) {
+
+                  pp_clocks.insert(actual);
+                  pp_activeHigh.insert(actual);
+                  continue;
+                }
+             }
+             continue;
+           }
+
+           if (cell->type == RTLIL::escape_id("RS_TDP36K")) {
+
+             for (auto &conn : cell->connections()) {
+
+                IdString portName = conn.first;
+
+                RTLIL::SigSpec actual = conn.second;
+
+                if ((portName == RTLIL::escape_id("CLK_A1")) ||
+                    (portName == RTLIL::escape_id("CLK_A2")) ||
+                    (portName == RTLIL::escape_id("CLK_B1")) ||
+                    (portName == RTLIL::escape_id("CLK_B2"))) {
+
+                  pp_clocks.insert(actual);
+                  pp_activeHigh.insert(actual);
+                  continue;
+                }
+             }
+             continue;
+           }
+
+        }
+
+        // Now dump the previous extracted port properties info into a json file
+        //
+        bool firstLine = true;
+
+        std::ofstream json_file(jsonFile);
+
+        json_file << "{\n";
+        json_file << "  \"ports\" : [\n";
+
+        for (auto wire : _design->top_module()->wires()) {
+
+           if (!wire->port_input && !wire->port_output) {
+             continue;
+           }
+
+           RTLIL::SigSpec io = wire;
+
+           if (firstLine) {
+             firstLine = false;
+           } else {
+             json_file << ",\n";
+           }
+
+           json_file << "     {\n";
+
+           json_file << "        \"name\": ";
+
+           dumpSig(json_file, io);
+
+           json_file << ",\n";
+
+           if (wire->port_input) {
+             json_file << "        \"direction\": \"input\"";
+           } else {
+             json_file << "        \"direction\": \"output\"";
+           }
+
+           if (pp_clocks.count(io)) {
+             json_file << ",\n        \"clock\": ";
+
+             if (pp_activeHigh.count(io)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(io)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_asyncReset.count(io)) {
+             json_file << ",\n        \"async_reset\": ";
+             if (pp_activeHigh.count(io)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(io)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_asyncSet.count(io)) {
+             json_file << ",\n        \"async_set\": ";
+             if (pp_activeHigh.count(io)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(io)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_syncReset.count(io)) {
+             json_file << ",\n        \"sync_reset\": ";
+             if (pp_activeHigh.count(io)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(io)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_syncSet.count(io)) {
+             json_file << ",\n        \"sync_set\": ";
+             if (pp_activeHigh.count(io)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(io)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else {
+               json_file << "\n";
+           }
+
+           json_file << "     }";
+        }
+
+        json_file << "\n   ]\n";
+        json_file << "}\n";
+
+        json_file.close();
+
+    }
+
     void script() override
     {
         string readArgs;
@@ -2960,6 +3694,12 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
         string techMapArgs = " -map +/techmap.v";
         run("techmap " + techMapArgs);
 #endif
+        // Extract Port properties like CLK, RST, ASYN, SYNC, ACTIVE_LOW, ... and do
+        // this before DFF legalization pass. Indeed this DFF legalization pass
+        // may remove SYNC set/reset logic when library DFFs do not have any set/reset pins.
+        // Then dump a "port_info.json" JSOn file storing the ports properties.
+        //
+        dumpPortProperties("port_info.json");
 
         if (fast) {
             // commenting : 
