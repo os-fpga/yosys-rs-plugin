@@ -2723,16 +2723,176 @@ static void show_sig(const RTLIL::SigSpec &sig)
       return 1;
     }
 
-    void dumpPortProperties(string jsonFile)
+    // EDA-2594 requirement : 
+    //
+    // Dump a JSON file storing top level ports properties like :
+    //
+    //    - direction : input/output
+    //    - clocked : no or active low or high
+    //    - async set/reset : no or set or reset. Active low or high
+    //    - sync set/reset : no or set or reset. Active low or high
+    //
+    // Example :
+    // 
+    //  {
+    //    "ports" : [
+    //       {
+    //          "name": "a",
+    //          "direction": "input"
+    //       },
+    //       {
+    //          "name": "b",
+    //          "direction": "input"
+    //       },
+    //       {
+    //          "name": "c",
+    //          "direction": "output"
+    //       },
+    //       {
+    //          "name": "clk",
+    //          "direction": "input",
+    //          "clock": "active_high"
+    //       },
+    //       {
+    //          "name": "enable",
+    //          "direction": "input"
+    //       },
+    //       {
+    //          "name": "reset",
+    //          "direction": "input",
+    //          "sync_reset": "active_high"
+    //       }
+    //     ]
+    //  }
+    //
+    void dumpPortProperties(string jsonFileName)
     {
 
-        log("\nDumping port properties into '%s' file.\n", jsonFile.c_str());
+        log("\nDumping port properties into '%s' file.\n", jsonFileName.c_str());
+
+        // General approach : 
+        //
+        // 1. First visit all the cells of the design an store info.
+        // 2. Dump the JSON file based on the info previously stored.
+        //
 
         for (auto cell : _design->top_module()->cells()) {
-           
-           //log("Cell = %s\n", (cell->type).c_str());
+#if 0
+           log("Cell = %s\n", (cell->type).c_str());
+#endif
 
            if (cell->type == RTLIL::escape_id("$lut")) {
+              continue;
+           }
+
+           // Case of DFF without any set/reset
+           //
+           if ((cell->type == RTLIL::escape_id("$dff")) ||
+               (cell->type == RTLIL::escape_id("$dffe"))) {
+
+              RTLIL::Const clk_pol = cell->getParam(RTLIL::escape_id("CLK_POLARITY"));
+ 
+              RTLIL::SigSpec clk = cell->getPort(ID::CLK);
+
+              // Clock
+              //
+              pp_clocks.insert(clk);
+
+              bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (clk_neg_edge) {
+                pp_activeLow.insert(clk);
+              } else {
+                pp_activeHigh.insert(clk);
+              }
+
+              continue;
+           }
+
+
+           // Case of DFF with synchronous set/reset
+           //
+           if ((cell->type == RTLIL::escape_id("$sdff")) ||
+               (cell->type == RTLIL::escape_id("$sdffe"))) {
+
+              RTLIL::Const clk_pol = cell->getParam(RTLIL::escape_id("CLK_POLARITY"));
+              RTLIL::Const srst_pol = cell->getParam(RTLIL::escape_id("SRST_POLARITY"));
+              RTLIL::Const srst_val = cell->getParam(RTLIL::escape_id("SRST_VALUE"));
+ 
+              RTLIL::SigSpec clk = cell->getPort(ID::CLK);
+              RTLIL::SigSpec srst = cell->getPort(ID::SRST);
+
+              // Clock
+              //
+              pp_clocks.insert(clk);
+
+              bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (clk_neg_edge) {
+                pp_activeLow.insert(clk);
+              } else {
+                pp_activeHigh.insert(clk);
+              }
+
+              bool srst_active_low = RTLIL::const_eq(srst_pol, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (srst_active_low) { 
+                  pp_activeLow.insert(srst);
+              } else { 
+                  pp_activeHigh.insert(srst);
+              }
+
+              bool srst_is_reset = RTLIL::const_eq(srst_val, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (srst_is_reset) { 
+                  pp_syncReset.insert(srst);
+              } else {
+                  pp_syncSet.insert(srst);
+              }
+
+              continue;
+           }
+
+           // Case of DFF with asynchronous set/reset
+           //
+           if ((cell->type == RTLIL::escape_id("$adff")) ||
+               (cell->type == RTLIL::escape_id("$adffe"))) {
+
+              RTLIL::Const clk_pol = cell->getParam(RTLIL::escape_id("CLK_POLARITY"));
+              RTLIL::Const arst_pol = cell->getParam(RTLIL::escape_id("ARST_POLARITY"));
+              RTLIL::Const arst_val = cell->getParam(RTLIL::escape_id("ARST_VALUE"));
+ 
+              RTLIL::SigSpec clk = cell->getPort(ID::CLK);
+              RTLIL::SigSpec arst = cell->getPort(ID::ARST);
+
+              // Clock
+              //
+              pp_clocks.insert(clk);
+
+              bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (clk_neg_edge) {
+                pp_activeLow.insert(clk);
+              } else {
+                pp_activeHigh.insert(clk);
+              }
+
+              bool arst_active_low = RTLIL::const_eq(arst_pol, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (arst_active_low) { 
+                  pp_activeLow.insert(arst);
+              } else { 
+                  pp_activeHigh.insert(arst);
+              }
+
+              bool arst_is_reset = RTLIL::const_eq(arst_val, RTLIL::Const(0), false, false, 1).as_bool();
+
+              if (arst_is_reset) { 
+                  pp_asyncReset.insert(arst);
+              } else {
+                  pp_asyncSet.insert(arst);
+              }
+
               continue;
            }
 
@@ -3117,7 +3277,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
         //
         bool firstLine = true;
 
-        std::ofstream json_file(jsonFile);
+        std::ofstream json_file(jsonFileName);
 
         json_file << "{\n";
         json_file << "  \"ports\" : [\n";
@@ -3578,7 +3738,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
         }
 
-#if 1
+        // Extract Port properties like CLK, RST, ASYN, SYNC, ACTIVE_LOW, ... before any : 
+        //     1. "dffunmap -srs-only" pass that may remove synchronous set/reset.
+        //     2. DFF legalization pass. Indeed this DFF legalization pass may remove SYNC 
+        //     set/reset logic when library DFFs do not have any set/reset pins.
+        //
+        // Then dump a "port_info.json" JSOn file storing the ports properties.
+        //
+        dumpPortProperties("port_info.json");
+
         // In Genesis3 we do not support DFF with sync set/reset so we need to unmap them. We do this
         // right after "mapBrams" because it may screw up Map inference if we dissolve the sync set/reset
         // logic before.
@@ -3588,7 +3756,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
           run("dffunmap -srst-only");
           top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
         }
-#endif
 
         run("pmuxtree");
 
@@ -3597,13 +3764,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
         run("memory_map");
 
         postProcessBrams();
-
-#if 0
-        if (tech == GENESIS_3) {
-          run("dffunmap -srst-only");
-          top_run_opt(0 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 1, 0);
-        }
-#endif
 
         if (check_label("map_gates")) {
             std::string arithMapFile;
@@ -3694,12 +3854,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
         string techMapArgs = " -map +/techmap.v";
         run("techmap " + techMapArgs);
 #endif
-        // Extract Port properties like CLK, RST, ASYN, SYNC, ACTIVE_LOW, ... and do
-        // this before DFF legalization pass. Indeed this DFF legalization pass
-        // may remove SYNC set/reset logic when library DFFs do not have any set/reset pins.
-        // Then dump a "port_info.json" JSOn file storing the ports properties.
-        //
-        dumpPortProperties("port_info.json");
 
         if (fast) {
             // commenting : 
