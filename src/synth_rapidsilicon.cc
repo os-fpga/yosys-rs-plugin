@@ -805,6 +805,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         run("opt_clean -purge");
 
+        run(stringf("hierarchy -check %s", top_opt.c_str()));
+
+        Module* topModule = _design->top_module();
+
+        const char* topName = topModule->name.c_str();
+        topName++; // skip the escape 
+
         run(stringf("write_verilog -selected -noexpr -nodec %s", verilogName.c_str()));
 
         run("design -reset");
@@ -817,7 +824,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         run(stringf("read_verilog -sv %s", verilogName.c_str()));
 
-        run(stringf("hierarchy %s", top_opt.c_str()));
+        run(stringf("hierarchy -top %s", topName));
 
         // Flatten the design : may not be necessary because
         //
@@ -904,7 +911,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             // Call ABC which calls command "dsec" underneath
             //
-            system(command.c_str());
+            int fail = system(command.c_str());
+
+            if (fail) {
+              log_error("Command %s failed !\n", command.c_str());
+            }
 
             log("=============================================================\n");
 
