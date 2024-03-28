@@ -4419,7 +4419,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
            run("techmap -map" + techMaplutArgs);
 #endif
         }
-        run("opt_clean");
+
         if (check_label("blif")) {
             if (!blif_file.empty()) {
                 run(stringf("write_blif %s", blif_file.c_str()));
