@@ -35,6 +35,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_DIR genesis
 #define GENESIS_2_DIR genesis2
 #define GENESIS_3_DIR genesis3
+#define SEC_MODELS_DIR sec_models
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define BLACKBOX_SIM_LIB_FILE cell_sim_blackbox.v
@@ -53,6 +54,14 @@ PRIVATE_NAMESPACE_BEGIN
 #define LUT4_SIM_FILE LUT4.v
 #define LUT5_SIM_FILE LUT5.v
 #define LUT6_SIM_FILE LUT6.v
+
+#define SEC_SIM_CELLS SEC_MODELS/simcells.v
+#define SEC_SIM_LIB SEC_MODELS/simlib.v
+#define SEC_GENESIS3 SEC_MODELS/genesis3.v
+#define SEC_DSP_MAP SEC_MODELS/dsp_map.v
+#define SEC_DSP_FINAL_MAP SEC_MODELS/dsp_final_map.v
+#define SEC_MODELS_BLIF SEC_MODELS/models.blif
+
 #define CLK_BUF_SIM_FILE CLK_BUF.v
 #define I_BUF_SIM_FILE I_BUF.v
 #define O_BUF_SIM_FILE O_BUF.v
@@ -393,15 +402,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     // For Ports properties extraction
     //
-    std::set<SigSpec> pp_clocks;
-    std::set<SigSpec> pp_asyncSet;
-    std::set<SigSpec> pp_asyncReset;
-    std::set<SigSpec> pp_syncSet;
-    std::set<SigSpec> pp_syncReset;
-    std::set<SigSpec> pp_clkEnable;
-    std::set<SigSpec> pp_activeHigh;
-    std::set<SigSpec> pp_activeLow;
-    std::set<SigSpec> pp_fake;
+    std::set<std::string> pp_clocks;
+    std::set<std::string> pp_asyncSet;
+    std::set<std::string> pp_asyncReset;
+    std::set<std::string> pp_syncSet;
+    std::set<std::string> pp_syncReset;
+    std::set<std::string> pp_clkEnable;
+    std::set<std::string> pp_activeHigh;
+    std::set<std::string> pp_activeLow;
+    std::set<std::string> pp_fake;
 
     void clear_flags() override
     {
@@ -756,18 +765,25 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log_pop();
     }
 
-    void readPrimitiveModels() {
+    void read_SEC_models() {
 
-        run("read_verilog -sv MODELS/simcells.v");
-        run("read_verilog -sv MODELS/simlib.v");
-        run("read_verilog -sv MODELS/genesis3.v");
-        run("read_verilog -sv MODELS/dsp_map.v");
-        run("read_verilog -sv MODELS/dsp_final_map.v");
+        std::string simcells = GET_FILE_PATH(GENESIS_3_DIR, SEC_SIM_CELLS);
+        std::string simlib = GET_FILE_PATH(GENESIS_3_DIR, SEC_SIM_LIB);
+        std::string genesis3 = GET_FILE_PATH(GENESIS_3_DIR, SEC_GENESIS3);
+        std::string dspmap = GET_FILE_PATH(GENESIS_3_DIR, SEC_DSP_MAP);
+        std::string dspfinalmap = GET_FILE_PATH(GENESIS_3_DIR, SEC_DSP_FINAL_MAP);
+
+        run(stringf("read_verilog -sv %s", simcells.c_str()));
+        run(stringf("read_verilog -sv %s", simlib.c_str()));
+        run(stringf("read_verilog -sv %s", genesis3.c_str()));
+        run(stringf("read_verilog -sv %s", dspmap.c_str()));
+        run(stringf("read_verilog -sv %s", dspfinalmap.c_str()));
     }
 
     void appendBlifModels(string blifName) {
 
-        const std::string& blif_file_path = "./MODELS//blif_models.blif";
+        //const std::string blif_file_path = GET_FILE_PATH(GENESIS_3_DIR, SEC_MODELS_BLIF);
+        const std::string blif_file_path = "./MODELS/models.blif";
 
         std::ifstream blif_file(blif_file_path);
         if(!blif_file.is_open()){
@@ -785,7 +801,74 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
-    void sec_check(string checkName) {
+    bool designIsSequential() {
+
+       for (auto cell : _design->top_module()->cells()) {
+
+           if (cell->type == RTLIL::escape_id("$dff")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("$dffe")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("$sdff")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("$sdffe")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("$adff")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("$adffe")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("TDP_RAM18KX2")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("RS_TDP36K")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("DFFRE")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("DFFRE1")) {
+              return true;
+           }
+           if (cell->type == RTLIL::escape_id("DSP38")) {
+              for (auto &conn : cell->connections()) {
+
+                  IdString portName = conn.first;
+                  RTLIL::SigSpec actual = conn.second;
+
+                  if (portName == RTLIL::escape_id("CLK")) {
+                     return true;
+                  }
+              }
+           }
+
+           RTLIL::IdString cellType = cell->type;
+           const char* cName = cellType.c_str();
+           string cellName = std::string(cName);
+
+           if ((cellName.length() >= 5) &&
+               (cellName.substr(0, 5) == "$_DFF")) { 
+              return true;
+           }
+
+           if ((cellName.length() >= 6) &&
+               (cellName.substr(0, 6) == "$_SDFF")) {  
+              return true;
+           }
+       }
+
+       return false;
+    }
+
+    void sec_check(string checkName, bool verify) {
         
         if (!sec) {
           return;
@@ -812,11 +895,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         const char* topName = topModule->name.c_str();
         topName++; // skip the escape 
 
-        run(stringf("write_verilog -selected -noexpr -nodec %s", verilogName.c_str()));
+        run(stringf("write_verilog -selected -noexpr -nodec -nohex %s", verilogName.c_str()));
+
+        bool isSequential = designIsSequential();
 
         run("design -reset");
 
-        readPrimitiveModels();
+        read_SEC_models();
 
         // Read the previously dumped design. This mechanism helps to succeed on 'blob_merge'
         // otherwise if we work directly on the 'design' 'dsec' returns "NOT equivalent" for 
@@ -826,14 +911,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         run(stringf("hierarchy -top %s", topName));
 
-        // Flatten the design : may not be necessary because
-        //
-        //    1/ long runtime
-        //    2/ the 'read_blif' inside 'dsec' will flatten the design anyway
-        //    3/ did not see situation where it helped 'dsec' to better succeed (UNDECIDED -> 
-        //    NOT EQUIV/EQUI, NOT EQUIV -> EQUIV)
-        //
-        // run("flatten");
+        run("flatten");
+
+        run(stringf("hierarchy -top %s", topName));
         
         run("proc");
         run("opt_expr");
@@ -897,7 +977,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
             //
             command += " ; tail -n 2 " + resName;
 
-            std::string command2 = "dsec " + previousBlifName +" " + blifName +"; quit;" ;
+            std::string command2 = "";
+
+            if (isSequential) {
+              command2 += "dsec ";
+            } else {
+              command2 += "cec ";
+            }
+            command2 += previousBlifName +" " + blifName +"; quit;" ;
 
             std::ofstream out(abc_script);
 
@@ -907,19 +994,32 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 out.close();
             }
 
-            log("\n=============================================================\n");
+            log("\n===============================================================================\n");
 
-            // Call ABC which calls command "dsec" underneath
-            //
-            int fail = system(command.c_str());
+            if (!verify) {
 
-            if (fail) {
-              log_error("Command %s failed !\n", command.c_str());
+               log("Formal Verification skipped\n");
+
+            } else {
+
+               if (isSequential) {
+                  log("DSEC : \n");
+               } else {
+                  log("CEC : \n");
+               }
+   
+               // Call ABC which calls command "dsec" underneath
+               //
+               int fail = system(command.c_str());
+
+               if (fail) {
+                 log_error("Command %s failed !\n", command.c_str());
+               }
             }
 
-            log("=============================================================\n");
+            log("===============================================================================\n");
 
-            //getchar();
+            getchar();
         }
 
         previousBlifName =  blifName;
@@ -1341,7 +1441,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (cec) {
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
         }
-        sec_check("after_lut_map");
+        sec_check("after_lut_map", true);
 
         index++;
     }
@@ -1480,7 +1580,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
     if (cec) {
         run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
     }
-    sec_check("after_lut_map");
+    sec_check("after_lut_map", true);
 
 }
 
@@ -2886,9 +2986,27 @@ static void show_sig(const RTLIL::SigSpec &sig)
         json_file << "\"";
     }
 
+    std::string* sigName(const RTLIL::SigSpec &sig)
+    {
+        const RTLIL::SigChunk chunk = sig.as_chunk();
+
+        const char* name = "\\";
+
+        if (chunk.width == chunk.wire->width && chunk.offset == 0) {
+          name = id(chunk.wire->name).c_str();
+        }
+        // any name is prefixed with '\' so we need to remove it
+        name++;
+
+        std::string* sName = new std::string;
+        *sName = std::string(name);
+
+        return sName;
+    }
+
     int checkCell(Cell* cell, const string cellName, 
-                  const string& port1, std::set<SigSpec>& pp_group1, std::set<SigSpec>& pp_activeValue1,
-                  const string& port2, std::set<SigSpec>& pp_group2, std::set<SigSpec>& pp_activeValue2)
+                  const string& port1, std::set<std::string>& pp_group1, std::set<std::string>& pp_activeValue1,
+                  const string& port2, std::set<std::string>& pp_group2, std::set<std::string>& pp_activeValue2)
     {
       if (cell->type != RTLIL::escape_id(cellName)) {
         return 0;
@@ -2898,21 +3016,144 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
           IdString portName = conn.first;
           RTLIL::SigSpec actual = conn.second;
+          std::string* actualName = sigName(actual);
 
           if (portName == RTLIL::escape_id(port1)) {
-             pp_group1.insert(actual);
-             pp_activeValue1.insert(actual);
+             pp_group1.insert(*actualName);
+             pp_activeValue1.insert(*actualName);
              continue;
           }
 
           if (portName == RTLIL::escape_id(port2)) {
-             pp_group2.insert(actual);
-             pp_activeValue2.insert(actual);
+             pp_group2.insert(*actualName);
+             pp_activeValue2.insert(*actualName);
              continue;
           }
       }
 
       return 1;
+    }
+
+    void writePortProperties(string jsonFileName)
+    {
+        run("design -save original");
+
+        run("splitnets -ports");
+
+        run(stringf("hierarchy -check %s", top_opt.c_str()));
+
+        Module* topModule = _design->top_module();
+
+        const char* topName = topModule->name.c_str();
+        topName++; // skip the escape 
+
+
+        log("\nDumping port properties into '%s' file.\n", jsonFileName.c_str());
+
+        // Now dump the extracted port properties info into a json file
+        //
+        bool firstLine = true;
+
+        std::ofstream json_file(jsonFileName);
+
+        json_file << "{\n";
+
+        json_file << "  \"top\" : \"";
+        json_file << topName;
+        json_file << "\",\n";
+
+        json_file << "  \"ports\" : [\n";
+
+        for (auto wire : _design->top_module()->wires()) {
+
+           if (!wire->port_input && !wire->port_output) {
+             continue;
+           }
+
+           RTLIL::SigSpec io = wire;
+
+           if (firstLine) {
+             firstLine = false;
+           } else {
+             json_file << ",\n";
+           }
+
+           json_file << "     {\n";
+
+           json_file << "        \"name\": ";
+
+           dumpSig(json_file, io);
+
+           std::string* ioName = sigName(io);
+
+           json_file << ",\n";
+
+           if (wire->port_input) {
+             json_file << "        \"direction\": \"input\"";
+           } else {
+             json_file << "        \"direction\": \"output\"";
+           }
+
+           if (pp_clocks.count(*ioName)) {
+             json_file << ",\n        \"clock\": ";
+
+             if (pp_activeHigh.count(*ioName)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(*ioName)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_asyncReset.count(*ioName)) {
+             json_file << ",\n        \"async_reset\": ";
+             if (pp_activeHigh.count(*ioName)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(*ioName)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_asyncSet.count(*ioName)) {
+             json_file << ",\n        \"async_set\": ";
+             if (pp_activeHigh.count(*ioName)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(*ioName)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_syncReset.count(*ioName)) {
+             json_file << ",\n        \"sync_reset\": ";
+             if (pp_activeHigh.count(*ioName)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(*ioName)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else if (pp_syncSet.count(*ioName)) {
+             json_file << ",\n        \"sync_set\": ";
+             if (pp_activeHigh.count(*ioName)) {
+               json_file << "\"active_high\"\n";
+             }
+             else if (pp_activeLow.count(*ioName)) {
+               json_file << "\"active_low\"\n";
+             }
+           }
+           else {
+               json_file << "\n";
+           }
+
+           json_file << "     }";
+        }
+
+        json_file << "\n   ]\n";
+        json_file << "}\n";
+
+        json_file.close();
+
+        run("design -load original");
+
     }
 
     // EDA-2594 requirement : 
@@ -2957,19 +3198,14 @@ static void show_sig(const RTLIL::SigSpec &sig)
     //     ]
     //  }
     //
-    void dumpPortProperties(string jsonFileName)
+    void collectPortProperties()
     {
 
         run("design -save original");
 
         run("splitnets -ports");
 
-        log("\nDumping port properties into '%s' file.\n", jsonFileName.c_str());
-
-        // General approach : 
-        //
-        // 1. First visit all the cells of the design an store info.
-        // 2. Dump the JSON file based on the info previously stored.
+        // visit all the cells of the design an store info.
         //
 
         for (auto cell : _design->top_module()->cells()) {
@@ -2990,16 +3226,18 @@ static void show_sig(const RTLIL::SigSpec &sig)
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
 
+              std::string* clkName = sigName(clk);
+
               // Clock
               //
-              pp_clocks.insert(clk);
+              pp_clocks.insert(*clkName);
 
               bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (clk_neg_edge) {
-                pp_activeLow.insert(clk);
+                pp_activeLow.insert(*clkName);
               } else {
-                pp_activeHigh.insert(clk);
+                pp_activeHigh.insert(*clkName);
               }
 
               continue;
@@ -3016,34 +3254,37 @@ static void show_sig(const RTLIL::SigSpec &sig)
               RTLIL::Const srst_val = cell->getParam(RTLIL::escape_id("SRST_VALUE"));
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
+              std::string* clkName = sigName(clk);
+
               RTLIL::SigSpec srst = cell->getPort(ID::SRST);
+              std::string* srstName = sigName(srst);
 
               // Clock
               //
-              pp_clocks.insert(clk);
+              pp_clocks.insert(*clkName);
 
               bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (clk_neg_edge) {
-                pp_activeLow.insert(clk);
+                pp_activeLow.insert(*clkName);
               } else {
-                pp_activeHigh.insert(clk);
+                pp_activeHigh.insert(*clkName);
               }
 
               bool srst_active_low = RTLIL::const_eq(srst_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (srst_active_low) { 
-                  pp_activeLow.insert(srst);
+                  pp_activeLow.insert(*srstName);
               } else { 
-                  pp_activeHigh.insert(srst);
+                  pp_activeHigh.insert(*srstName);
               }
 
               bool srst_is_reset = RTLIL::const_eq(srst_val, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (srst_is_reset) { 
-                  pp_syncReset.insert(srst);
+                  pp_syncReset.insert(*srstName);
               } else {
-                  pp_syncSet.insert(srst);
+                  pp_syncSet.insert(*srstName);
               }
 
               continue;
@@ -3059,36 +3300,51 @@ static void show_sig(const RTLIL::SigSpec &sig)
               RTLIL::Const arst_val = cell->getParam(RTLIL::escape_id("ARST_VALUE"));
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
+              std::string* clkName = sigName(clk);
+
               RTLIL::SigSpec arst = cell->getPort(ID::ARST);
+              std::string* arstName = sigName(arst);
 
               // Clock
               //
-              pp_clocks.insert(clk);
+              pp_clocks.insert(*clkName);
 
               bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (clk_neg_edge) {
-                pp_activeLow.insert(clk);
+                pp_activeLow.insert(*clkName);
               } else {
-                pp_activeHigh.insert(clk);
+                pp_activeHigh.insert(*clkName);
               }
 
               bool arst_active_low = RTLIL::const_eq(arst_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (arst_active_low) { 
-                  pp_activeLow.insert(arst);
+                  pp_activeLow.insert(*arstName);
               } else { 
-                  pp_activeHigh.insert(arst);
+                  pp_activeHigh.insert(*arstName);
               }
 
               bool arst_is_reset = RTLIL::const_eq(arst_val, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (arst_is_reset) { 
-                  pp_asyncReset.insert(arst);
+                  pp_asyncReset.insert(*arstName);
               } else {
-                  pp_asyncSet.insert(arst);
+                  pp_asyncSet.insert(*arstName);
               }
 
+              continue;
+           }
+
+           if (checkCell(cell, "DFFRE", 
+                         "C", pp_clocks, pp_activeHigh,
+                         "R", pp_asyncReset, pp_activeLow)) {
+              continue;
+           }
+
+           if (checkCell(cell, "DFFNRE", 
+                         "C", pp_clocks, pp_activeLow,
+                         "R", pp_asyncReset, pp_activeLow)) {
               continue;
            }
 
@@ -3413,12 +3669,13 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 IdString portName = conn.first;
 
                 RTLIL::SigSpec actual = conn.second;
+                std::string* actualName = sigName(actual);
 
                 if ((portName == RTLIL::escape_id("CLK_A")) || 
                     (portName == RTLIL::escape_id("CLK_B"))) {
 
-                  pp_clocks.insert(actual);
-                  pp_activeHigh.insert(actual);
+                  pp_clocks.insert(*actualName);
+                  pp_activeHigh.insert(*actualName);
                   continue;
                 }
              }
@@ -3432,14 +3689,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 IdString portName = conn.first;
 
                 RTLIL::SigSpec actual = conn.second;
+                std::string* actualName = sigName(actual);
 
                 if ((portName == RTLIL::escape_id("CLK_A1")) ||
                     (portName == RTLIL::escape_id("CLK_A2")) ||
                     (portName == RTLIL::escape_id("CLK_B1")) ||
                     (portName == RTLIL::escape_id("CLK_B2"))) {
 
-                  pp_clocks.insert(actual);
-                  pp_activeHigh.insert(actual);
+                  pp_clocks.insert(*actualName);
+                  pp_activeHigh.insert(*actualName);
                   continue;
                 }
              }
@@ -3453,14 +3711,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 IdString portName = conn.first;
 
                 RTLIL::SigSpec actual = conn.second;
+                std::string* actualName = sigName(actual);
 
                 if ((portName == RTLIL::escape_id("CLK_A1")) ||
                     (portName == RTLIL::escape_id("CLK_A2")) ||
                     (portName == RTLIL::escape_id("CLK_B1")) ||
                     (portName == RTLIL::escape_id("CLK_B2"))) {
 
-                  pp_clocks.insert(actual);
-                  pp_activeHigh.insert(actual);
+                  pp_clocks.insert(*actualName);
+                  pp_activeHigh.insert(*actualName);
                   continue;
                 }
              }
@@ -3469,116 +3728,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         }
 
-
-        run(stringf("hierarchy -check %s", top_opt.c_str()));
-
-        Module* topModule = _design->top_module();
-
-        const char* topName = topModule->name.c_str();
-        topName++; // skip the escape 
-
-        // Now dump the previous extracted port properties info into a json file
-        //
-        bool firstLine = true;
-
-        std::ofstream json_file(jsonFileName);
-
-        json_file << "{\n";
-
-        json_file << "  \"top\" : \"";
-        json_file << topName;
-        json_file << "\",\n";
-
-        json_file << "  \"ports\" : [\n";
-
-        for (auto wire : _design->top_module()->wires()) {
-
-           if (!wire->port_input && !wire->port_output) {
-             continue;
-           }
-
-           RTLIL::SigSpec io = wire;
-
-           if (firstLine) {
-             firstLine = false;
-           } else {
-             json_file << ",\n";
-           }
-
-           json_file << "     {\n";
-
-           json_file << "        \"name\": ";
-
-           dumpSig(json_file, io);
-
-           json_file << ",\n";
-
-           if (wire->port_input) {
-             json_file << "        \"direction\": \"input\"";
-           } else {
-             json_file << "        \"direction\": \"output\"";
-           }
-
-           if (pp_clocks.count(io)) {
-             json_file << ",\n        \"clock\": ";
-
-             if (pp_activeHigh.count(io)) {
-               json_file << "\"active_high\"\n";
-             }
-             else if (pp_activeLow.count(io)) {
-               json_file << "\"active_low\"\n";
-             }
-           }
-           else if (pp_asyncReset.count(io)) {
-             json_file << ",\n        \"async_reset\": ";
-             if (pp_activeHigh.count(io)) {
-               json_file << "\"active_high\"\n";
-             }
-             else if (pp_activeLow.count(io)) {
-               json_file << "\"active_low\"\n";
-             }
-           }
-           else if (pp_asyncSet.count(io)) {
-             json_file << ",\n        \"async_set\": ";
-             if (pp_activeHigh.count(io)) {
-               json_file << "\"active_high\"\n";
-             }
-             else if (pp_activeLow.count(io)) {
-               json_file << "\"active_low\"\n";
-             }
-           }
-           else if (pp_syncReset.count(io)) {
-             json_file << ",\n        \"sync_reset\": ";
-             if (pp_activeHigh.count(io)) {
-               json_file << "\"active_high\"\n";
-             }
-             else if (pp_activeLow.count(io)) {
-               json_file << "\"active_low\"\n";
-             }
-           }
-           else if (pp_syncSet.count(io)) {
-             json_file << ",\n        \"sync_set\": ";
-             if (pp_activeHigh.count(io)) {
-               json_file << "\"active_high\"\n";
-             }
-             else if (pp_activeLow.count(io)) {
-               json_file << "\"active_low\"\n";
-             }
-           }
-           else {
-               json_file << "\n";
-           }
-
-           json_file << "     }";
-        }
-
-        json_file << "\n   ]\n";
-        json_file << "}\n";
-
-        json_file.close();
-
         run("design -load original");
     }
+
 
     void script() override
     {
@@ -3636,11 +3788,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
         if (check_label("prepare")) {
             run(stringf("hierarchy -check %s", top_opt.c_str()));
             run("proc");
+            
+            // Collect ports properties
+            //
+            collectPortProperties();
 
             if (cec) {
                 run("write_verilog -noattr -nohex after_proc.v");
             }
-            sec_check("after_proc");
+            sec_check("after_proc", true);
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
@@ -3656,7 +3812,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
             }
-            sec_check("before_tribuf");
+            sec_check("before_tribuf", true);
 
             /*Added to support OBUFT  if keep_tribuf flag is given*/
             if(keep_tribuf) { //non defualt mode :we keep TRIBUF
@@ -3674,7 +3830,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
                    run("write_verilog -noattr -nohex after_tribuf_merge.v");
                 }
-                sec_check("after_tribuf_merge");
+                sec_check("after_tribuf_merge", true);
 
                 // specific Rapid Silicon logic with -rs_logic option
                 //
@@ -3683,7 +3839,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                    run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
                 }
-                sec_check("after_tribuf_logic");
+                sec_check("after_tribuf_logic", true);
             
 #else
             // Old tri-state handling
@@ -3703,7 +3859,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
             }
-            sec_check("after_opt_clean1");
+            sec_check("after_opt_clean1", true);
 
             run("check");
 
@@ -3719,7 +3875,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_fsm.v");
             }
-            sec_check("after_fsm");
+            sec_check("after_fsm", true);
 
             run("wreduce -keepdc");
             run("peepopt");
@@ -3746,7 +3902,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean2.v");
             }
-            sec_check("after_opt_clean2");
+            sec_check("after_opt_clean2", true);
         }
 
         transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
@@ -3818,7 +3974,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
-                        sec_check("after_dsp_map3");
+                        sec_check("after_dsp_map3", true);
 
                         // Fractuated mode has been disabled for Genesis2
                         // Fractuated mode has been disabled for Genesis3
@@ -3833,7 +3989,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
-                        sec_check("after_dsp_map4");
+                        sec_check("after_dsp_map4", true);
 
                         if (tech == Technologies::GENESIS)
                             run("rs-pack-dsp-regs -genesis");
@@ -3852,7 +4008,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
-                        sec_check("after_dsp_map5");
+                        sec_check("after_dsp_map5", true);
 
                         break;
                     }
@@ -3895,7 +4051,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
-                        sec_check("after_dsp_map3");
+                        sec_check("after_dsp_map3", true);
 
                         // Fractuated mode has been enabled for Genesis3
                         if (tech == Technologies::GENESIS_3  && new_dsp19x2)
@@ -3909,7 +4065,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
-                        sec_check("after_dsp_map4");
+                        sec_check("after_dsp_map4", true);
 
                         run("rs-pack-dsp-regs -genesis3");
 
@@ -3921,7 +4077,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
-                        sec_check("after_dsp_map5");
+                        sec_check("after_dsp_map5", true);
 
 #if 1
                         //run("stat");
@@ -3944,7 +4100,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_alumacc.v");
             }
-            sec_check("after_alumacc");
+            sec_check("after_alumacc", true);
 
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
@@ -3964,7 +4120,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean3.v");
             }
-            sec_check("after_opt_clean3");
+            sec_check("after_opt_clean3", true);
         }
 
         if (!nobram){
@@ -3984,9 +4140,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
         //     2. DFF legalization pass. Indeed this DFF legalization pass may remove SYNC 
         //     set/reset logic when library DFFs do not have any set/reset pins.
         //
-        // Then dump a "port_info.json" JSOn file storing the ports properties.
-        //
-        dumpPortProperties("port_info.json");
+        collectPortProperties();
 
         // In Genesis3 we do not support DFF with sync set/reset so we need to unmap them. We do this
         // right after "mapBrams" because it may screw up Map inference if we dissolve the sync set/reset
@@ -4079,9 +4233,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
 
             if (cec) {
-                run("write_verilog -noattr -nohex after_carry_map.v");
+                run("write_verilog -noattr -nohex after_tech_map.v");
             }
-            sec_check("after_carry_map");
+            sec_check("after_tech_map", false);
 
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
@@ -4092,7 +4246,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
             }
-            sec_check("after_opt-fast-full");
+            sec_check("after_opt-fast-full", true);
         }
 
 #if 1
@@ -4137,7 +4291,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                     run("write_verilog -noattr -nohex before_simplify.v");
                 }
-                sec_check("before_simplify");
+                sec_check("before_simplify", true);
 
                 int dfl = 0;
 
@@ -4231,7 +4385,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                     run("write_verilog -noattr -nohex after_simplify.v");
                 }
-                sec_check("after_simplify");
+                sec_check("after_simplify", true);
             }
         }
 
@@ -4275,7 +4429,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize");
+                        sec_check("after_dfflegalize", true);
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -4298,7 +4452,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize");
+                        sec_check("after_dfflegalize", true);
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -4323,7 +4477,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize");
+                        sec_check("after_dfflegalize", true);
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -4346,7 +4500,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                     run("write_verilog -noattr -nohex after_techmap_ff_map.v");
                 }
-                sec_check("after_techmap_ff_map");
+                sec_check("after_techmap_ff_map", true);
             }
             run("opt_expr -mux_undef");
             run("simplemap");
@@ -4358,7 +4512,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
             }
-            sec_check("after_opt_clean4");
+            sec_check("after_opt_clean4", true);
 
             if (!fast)
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
@@ -4446,9 +4600,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
         log("   Number of LUTs:               %5d\n", nbLUTx);
         log("   Number of REGs:               %5d\n", nbREGs);
 
+        writePortProperties("port_info.json");
+
         reportCarryChains();
 
-        sec_check("final_netlist");
+        sec_check("final_netlist", true);
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
