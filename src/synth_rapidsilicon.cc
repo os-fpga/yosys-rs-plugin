@@ -4561,6 +4561,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
+                //EDA-2629: Remove dangling wires after CLK_BUF
+                run("opt_clean");
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
@@ -4571,6 +4573,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
            string techMaplutArgs = GET_TECHMAP_FILE_PATH(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
            run("techmap -map" + techMaplutArgs);
 #endif
+        run("opt_clean");
         }
 
         if (check_label("blif")) {
