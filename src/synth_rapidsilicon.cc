@@ -2988,7 +2988,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
     std::string* sigName(const RTLIL::SigSpec &sig)
     {
+        if (!sig.is_chunk()) {
+           return NULL;
+        }
+
         const RTLIL::SigChunk chunk = sig.as_chunk();
+
+        if (chunk.wire == NULL) {
+           return NULL;
+        }
 
         const char* name = "\\";
 
@@ -3019,15 +3027,19 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
           if (portName == RTLIL::escape_id(port1)) {
              std::string* actualName = sigName(actual);
-             pp_group1.insert(*actualName);
-             pp_activeValue1.insert(*actualName);
+             if (actualName) {
+               pp_group1.insert(*actualName);
+               pp_activeValue1.insert(*actualName);
+             }
              continue;
           }
 
           if (portName == RTLIL::escape_id(port2)) {
              std::string* actualName = sigName(actual);
-             pp_group2.insert(*actualName);
-             pp_activeValue2.insert(*actualName);
+             if (actualName) {
+               pp_group2.insert(*actualName);
+               pp_activeValue2.insert(*actualName);
+             }
              continue;
           }
       }
@@ -3086,6 +3098,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
            dumpSig(json_file, io);
 
            std::string* ioName = sigName(io);
+
+           if (!ioName) {
+             continue;
+           }
 
            json_file << ",\n";
 
@@ -3201,7 +3217,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
     //
     void collectPortProperties()
     {
-
         run("design -save original");
 
         run("splitnets -ports");
@@ -3228,6 +3243,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
 
               std::string* clkName = sigName(clk);
+
+              if (!clkName) {
+                continue;
+              }
 
               // Clock
               //
@@ -3257,8 +3276,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
               std::string* clkName = sigName(clk);
 
+              if (!clkName) {
+                continue;
+              }
+
               RTLIL::SigSpec srst = cell->getPort(ID::SRST);
               std::string* srstName = sigName(srst);
+              if (!srstName) {
+                continue;
+              }
 
               // Clock
               //
@@ -3302,9 +3328,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
               std::string* clkName = sigName(clk);
+              if (!clkName) {
+                continue;
+              }
 
               RTLIL::SigSpec arst = cell->getPort(ID::ARST);
               std::string* arstName = sigName(arst);
+              if (!arstName) {
+                continue;
+              }
 
               // Clock
               //
@@ -3670,7 +3702,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 IdString portName = conn.first;
 
                 RTLIL::SigSpec actual = conn.second;
+
                 std::string* actualName = sigName(actual);
+
+                if (!actualName) {
+                  continue;
+                }
 
                 if ((portName == RTLIL::escape_id("CLK_A")) || 
                     (portName == RTLIL::escape_id("CLK_B"))) {
@@ -3690,7 +3727,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 IdString portName = conn.first;
 
                 RTLIL::SigSpec actual = conn.second;
+
                 std::string* actualName = sigName(actual);
+
+                if (!actualName) {
+                  continue;
+                }
 
                 if ((portName == RTLIL::escape_id("CLK_A1")) ||
                     (portName == RTLIL::escape_id("CLK_A2")) ||
@@ -3712,7 +3754,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 IdString portName = conn.first;
 
                 RTLIL::SigSpec actual = conn.second;
+
                 std::string* actualName = sigName(actual);
+
+                if (!actualName) {
+                  continue;
+                }
 
                 if ((portName == RTLIL::escape_id("CLK_A1")) ||
                     (portName == RTLIL::escape_id("CLK_A2")) ||
