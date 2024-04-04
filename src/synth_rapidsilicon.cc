@@ -136,6 +136,12 @@ enum Technologies {
     GENESIS_3
 };
 
+enum SECMode {
+    ON_STEP,
+    ON,
+    OFF
+};
+
 enum CarryMode {
     AUTO,
     ALL,
@@ -243,7 +249,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
         log("    -sec\n");
         log("        Call sequential ABC formal verification flow using 'dsec'.\n");
-        log("        Disabled by default.\n");
+        log("        - on_step  : SEC is called and stopts after each incremental FV comparison.\n");
+        log("        - on       : SEC is called but never stops.\n");
+        log("        - off      : SEC is not called.\n");
+        log("        By default 'off' mode is used.\n");
         log("\n");
         log("    -carry <sub-mode>\n");
         log("        Infer Carry cells when possible.\n");
@@ -377,6 +386,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool no_flatten;
     bool no_iobuf;
     CarryMode infer_carry;
+    SECMode sec_mode;
     bool sdffr;
     bool nosimplify;
     bool keep_tribuf;
@@ -444,6 +454,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         keep_tribuf = false;
         de = false;
         de_max_threads = -1;
+        sec_mode = SECMode::OFF;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
         nolibmap = false;
@@ -465,6 +476,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string encoding_str;
         string effort_str;
         string carry_str;
+        string sec_str;
         string clke_strategy_str;
         string gen3_model;
         clear_flags();
@@ -541,8 +553,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 cec = true;
                 continue;
             }
-            if (args[argidx] == "-sec") {
-                sec = true;
+            if (args[argidx] == "-sec" && argidx + 1 < args.size()) {
+                sec_str = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-carry" && argidx + 1 < args.size()) {
@@ -725,6 +737,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
 
+        if (sec_str == "on_step")
+            sec_mode = SECMode::ON_STEP;
+        else if (sec_str == "on")
+            sec_mode = SECMode::ON;
+        else if (sec_str == "off")
+            sec_mode = SECMode::OFF;
+
         if (carry_str == "auto")
             infer_carry = CarryMode::AUTO;
         else if (carry_str == "all")
@@ -870,7 +889,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     void sec_check(string checkName, bool verify) {
         
-        if (!sec) {
+        if (sec_mode == SECMode::OFF) {
           return;
         }
 
@@ -926,8 +945,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run(stringf("write_blif %s", blifName.c_str()));
 
         appendBlifModels(blifName);
-
-        run("design -load original");
 
         // If there was a previous step then 'stat' the previous design cells
         //
@@ -1019,13 +1036,54 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             log("===============================================================================\n");
 
-            getchar();
+            if (sec_mode == SECMode::ON_STEP) {
+              getchar();
+            }
         }
 
         previousBlifName =  blifName;
         
         run("design -save previous");
+
+        run("design -load original");
     }
+
+    void sec_report() {
+        
+        if (sec_mode == SECMode::OFF) {
+          return;
+        }
+
+        log("===============================================================================\n");
+        log("SEC REPORT: \n");
+        log("\n");
+
+        log("Nb res files : ");
+        std::string command = "ls -l *.res | wc -l";
+        int fail = system(command.c_str());
+        if (fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+        log("\n");
+
+        command = "grep 'Networks are equivalent.' *.res | wc -l";
+        log("Nb equivalent comparisons : ");
+        fail = system(command.c_str());
+        if (fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+        log("\n");
+
+        log("List of NOT EQUIVALENT or UNDECIDABLE : \n\n");
+        command = "grep 'NOT EQUIVALENT' *.res ; grep 'UNDECID' *.res ";
+        fail = system(command.c_str());
+        if (0 && fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+
+        log("===============================================================================\n");
+    }
+
 
     
     void step(string msg)
@@ -4663,6 +4721,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
           log("\n");
           log_cmd_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
         }
+
+        sec_report();
     }
 
 } SynthRapidSiliconPass;
