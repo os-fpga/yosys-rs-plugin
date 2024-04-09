@@ -57,6 +57,7 @@ PRIVATE_NAMESPACE_BEGIN
 
 #define SEC_SIM_CELLS SEC_MODELS/simcells.v
 #define SEC_SIM_LIB SEC_MODELS/simlib.v
+#define SEC_CARRY SEC_MODELS/CARRY.v
 #define SEC_GENESIS3 SEC_MODELS/genesis3.v
 #define SEC_DSP_MAP SEC_MODELS/dsp_map.v
 #define SEC_DSP_FINAL_MAP SEC_MODELS/dsp_final_map.v
@@ -134,6 +135,12 @@ enum Technologies {
     GENESIS,
     GENESIS_2,
     GENESIS_3
+};
+
+enum SECMode {
+    ON_STEP,
+    ON,
+    OFF
 };
 
 enum CarryMode {
@@ -243,7 +250,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
         log("    -sec\n");
         log("        Call sequential ABC formal verification flow using 'dsec'.\n");
-        log("        Disabled by default.\n");
+        log("        - on_step  : SEC is called and stopts after each incremental FV comparison.\n");
+        log("        - on       : SEC is called but never stops.\n");
+        log("        - off      : SEC is not called.\n");
+        log("        By default 'off' mode is used.\n");
         log("\n");
         log("    -carry <sub-mode>\n");
         log("        Infer Carry cells when possible.\n");
@@ -377,6 +387,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool no_flatten;
     bool no_iobuf;
     CarryMode infer_carry;
+    SECMode sec_mode;
     bool sdffr;
     bool nosimplify;
     bool keep_tribuf;
@@ -444,6 +455,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         keep_tribuf = false;
         de = false;
         de_max_threads = -1;
+        sec_mode = SECMode::OFF;
         infer_carry = CarryMode::AUTO;
         sdffr = false;
         nolibmap = false;
@@ -465,6 +477,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         string encoding_str;
         string effort_str;
         string carry_str;
+        string sec_str;
         string clke_strategy_str;
         string gen3_model;
         clear_flags();
@@ -541,8 +554,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 cec = true;
                 continue;
             }
-            if (args[argidx] == "-sec") {
-                sec = true;
+            if (args[argidx] == "-sec" && argidx + 1 < args.size()) {
+                sec_str = args[++argidx];
                 continue;
             }
             if (args[argidx] == "-carry" && argidx + 1 < args.size()) {
@@ -725,6 +738,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         else if (effort_str != "")
             log_cmd_error("Invalid effort specified: '%s'\n", effort_str.c_str());
 
+        if (sec_str == "on_step")
+            sec_mode = SECMode::ON_STEP;
+        else if (sec_str == "on")
+            sec_mode = SECMode::ON;
+        else if (sec_str == "off")
+            sec_mode = SECMode::OFF;
+
         if (carry_str == "auto")
             infer_carry = CarryMode::AUTO;
         else if (carry_str == "all")
@@ -769,12 +789,14 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         std::string simcells = GET_FILE_PATH(GENESIS_3_DIR, SEC_SIM_CELLS);
         std::string simlib = GET_FILE_PATH(GENESIS_3_DIR, SEC_SIM_LIB);
+        std::string carry = GET_FILE_PATH(GENESIS_3_DIR, SEC_CARRY);
         std::string genesis3 = GET_FILE_PATH(GENESIS_3_DIR, SEC_GENESIS3);
         std::string dspmap = GET_FILE_PATH(GENESIS_3_DIR, SEC_DSP_MAP);
         std::string dspfinalmap = GET_FILE_PATH(GENESIS_3_DIR, SEC_DSP_FINAL_MAP);
 
         run(stringf("read_verilog -sv %s", simcells.c_str()));
         run(stringf("read_verilog -sv %s", simlib.c_str()));
+        run(stringf("read_verilog -sv %s", carry.c_str()));
         run(stringf("read_verilog -sv %s", genesis3.c_str()));
         run(stringf("read_verilog -sv %s", dspmap.c_str()));
         run(stringf("read_verilog -sv %s", dspfinalmap.c_str()));
@@ -868,24 +890,29 @@ struct SynthRapidSiliconPass : public ScriptPass {
        return false;
     }
 
+    // Performs Formal Verification between design in current memory (called "original") 
+    // and "previous" design saved as "previous".
+    //
     void sec_check(string checkName, bool verify) {
         
-        if (!sec) {
+        if (sec_mode == SECMode::OFF) {
           return;
         }
 
+        run("design -save original");
+
+        // Generate the corresponding Blif to compare with
+        //
         char name[528];
 
         sec_counter++;
 
         sprintf(name, "%03d_%s", sec_counter, checkName.c_str());
 
-        string blifName = "b" + string(name) + ".blif";
+        string currentBlifName = "b" + string(name) + ".blif";
         string verilogName = "v" + string(name) + ".v";
         string resName = "r" + string(name) + ".res";
  
-        run("design -save original");
-
         run("opt_clean -purge");
 
         run(stringf("hierarchy -check %s", top_opt.c_str()));
@@ -895,6 +922,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         const char* topName = topModule->name.c_str();
         topName++; // skip the escape 
 
+        // Dump a verilog image of the current design in memory
+        //
         run(stringf("write_verilog -selected -noexpr -nodec %s", verilogName.c_str()));
 
         bool isSequential = designIsSequential();
@@ -923,17 +952,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         // run("abc -script prepare_for_dsec.scr");
 
-        run(stringf("write_blif %s", blifName.c_str()));
+        run(stringf("write_blif %s", currentBlifName.c_str()));
 
-        appendBlifModels(blifName);
+        appendBlifModels(currentBlifName);
 
-        run("design -load original");
-
-        // If there was a previous step then 'stat' the previous design cells
+        // If there was a previous step (<=> 'sec_counter > 1') then 'stat' the previous design cells
         //
         if (sec_counter > 1) {
-
-          run("design -save current");
 
           // Load previous step to show the 'stat'
           //
@@ -944,16 +969,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
           log(" =======================\n");
 
           run("stat");
-
-          run("design -load current");
         }
 
         log(" =======================\n");
         log("     Current step:\n");
         log(" =======================\n");
 
+        run("design -load original");
+
         run("stat");
-        
+
+        run("design -save original");
+
         // If there was a previous step then perform Formal Verification between 
         // previous and current steps
         //
@@ -963,7 +990,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
             string abc_exe_dir = proc_self_dirname() + "abc";
 
-            log("Comparing : %s <--> %s (%s)\n", previousBlifName.c_str(), blifName.c_str(),
+            log("Comparing : \n\n");
+            log("  %s <-> %s (%s)\n", previousBlifName.c_str(), currentBlifName.c_str(),
                 resName.c_str());
 
             std::string command = abc_exe_dir + " -f abc.scr > " + resName;
@@ -984,7 +1012,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
             } else {
               command2 += "cec ";
             }
-            command2 += previousBlifName +" " + blifName +"; quit;" ;
+            command2 += previousBlifName +" " + currentBlifName +"; quit;" ;
 
             std::ofstream out(abc_script);
 
@@ -994,7 +1022,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 out.close();
             }
 
-            log("\n===============================================================================\n");
+            log("\n=================================================================================\n");
 
             if (!verify) {
 
@@ -1017,15 +1045,81 @@ struct SynthRapidSiliconPass : public ScriptPass {
                }
             }
 
-            log("===============================================================================\n");
+            log("=================================================================================\n");
 
-            getchar();
+            if (sec_mode == SECMode::ON_STEP) {
+              getchar();
+            }
         }
 
-        previousBlifName =  blifName;
+        previousBlifName =  currentBlifName;
         
+        run("design -load original");
+
         run("design -save previous");
     }
+
+    void sec_report() {
+        
+        if (sec_mode == SECMode::OFF) {
+          return;
+        }
+
+        log("=================================================================================\n");
+        log("SEC REPORT: \n");
+        log("\n");
+
+        log("Nb FV Comparisons (Nb res files) : ");
+        std::string command = "ls -l *.res | wc -l";
+        int fail = system(command.c_str());
+        if (fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+        log("\n");
+
+        // report NB equivalences
+        //
+        command = "grep 'Networks are equivalent.' *.res | wc -l";
+        log("Nb EQUIVALENT FV comparisons : ");
+        fail = system(command.c_str());
+        if (fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+        log("\n");
+
+        // report NB NOT equivalences
+        //
+        command = "grep 'NOT EQUIVALENT' *.res | wc -l";
+        log("Nb NOT EQUIVALENT FV comparisons : ");
+        fail = system(command.c_str());
+        if (0 && fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+        log("\n");
+        command = "grep 'NOT EQUIVALENT' *.res";
+        fail = system(command.c_str());
+        if (0 && fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+
+        // report NB UNDECIDABLE equivalences
+        //
+        command = "grep 'UNDECID' *.res | wc -l";
+        log("Nb UNDECIDABLE FV comparisons : ");
+        fail = system(command.c_str());
+        if (0 && fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+        log("\n");
+        command = "grep 'UNDECID' *.res";
+        fail = system(command.c_str());
+        if (0 && fail) {
+           log_error("Command %s failed !\n", command.c_str());
+        }
+
+        log("=================================================================================\n");
+    }
+
 
     
     void step(string msg)
@@ -1354,7 +1448,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
       }
     }
 
-    void map_luts(EffortLevel effort_lvl) {
+    void map_luts(EffortLevel effort_lvl, const std::string step) {
         static int index = 1;
         if (abc_script != "")
             run("abc -script " + abc_script);
@@ -1441,7 +1535,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (cec) {
             run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
         }
-        sec_check("after_lut_map", true);
+        sec_check(step, true);
 
         index++;
     }
@@ -1539,7 +1633,7 @@ bool isHugeDesign(int nbRegs, int nbCells)
 
 // Perform different ABC -dff optimization strategies according to "dfl" heuristice number
 //
-void abcDffOpt(int unmap_dff_ce, int n, int dfl)
+void abcDffOpt(int unmap_dff_ce, int n, int dfl, const string step)
 {
     log("\nABC-DFF iteration : %d\n", n);
 
@@ -1580,7 +1674,8 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
     if (cec) {
         run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
     }
-    sec_check("after_lut_map", true);
+
+    sec_check(step, true);
 
 }
 
@@ -1609,12 +1704,12 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
         if (isHugeDesign (nbGenericREGs, nbcells)) {
 
-          abcDffOpt(unmap_dff_ce, 1 /* step */, 0 /* dfl */); // fast version
+          abcDffOpt(unmap_dff_ce, 1 /* step */, 0 /* dfl */, "after_dffOpt_step1_dfl0"); // fast version
 
         } else {
 
-          abcDffOpt(unmap_dff_ce, 1 /* step */, 1 /* dfl */);
-          abcDffOpt(unmap_dff_ce, 2 /* step */, 1 /* dfl */);
+          abcDffOpt(unmap_dff_ce, 1 /* step */, 1 /* dfl */, "after_dffOpt_step1_dfl1");
+          abcDffOpt(unmap_dff_ce, 2 /* step */, 1 /* dfl */, "after_dffOpt_step2_dfl1");
         }
         
         // Save this first simplify solution (with default "dfl")
@@ -1627,11 +1722,11 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl)
 
         if (isHugeDesign (nbGenericREGs1, nbcells1)) {
 
-          abcDffOpt(unmap_dff_ce, 2 /* step */, 0 /* dfl */); // fast version
+          abcDffOpt(unmap_dff_ce, 2 /* step */, 0 /* dfl */, "after_dffOpt_step2_dfl0"); // fast version
         } else {
 
-          abcDffOpt(unmap_dff_ce, 3 /* step */, 2 /* dfl */);
-          abcDffOpt(unmap_dff_ce, 4 /* step */, 2 /* dfl */);
+          abcDffOpt(unmap_dff_ce, 3 /* step */, 2 /* dfl */, "after_dffOpt_step3_dfl2");
+          abcDffOpt(unmap_dff_ce, 4 /* step */, 2 /* dfl */, "after_dffOpt_step4_dfl2");
         }
 
         int nbcells2 = getNumberOfInstances();
@@ -4442,7 +4537,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
-            map_luts(effort);
+            map_luts(effort, "after_map_lut_1");
 
             if (!nosimplify)
                 run("opt_ffinv"); // help for "trial1" to gain further luts
@@ -4572,9 +4667,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         if (check_label("map_luts_2")) {
             if(fast) 
-                map_luts(EffortLevel::LOW);
+                map_luts(EffortLevel::LOW, "after_map_lut_2");
             else
-                map_luts(EffortLevel::HIGH);
+                map_luts(EffortLevel::HIGH, "after_map_lut_2");
         }
 
         if (check_label("check")) {
@@ -4666,6 +4761,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
           log("\n");
           log_cmd_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
         }
+
+        sec_report();
     }
 
 } SynthRapidSiliconPass;
