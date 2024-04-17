@@ -423,6 +423,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
     std::set<std::string> pp_activeLow;
     std::set<std::string> pp_fake;
 
+    // Special cells
+    //
+    dict<std::string, pair<int, int>> pp_memories;
+
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -3142,7 +3146,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
       return 1;
     }
 
-    void writePortProperties(string jsonFileName)
+    void writeNetlistInfo(string jsonFileName)
     {
         run("design -save original");
 
@@ -3260,6 +3264,36 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
 
         json_file << "\n   ]\n";
+
+        if (pp_memories.size()) {
+
+           dict<std::string, pair<int, int>>::iterator it;
+
+           json_file << "  \"memories\" : [\n";
+
+           firstLine = true;
+
+           for (it = pp_memories.begin(); it != pp_memories.end(); ++it) {
+
+             if (firstLine) {
+               firstLine = false;
+             } else {
+               json_file << ",\n";
+             }
+
+             json_file << "     {\n";
+             std::string name = it->first;
+             pair<int, int> wd = it->second;
+
+             json_file << "        \"name\" : \"" << name.substr(1) << "\",\n";
+             json_file << "        \"width\" : \"" << wd.first << "\",\n";
+             json_file << "        \"depth\" : \"" << wd.second << "\"\n";
+             json_file << "     }";
+           }
+
+           json_file << "\n   ]\n";
+        }
+
         json_file << "}\n";
 
         json_file.close();
@@ -3812,6 +3846,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                   continue;
                 }
              }
+
              continue;
            }
 
@@ -3839,6 +3874,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                   continue;
                 }
              }
+
              continue;
            }
 
@@ -3874,6 +3910,18 @@ static void show_sig(const RTLIL::SigSpec &sig)
         run("design -load original");
     }
 
+    void collectMemProperties()
+    {
+	for (auto &mem : Mem::get_all_memories(_design->top_module())) {
+
+	   std::string mem_id = id(mem.memid);
+
+           int width = mem.width;
+           int depth = mem.size;
+
+           pp_memories[mem_id] = std::make_pair(width, depth);
+        }
+    }
 
     void script() override
     {
@@ -3998,6 +4046,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             run("deminout");
             run("opt_expr");
             run("opt_clean");
+
+            collectMemProperties();
 
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
@@ -4535,6 +4585,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
         transform(1 /* bmuxmap*/); // we can map $bmux now because
                                    // "memory" has been called
 
+        collectPortProperties();
+
         if (check_label("map_luts") && effort != EffortLevel::LOW && !fast) {
 
             map_luts(effort, "after_map_lut_1");
@@ -4738,6 +4790,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         sec_check("final_netlist", true);
 
+        writeNetlistInfo("netlist_info.json");
+
         run("stat");
 
         // Note that numbers extractions are specific to GENESIS3
@@ -4749,8 +4803,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
         log("   Number of REGs:               %5d\n", nbREGs);
 
         reportCarryChains();
-
-        writePortProperties("port_info.json");
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
