@@ -3822,6 +3822,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
               continue;
            }
 
+           if (checkCell(cell, "DSP19X2", 
+                         "CLK", pp_clocks, pp_activeHigh,
+                         "RESET", pp_asyncReset, pp_activeHigh)) {
+              continue;
+           }
+
            // Process BRAM
            //
            if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
@@ -3898,6 +3904,38 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     (portName == RTLIL::escape_id("CLK_B2"))) {
 
                   pp_clocks.insert(*actualName);
+                  pp_activeHigh.insert(*actualName);
+                  continue;
+                }
+             }
+             continue;
+           }
+
+           if (cell->type == RTLIL::escape_id("FIFO36K")) {
+
+             for (auto &conn : cell->connections()) {
+
+                IdString portName = conn.first;
+
+                RTLIL::SigSpec actual = conn.second;
+
+                std::string* actualName = sigName(actual);
+
+                if (!actualName) {
+                  continue;
+                }
+
+                if ((portName == RTLIL::escape_id("WR_CLK")) ||
+                    (portName == RTLIL::escape_id("RD_CLK"))) {
+
+                  pp_clocks.insert(*actualName);
+                  pp_activeHigh.insert(*actualName);
+                  continue;
+                }
+
+                if (portName == RTLIL::escape_id("RESET")) {
+
+                  pp_syncReset.insert(*actualName);
                   pp_activeHigh.insert(*actualName);
                   continue;
                 }
