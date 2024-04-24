@@ -3263,9 +3263,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
            json_file << "     }";
         }
 
-        json_file << "\n   ]\n";
-
         if (pp_memories.size()) {
+
+           json_file << "\n   ],\n";
 
            dict<std::string, pair<int, int>>::iterator it;
 
@@ -3291,6 +3291,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
              json_file << "     }";
            }
 
+           json_file << "\n   ]\n";
+
+        } else {
            json_file << "\n   ]\n";
         }
 
