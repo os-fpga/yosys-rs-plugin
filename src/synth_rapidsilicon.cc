@@ -16,6 +16,7 @@
 #include <fstream>
 #include <regex>
 #include <string>
+#include <strings.h>
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
@@ -3106,7 +3107,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
         name++;
 
         std::string* sName = new std::string;
-        *sName = std::string(name);
+        *sName = strdup(name);
 
         return sName;
     }
