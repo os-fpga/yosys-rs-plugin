@@ -898,6 +898,19 @@ struct SynthRapidSiliconPass : public ScriptPass {
     // Performs Formal Verification between design in current memory (called "original") 
     // and "previous" design saved as "previous".
     //
+
+
+    void remove_print_cell(){
+        for(auto& modules : _design->selected_modules()){
+            for(auto& cell : modules->selected_cells()){
+                if (cell->type == RTLIL::escape_id("$print")){
+                    log("Deleting Cell = %s\n",log_id(cell->type));
+                    modules->remove(cell);
+                }
+            }
+        }
+    }
+
     void sec_check(string checkName, bool verify) {
         
         if (sec_mode == SECMode::OFF) {
@@ -951,6 +964,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         
         run("proc");
         run("opt_expr");
+
         run("opt_clean -purge");
 
         // Transform the network so that the blif dumped is easier to process for 'dsec'
@@ -4036,6 +4050,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (!no_flatten) {
               run("flatten");
             }
+
+            remove_print_cell();
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
