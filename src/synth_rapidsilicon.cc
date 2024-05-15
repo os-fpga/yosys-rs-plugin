@@ -428,6 +428,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     dict<std::string, pair<int, int>> pp_memories;
 
+    // Alias between same signals (for I_BUF/CLK_BUF)
+    //
+    dict<std::string, std::string> pp_alias;
+
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -3083,6 +3087,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
 }
  
+    std::string getSigNameSource(std::string &sig)
+    {
+      if (pp_alias.count(sig) == 0) {
+        return sig;
+      }
+
+      return (getSigNameSource(pp_alias[sig]));
+    }
+
     void dumpSig(std::ofstream &json_file, const RTLIL::SigSpec &sig)
     {
         const RTLIL::SigChunk chunk = sig.as_chunk();
@@ -3118,12 +3131,16 @@ static void show_sig(const RTLIL::SigSpec &sig)
           name = "";
         }
 
+        name = getSigNameSource(name);
+
         return true;
     }
 
     int checkCell(Cell* cell, const string cellName, 
-                  const string& port1, std::set<std::string>& pp_group1, std::set<std::string>& pp_activeValue1,
-                  const string& port2, std::set<std::string>& pp_group2, std::set<std::string>& pp_activeValue2)
+                  const string& port1, 
+                  std::set<std::string>& pp_group1, std::set<std::string>& pp_activeValue1,
+                  const string& port2, 
+                  std::set<std::string>& pp_group2, std::set<std::string>& pp_activeValue2)
     {
       if (cell->type != RTLIL::escape_id(cellName)) {
         return 0;
@@ -3361,6 +3378,41 @@ static void show_sig(const RTLIL::SigSpec &sig)
         run("design -save original");
 
         run("splitnets -ports");
+
+        std::string nameIn;
+        std::string nameOut;
+
+        // process first alias names situations
+        // introduced by I_BUF/CLK_BUF presence
+        //
+        for (auto cell : _design->top_module()->cells()) {
+
+           if ((cell->type == RTLIL::escape_id("I_BUF")) ||
+               (cell->type == RTLIL::escape_id("CLK_BUF"))) {
+
+              RTLIL::SigSpec in = cell->getPort(ID::I);
+
+              if (!sigName(in, nameIn)) {
+                continue;
+              }
+
+              RTLIL::SigSpec out = cell->getPort(ID::O);
+
+              if (!sigName(out, nameOut)) {
+                continue;
+              }
+
+              // Avoid infinite recursivity
+              //
+              if (nameIn != nameOut) {
+
+                pp_alias[nameOut] = nameIn;
+              }
+
+              continue;
+           }
+
+        }
 
         std::string name;
 
