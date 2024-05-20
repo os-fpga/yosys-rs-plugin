@@ -367,6 +367,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
     }
 
+
+    dict<RTLIL::SigSpec, std::set<Cell*>*> in_2_cell;
     string top_opt; 
     Technologies tech; 
     string blif_file; 
@@ -3979,6 +3981,91 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
     }
 
+    bool illegal_port_connection(std::set<Cell*>* set_cells){
+        bool generic_cell = false;
+        bool i_buf = false;
+        for (std::set<Cell*>::iterator it = set_cells->begin(); 
+            it != set_cells->end(); it++) {
+            Cell* cell = *it;
+            if (cell->type == RTLIL::escape_id("I_BUF"))
+                i_buf = true;
+            else
+                generic_cell = true;
+
+            if (i_buf && generic_cell) return true;
+        }
+        return false;
+    }
+
+    void get_port_cell_relation (){
+        run("design -save original");
+        run("splitnets -ports");
+        
+        for (auto &module : _design->selected_modules()) {
+            for (auto wire : module->wires()){
+                if (!wire->port_input) continue;
+                SigSpec sig_port = wire;
+                for (auto &cell : module->selected_cells()) {
+                    for (auto &conn : cell->connections()) {
+                        std::set<Cell*>* newSet;
+                        if (!conn.second.is_chunk()){
+                            std::vector<SigChunk> chunks_ = conn.second;
+                            for (auto &chunk_ : chunks_){
+                                SigSpec ChunkP  = chunk_;
+                                if (sig_port == ChunkP){
+                                    if (in_2_cell.count(sig_port)) { 
+                                        newSet = in_2_cell[sig_port];
+                                    } else {
+                                        newSet = new std::set<Cell*>;
+                                        in_2_cell[sig_port] = newSet;
+                                    }
+                                    newSet->insert(cell);
+                                    continue;
+                                }
+                                // wire chunk with size greater 1
+                                for (auto  Pbit : ChunkP){
+                                    if (Pbit  == sig_port){
+                                        if (in_2_cell.count(sig_port)) { 
+                                            newSet = in_2_cell[sig_port];
+                                        } else {
+                                            newSet = new std::set<Cell*>;
+                                            in_2_cell[sig_port] = newSet;
+                                        }
+                                        newSet->insert(cell);
+                                    }
+                                }
+                            }
+                        }
+                        else{
+                            if (sig_port == conn.second){
+                                if (in_2_cell.count(sig_port)) { 
+                                    newSet = in_2_cell[sig_port];
+                                } else {
+                                    newSet = new std::set<Cell*>;
+                                    in_2_cell[sig_port] = newSet;
+                                }
+                                newSet->insert(cell);
+                                continue;
+                            }
+                            // wire chunk with size greater 1
+                            for (auto  Pbit : conn.second){
+                                if (Pbit  == sig_port){
+                                    if (in_2_cell.count(sig_port)) {
+                                        newSet = in_2_cell[sig_port];
+                                    } else {
+                                        newSet = new std::set<Cell*>;
+                                        in_2_cell[sig_port] = newSet;
+                                    }
+                                    newSet->insert(cell);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     void script() override
     {
         string readArgs;
@@ -4809,7 +4896,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
            readIOArgs=GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_cells_FILE)
                       GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,BLACKBOX_SIM_LIB_FILE);
            
+
            if (!no_iobuf){
+                
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
@@ -4818,6 +4907,27 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
+                get_port_cell_relation();
+                
+                run("design -save original");
+                run("splitnets -ports");
+                bool error_count_illegal_port_conn = false;
+                for (auto &module : _design->selected_modules()) {
+                    for (auto wire : module->wires()){
+                        SigSpec sig_port = wire;
+                        if (!wire->port_input) continue;
+                        if (in_2_cell.count(sig_port)){
+                            std::set<Cell*>* set_cells = in_2_cell[sig_port];
+                            if (illegal_port_connection(set_cells)){
+                                error_count_illegal_port_conn=true;
+                                log("ERROR: Illegal port connection: Input port %s connected to an input buffer and other components\n",log_signal(sig_port));
+                            }
+                        }
+                    }
+                }
+                if (error_count_illegal_port_conn)log_error("Terminating Synthesis for design %s due to previous errors\n",_design->top_module()->name.c_str());
+
+                run("design -load original");
            }
 
            run("stat");
