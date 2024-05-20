@@ -366,6 +366,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("\n");
         log("\n");
     }
+
+
     dict<RTLIL::SigSpec, std::set<Cell*>*> in_2_cell;
     string top_opt; 
     Technologies tech; 
@@ -4016,7 +4018,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
     }
 
-
     bool illegal_port_connection(std::set<Cell*>* set_cells){
         bool generic_cell = false;
         bool i_buf = false;
@@ -4028,7 +4029,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             else
                 generic_cell = true;
 
-            if (i_buf && generic_cell) return true
+            if (i_buf && generic_cell) return true;
         }
         return false;
     }
@@ -4101,7 +4102,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
         }
     }
-   
+    
     void script() override
     {
         string readArgs;
@@ -4932,8 +4933,18 @@ static void show_sig(const RTLIL::SigSpec &sig)
            readIOArgs=GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_cells_FILE)
                       GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,BLACKBOX_SIM_LIB_FILE);
            
+
            if (!no_iobuf){
+                run("read_verilog -sv -lib "+readIOArgs);
+                run("clkbufmap -buf rs__CLK_BUF O:I");
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
+                //EDA-2629: Remove dangling wires after CLK_BUF
+                run("opt_clean");
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
+                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
+
                 get_port_cell_relation();
+                
                 run("design -save original");
                 run("splitnets -ports");
                 bool error_count_illegal_port_conn = false;
@@ -4951,16 +4962,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     }
                 }
                 if (error_count_illegal_port_conn)log_error("Terminating Synthesis for design %s due to previous errors\n",_design->top_module()->name.c_str());
-                run("design -load original");
-                
-                run("read_verilog -sv -lib "+readIOArgs);
-                run("clkbufmap -buf rs__CLK_BUF O:I");
-                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
-                //EDA-2629: Remove dangling wires after CLK_BUF
-                run("opt_clean");
-                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
-                run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
+                run("design -load original");
            }
 
            run("stat");
