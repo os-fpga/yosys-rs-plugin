@@ -430,6 +430,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     dict<std::string, pair<int, int>> pp_memories;
 
+    // Alias between same signals (for I_BUF/CLK_BUF)
+    //
+    dict<std::string, std::string> pp_alias;
+
     void clear_flags() override
     {
         top_opt = "-auto-top";
@@ -3085,6 +3089,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
 }
  
+    std::string getSigNameSource(std::string &sig)
+    {
+      if (pp_alias.count(sig) == 0) {
+        return sig;
+      }
+
+      return (getSigNameSource(pp_alias[sig]));
+    }
+
     void dumpSig(std::ofstream &json_file, const RTLIL::SigSpec &sig)
     {
         const RTLIL::SigChunk chunk = sig.as_chunk();
@@ -3102,39 +3115,40 @@ static void show_sig(const RTLIL::SigSpec &sig)
         json_file << "\"";
     }
 
-    std::string* sigName(const RTLIL::SigSpec &sig)
+    bool sigName(const RTLIL::SigSpec &sig, std::string& name)
     {
         if (!sig.is_chunk()) {
-           return NULL;
+           return false;
         }
 
         const RTLIL::SigChunk chunk = sig.as_chunk();
 
         if (chunk.wire == NULL) {
-           return NULL;
+           return false;
         }
-
-        const char* name = "\\";
 
         if (chunk.width == chunk.wire->width && chunk.offset == 0) {
-          name = id(chunk.wire->name).c_str();
+          name = (chunk.wire->name).substr(1);
+        } else {
+          name = "";
         }
-        // any name is prefixed with '\' so we need to remove it
-        name++;
 
-        std::string* sName = new std::string;
-        *sName = strdup(name);
+        name = getSigNameSource(name);
 
-        return sName;
+        return true;
     }
 
     int checkCell(Cell* cell, const string cellName, 
-                  const string& port1, std::set<std::string>& pp_group1, std::set<std::string>& pp_activeValue1,
-                  const string& port2, std::set<std::string>& pp_group2, std::set<std::string>& pp_activeValue2)
+                  const string& port1, 
+                  std::set<std::string>& pp_group1, std::set<std::string>& pp_activeValue1,
+                  const string& port2, 
+                  std::set<std::string>& pp_group2, std::set<std::string>& pp_activeValue2)
     {
       if (cell->type != RTLIL::escape_id(cellName)) {
         return 0;
       }
+
+      std::string name;
 
       for (auto &conn : cell->connections()) {
 
@@ -3142,19 +3156,17 @@ static void show_sig(const RTLIL::SigSpec &sig)
           RTLIL::SigSpec actual = conn.second;
 
           if (portName == RTLIL::escape_id(port1)) {
-             std::string* actualName = sigName(actual);
-             if (actualName) {
-               pp_group1.insert(*actualName);
-               pp_activeValue1.insert(*actualName);
+             if (sigName(actual, name)) {
+               pp_group1.insert(name);
+               pp_activeValue1.insert(name);
              }
              continue;
           }
 
           if (portName == RTLIL::escape_id(port2)) {
-             std::string* actualName = sigName(actual);
-             if (actualName) {
-               pp_group2.insert(*actualName);
-               pp_activeValue2.insert(*actualName);
+             if (sigName(actual, name)) {
+               pp_group2.insert(name);
+               pp_activeValue2.insert(name);
              }
              continue;
           }
@@ -3213,9 +3225,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
            dumpSig(json_file, io);
 
-           std::string* ioName = sigName(io);
-
-           if (!ioName) {
+           std::string ioName;
+           if (!sigName(io, ioName)) {
              continue;
            }
 
@@ -3227,49 +3238,49 @@ static void show_sig(const RTLIL::SigSpec &sig)
              json_file << "        \"direction\": \"output\"";
            }
 
-           if (pp_clocks.count(*ioName)) {
+           if (pp_clocks.count(ioName)) {
              json_file << ",\n        \"clock\": ";
 
-             if (pp_activeHigh.count(*ioName)) {
+             if (pp_activeHigh.count(ioName)) {
                json_file << "\"active_high\"\n";
              }
-             else if (pp_activeLow.count(*ioName)) {
+             else if (pp_activeLow.count(ioName)) {
                json_file << "\"active_low\"\n";
              }
            }
-           else if (pp_asyncReset.count(*ioName)) {
+           else if (pp_asyncReset.count(ioName)) {
              json_file << ",\n        \"async_reset\": ";
-             if (pp_activeHigh.count(*ioName)) {
+             if (pp_activeHigh.count(ioName)) {
                json_file << "\"active_high\"\n";
              }
-             else if (pp_activeLow.count(*ioName)) {
+             else if (pp_activeLow.count(ioName)) {
                json_file << "\"active_low\"\n";
              }
            }
-           else if (pp_asyncSet.count(*ioName)) {
+           else if (pp_asyncSet.count(ioName)) {
              json_file << ",\n        \"async_set\": ";
-             if (pp_activeHigh.count(*ioName)) {
+             if (pp_activeHigh.count(ioName)) {
                json_file << "\"active_high\"\n";
              }
-             else if (pp_activeLow.count(*ioName)) {
+             else if (pp_activeLow.count(ioName)) {
                json_file << "\"active_low\"\n";
              }
            }
-           else if (pp_syncReset.count(*ioName)) {
+           else if (pp_syncReset.count(ioName)) {
              json_file << ",\n        \"sync_reset\": ";
-             if (pp_activeHigh.count(*ioName)) {
+             if (pp_activeHigh.count(ioName)) {
                json_file << "\"active_high\"\n";
              }
-             else if (pp_activeLow.count(*ioName)) {
+             else if (pp_activeLow.count(ioName)) {
                json_file << "\"active_low\"\n";
              }
            }
-           else if (pp_syncSet.count(*ioName)) {
+           else if (pp_syncSet.count(ioName)) {
              json_file << ",\n        \"sync_set\": ";
-             if (pp_activeHigh.count(*ioName)) {
+             if (pp_activeHigh.count(ioName)) {
                json_file << "\"active_high\"\n";
              }
-             else if (pp_activeLow.count(*ioName)) {
+             else if (pp_activeLow.count(ioName)) {
                json_file << "\"active_low\"\n";
              }
            }
@@ -3370,6 +3381,43 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         run("splitnets -ports");
 
+        std::string nameIn;
+        std::string nameOut;
+
+        // process first alias names situations
+        // introduced by I_BUF/CLK_BUF presence
+        //
+        for (auto cell : _design->top_module()->cells()) {
+
+           if ((cell->type == RTLIL::escape_id("I_BUF")) ||
+               (cell->type == RTLIL::escape_id("CLK_BUF"))) {
+
+              RTLIL::SigSpec in = cell->getPort(ID::I);
+
+              if (!sigName(in, nameIn)) {
+                continue;
+              }
+
+              RTLIL::SigSpec out = cell->getPort(ID::O);
+
+              if (!sigName(out, nameOut)) {
+                continue;
+              }
+
+              // Avoid infinite recursivity
+              //
+              if (nameIn != nameOut) {
+
+                pp_alias[nameOut] = nameIn;
+              }
+
+              continue;
+           }
+
+        }
+
+        std::string name;
+
         // visit all the cells of the design an store info.
         //
 
@@ -3391,22 +3439,20 @@ static void show_sig(const RTLIL::SigSpec &sig)
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
 
-              std::string* clkName = sigName(clk);
-
-              if (!clkName) {
+              if (!sigName(clk, name)) {
                 continue;
               }
 
               // Clock
               //
-              pp_clocks.insert(*clkName);
+              pp_clocks.insert(name);
 
               bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (clk_neg_edge) {
-                pp_activeLow.insert(*clkName);
+                pp_activeLow.insert(name);
               } else {
-                pp_activeHigh.insert(*clkName);
+                pp_activeHigh.insert(name);
               }
 
               continue;
@@ -3423,44 +3469,44 @@ static void show_sig(const RTLIL::SigSpec &sig)
               RTLIL::Const srst_val = cell->getParam(RTLIL::escape_id("SRST_VALUE"));
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
-              std::string* clkName = sigName(clk);
+              std::string clkName;
 
-              if (!clkName) {
+              if (!sigName(clk, clkName)) {
                 continue;
               }
 
               RTLIL::SigSpec srst = cell->getPort(ID::SRST);
-              std::string* srstName = sigName(srst);
-              if (!srstName) {
+
+              if (!sigName(srst, name)) {
                 continue;
               }
 
               // Clock
               //
-              pp_clocks.insert(*clkName);
+              pp_clocks.insert(clkName);
 
               bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (clk_neg_edge) {
-                pp_activeLow.insert(*clkName);
+                pp_activeLow.insert(clkName);
               } else {
-                pp_activeHigh.insert(*clkName);
+                pp_activeHigh.insert(clkName);
               }
 
               bool srst_active_low = RTLIL::const_eq(srst_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (srst_active_low) { 
-                  pp_activeLow.insert(*srstName);
+                  pp_activeLow.insert(name);
               } else { 
-                  pp_activeHigh.insert(*srstName);
+                  pp_activeHigh.insert(name);
               }
 
               bool srst_is_reset = RTLIL::const_eq(srst_val, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (srst_is_reset) { 
-                  pp_syncReset.insert(*srstName);
+                  pp_syncReset.insert(name);
               } else {
-                  pp_syncSet.insert(*srstName);
+                  pp_syncSet.insert(name);
               }
 
               continue;
@@ -3476,43 +3522,43 @@ static void show_sig(const RTLIL::SigSpec &sig)
               RTLIL::Const arst_val = cell->getParam(RTLIL::escape_id("ARST_VALUE"));
  
               RTLIL::SigSpec clk = cell->getPort(ID::CLK);
-              std::string* clkName = sigName(clk);
-              if (!clkName) {
+              std::string clkName;
+
+              if (!sigName(clk, clkName)) {
                 continue;
               }
-
               RTLIL::SigSpec arst = cell->getPort(ID::ARST);
-              std::string* arstName = sigName(arst);
-              if (!arstName) {
+
+              if (!sigName(arst, name)) {
                 continue;
               }
 
               // Clock
               //
-              pp_clocks.insert(*clkName);
+              pp_clocks.insert(clkName);
 
               bool clk_neg_edge = RTLIL::const_eq(clk_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (clk_neg_edge) {
-                pp_activeLow.insert(*clkName);
+                pp_activeLow.insert(clkName);
               } else {
-                pp_activeHigh.insert(*clkName);
+                pp_activeHigh.insert(clkName);
               }
 
               bool arst_active_low = RTLIL::const_eq(arst_pol, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (arst_active_low) { 
-                  pp_activeLow.insert(*arstName);
+                  pp_activeLow.insert(name);
               } else { 
-                  pp_activeHigh.insert(*arstName);
+                  pp_activeHigh.insert(name);
               }
 
               bool arst_is_reset = RTLIL::const_eq(arst_val, RTLIL::Const(0), false, false, 1).as_bool();
 
               if (arst_is_reset) { 
-                  pp_asyncReset.insert(*arstName);
+                  pp_asyncReset.insert(name);
               } else {
-                  pp_asyncSet.insert(*arstName);
+                  pp_asyncSet.insert(name);
               }
 
               continue;
@@ -3858,17 +3904,14 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                 RTLIL::SigSpec actual = conn.second;
 
-                std::string* actualName = sigName(actual);
-
-                if (!actualName) {
+                if (!sigName(actual, name)) {
                   continue;
                 }
-
                 if ((portName == RTLIL::escape_id("CLK_A")) || 
                     (portName == RTLIL::escape_id("CLK_B"))) {
 
-                  pp_clocks.insert(*actualName);
-                  pp_activeHigh.insert(*actualName);
+                  pp_clocks.insert(name);
+                  pp_activeHigh.insert(name);
                   continue;
                 }
              }
@@ -3884,9 +3927,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                 RTLIL::SigSpec actual = conn.second;
 
-                std::string* actualName = sigName(actual);
-
-                if (!actualName) {
+                if (!sigName(actual, name)) {
                   continue;
                 }
 
@@ -3895,8 +3936,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     (portName == RTLIL::escape_id("CLK_B1")) ||
                     (portName == RTLIL::escape_id("CLK_B2"))) {
 
-                  pp_clocks.insert(*actualName);
-                  pp_activeHigh.insert(*actualName);
+                  pp_clocks.insert(name);
+                  pp_activeHigh.insert(name);
                   continue;
                 }
              }
@@ -3912,9 +3953,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                 RTLIL::SigSpec actual = conn.second;
 
-                std::string* actualName = sigName(actual);
-
-                if (!actualName) {
+                if (!sigName(actual, name)) {
                   continue;
                 }
 
@@ -3923,8 +3962,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     (portName == RTLIL::escape_id("CLK_B1")) ||
                     (portName == RTLIL::escape_id("CLK_B2"))) {
 
-                  pp_clocks.insert(*actualName);
-                  pp_activeHigh.insert(*actualName);
+                  pp_clocks.insert(name);
+                  pp_activeHigh.insert(name);
                   continue;
                 }
              }
@@ -3939,24 +3978,22 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                 RTLIL::SigSpec actual = conn.second;
 
-                std::string* actualName = sigName(actual);
-
-                if (!actualName) {
+                if (!sigName(actual, name)) {
                   continue;
                 }
 
                 if ((portName == RTLIL::escape_id("WR_CLK")) ||
                     (portName == RTLIL::escape_id("RD_CLK"))) {
 
-                  pp_clocks.insert(*actualName);
-                  pp_activeHigh.insert(*actualName);
+                  pp_clocks.insert(name);
+                  pp_activeHigh.insert(name);
                   continue;
                 }
 
                 if (portName == RTLIL::escape_id("RESET")) {
 
-                  pp_syncReset.insert(*actualName);
-                  pp_activeHigh.insert(*actualName);
+                  pp_syncReset.insert(name);
+                  pp_activeHigh.insert(name);
                   continue;
                 }
              }
