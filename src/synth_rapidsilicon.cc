@@ -4035,9 +4035,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
     }
 
     void get_port_cell_relation (){
-        run("design -save original");
-        run("splitnets -ports");
-        
         for (auto &module : _design->selected_modules()) {
             for (auto wire : module->wires()){
                 if (!wire->port_input) continue;
@@ -4942,11 +4939,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("opt_clean");
                 run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
-
-                get_port_cell_relation();
                 
                 run("design -save original");
                 run("splitnets -ports");
+                get_port_cell_relation();
+                
                 bool error_count_illegal_port_conn = false;
                 for (auto &module : _design->selected_modules()) {
                     for (auto wire : module->wires()){
