@@ -413,6 +413,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     int sec_counter = 0;
     string previousBlifName;
 
+    int cec_counter = 0;
 
     // For Ports properties extraction
     //
@@ -1082,6 +1083,26 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("design -load original");
 
         run("design -save previous");
+    }
+
+    void cec_check(string checkName) {
+        
+        if (!cec) {
+          return;
+        }
+
+        char name[1024];
+
+        cec_counter++;
+
+        sprintf(name, "%03d_%s", cec_counter, checkName.c_str());
+
+        string verilogName = "cec_" + string(name) + ".v";
+ 
+        // Dump a verilog image of the current design in memory
+        //
+        run(stringf("write_verilog -selected -noexpr -nodec %s", verilogName.c_str()));
+
     }
 
     void sec_report() {
@@ -4035,9 +4056,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
     }
 
     void get_port_cell_relation (){
-        run("design -save original");
-        run("splitnets -ports");
-        
         for (auto &module : _design->selected_modules()) {
             for (auto wire : module->wires()){
                 if (!wire->port_input) continue;
@@ -4103,6 +4121,73 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
     }
     
+    // Make sure that all OBUFT are correctly connected after calling
+    // 'iopadmap'. Any undriven OBUFT or any dangling OBUFT is illegal
+    // and we error out.
+    //
+    void check_OBUFT_Connections() {
+
+       for (auto &module : _design->selected_modules()) {
+
+          for(auto& cell : module->selected_cells()) {
+
+             if(cell->type != RTLIL::escape_id("rs__O_BUFT")){
+               continue;
+             }
+
+             int found_O = false;
+             int found_I = false;
+
+             for (auto &conn : cell->connections()) {
+
+                 IdString portName = conn.first;
+
+                 if (portName == RTLIL::escape_id("I")) {
+                    found_I = true;
+                 }
+                 if (portName == RTLIL::escape_id("O")) {
+                    found_O = true;
+                 }
+             }
+
+             if (!found_O) {
+                log_error("Dangling OBUFT (may be due to 'inout' port declaration or 'z' not handled (use -keep_tribuf)) \n");
+             }
+
+             if (!found_I) {
+                log_error("Undriven OBUFT error connection \n");
+             }
+          }
+       }
+    }
+
+    void checkPortConnections() {
+
+       run("design -save original");
+       run("splitnets -ports");
+       get_port_cell_relation();
+
+       bool error_count_illegal_port_conn = false;
+
+       for (auto &module : _design->selected_modules()) {
+           for (auto wire : module->wires()){
+              SigSpec sig_port = wire;
+              if (!wire->port_input) continue;
+              if (in_2_cell.count(sig_port)){
+                std::set<Cell*>* set_cells = in_2_cell[sig_port];
+                if (illegal_port_connection(set_cells)){
+                  error_count_illegal_port_conn=true;
+                  log("ERROR: Illegal port connection: Input port %s connected to an input buffer and other components\n",log_signal(sig_port));
+                }
+              }
+           }
+        }
+        if (error_count_illegal_port_conn)
+            log_error("Terminating Synthesis for design %s due to previous errors\n",_design->top_module()->name.c_str());
+
+        run("design -load original");
+    }
+
     void script() override
     {
         string readArgs;
@@ -4935,36 +5020,31 @@ static void show_sig(const RTLIL::SigSpec &sig)
            
 
            if (!no_iobuf){
-                
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
                 //EDA-2629: Remove dangling wires after CLK_BUF
                 run("opt_clean");
-                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -limit "+ std::to_string(max_device_ios));
+
+                cec_check("before_iopadmap");
+
+                // Fix EDA-2887 : handle tri-state where output is declared as 'inout'
+                //
+                run("iopadmap -bits -inpad rs__I_BUF O:I -outpad rs__O_BUF I:O -toutpad rs__O_BUFT T:I:O -tinoutpad rs__O_BUFT T:O:I -limit "+ std::to_string(max_device_ios));
+
+                cec_check("after_iopadmap");
+
+                check_OBUFT_Connections();
+
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
 
-                get_port_cell_relation();
-                
-                run("design -save original");
-                run("splitnets -ports");
-                bool error_count_illegal_port_conn = false;
-                for (auto &module : _design->selected_modules()) {
-                    for (auto wire : module->wires()){
-                        SigSpec sig_port = wire;
-                        if (!wire->port_input) continue;
-                        if (in_2_cell.count(sig_port)){
-                            std::set<Cell*>* set_cells = in_2_cell[sig_port];
-                            if (illegal_port_connection(set_cells)){
-                                error_count_illegal_port_conn=true;
-                                log("ERROR: Illegal port connection: Input port %s connected to an input buffer and other components\n",log_signal(sig_port));
-                            }
-                        }
-                    }
-                }
-                if (error_count_illegal_port_conn)log_error("Terminating Synthesis for design %s due to previous errors\n",_design->top_module()->name.c_str());
+                cec_check("after_iopadmap_techmap");
 
-                run("design -load original");
+                run("opt_clean");
+
+                cec_check("after_iopadmap_techmap_opt_clean");
+                
+                checkPortConnections();
            }
 
            run("stat");
@@ -4972,7 +5052,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
            string techMaplutArgs = GET_TECHMAP_FILE_PATH(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
            run("techmap -map" + techMaplutArgs);
 #endif
-        run("opt_clean");
+           run("opt_clean");
         }
 
         if (check_label("blif")) {
