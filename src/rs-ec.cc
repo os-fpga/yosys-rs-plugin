@@ -106,30 +106,38 @@ struct RsSECWorker
             }
             Pass::call(design, stringf("hierarchy -top %s",mod_name.c_str()));
 
-            Pass::call(design, "stat");
+            // Pass::call(design, "stat");
             Pass::call(design, "proc");
             Pass::call(design, "flatten");
             Pass::call(design, "opt_expr");
             Pass::call(design, "techmap");
             Pass::call(design, "opt_clean");
             
-            Pass::call(design, "stat");
-            log("Before Writing Blif\n");
+            // Pass::call(design, "stat");
+            // log("Before Writing Blif\n");
             Pass::call(design, stringf("write_blif %s.blif",mod_name.c_str()));
         }
     }
 
     void edit_design(RTLIL::Design *design, std::set<RTLIL::IdString>& blif_models){
-        Pass::call(design, "design -save original");
+        // Pass::call(design, "design -save new_design");
         Pass::call(design,"opt_clean");
         
         for(auto& modules : design->selected_modules()){
             for (auto &cell : modules->selected_cells()) {
-                if (cell->type.in(ID($add))){
+                if (cell->type.in(ID($add),ID($xor))){
                     string cell_type = log_id(cell->type);
                     RTLIL::IdString cell_name = cell_type + "_" + \
                     std::to_string(GetSize(cell->getPort(ID::A))) + "_" + \
                     std::to_string(GetSize(cell->getPort(ID::B))) + "_" + \
+                    std::to_string(GetSize(cell->getPort(ID::Y)));
+                    blif_models.insert(cell_name);
+                    cell->type = cell_name;
+                }
+                if (cell->type.in(ID($reduce_xor))){
+                    string cell_type = log_id(cell->type);
+                    RTLIL::IdString cell_name = cell_type + "_" + \
+                    std::to_string(GetSize(cell->getPort(ID::A))) + "_0_" + \
                     std::to_string(GetSize(cell->getPort(ID::Y)));
                     blif_models.insert(cell_name);
                     cell->type = cell_name;
@@ -281,32 +289,35 @@ struct RsSECWorker
     }
   
     void run_scr (RTLIL::Design *design) {
-        // Module* topModule = design->top_module();
+        Module* topModule = design->top_module();
 
-        // const char* topName = topModule->name.c_str();
-        // topName++;
+        const char* topName = topModule->name.c_str();
+        topName++;
 
         Pass::call(design, "design -save original");
+        Pass::call(design, "write_verilog -selected -noexpr -nodec design.v");
+        Pass::call(design, "design -reset");
         
-        // Pass::call(design, "write_verilog -noexpr -nodec design.v");
-        // Pass::call(design, "design -reset");
+        Pass::call(design, "read_verilog -sv /nfs_scratch/scratch/FV/awais/Synthesis/yosys_opensource/EDA-2073/yosys_verific_rs_sec_project/yosys-rs-plugin/genesis3/SEC_MODELS/simcells.v");
+        Pass::call(design, "read_verilog -sv /nfs_scratch/scratch/FV/awais/Synthesis/yosys_opensource/EDA-2073/yosys_verific_rs_sec_project/yosys-rs-plugin/genesis3/SEC_MODELS/simlib.v");
+        Pass::call(design, "read_verilog design.v");
         
-        // Pass::call(design, "read_verilog design.v");
-        
-        // Pass::call(design, stringf("hierarchy -top %s",topName));
-        // Pass::call(design, "flatten");
-        // Pass::call(design, stringf("hierarchy -top %s",topName));
+        Pass::call(design, stringf("hierarchy -top %s",topName));
+        Pass::call(design, "flatten");
+        Pass::call(design, stringf("hierarchy -top %s",topName));
 
-        // Pass::call(design, "proc");
-        // Pass::call(design, "opt_expr");
+        Pass::call(design, "proc");
+        Pass::call(design, "opt_expr");
 
-        // Pass::call(design, "opt_clean -purge");
+        Pass::call(design, "opt_clean -purge");
+        Pass::call(design, "design -save new_design");
+        Pass::call(design, "stat");
         
         std::vector<Entry> entries;
         std::set<Entry, CompareEntry> uniqueSet;
         
-        for (auto &cell : m_module->selected_cells()) {
-           
+        for (auto cell : design->top_module()->cells()) {
+            // Pass::call(design, "stat");
             if (cell->type.in(ID($add), ID($sub), ID($div), ID($mod), ID($divfloor), ID($modfloor), ID($pow), ID($mul),\
                 ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand))){
                 addEntry(entries,uniqueSet,{log_id(cell->type),GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false});
@@ -315,10 +326,12 @@ struct RsSECWorker
                 addEntry(entries,uniqueSet,{log_id(cell->type), GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false});
             }
         }
-        
+        for (auto entry : entries){
+            log("%s: %d, %d, %d, %d\n",entry.type.c_str(),entry.inA, entry.inB, entry.outY, entry.signed_opr);
+        }
         add_A_B_Y_S(design,entries);
 
-        Pass::call(design, "design -load original");
+        Pass::call(design, "design -load new_design");
         std::set<RTLIL::IdString> blif_models;
 
         // edit netlist subckt names according to cell (name, size)
@@ -326,13 +339,16 @@ struct RsSECWorker
 
         // append current netlist with subckt models
         create_blif_models(design, blif_models);
+        
         if (current_stage != "" && previous_state != "")
             run_sec(design);
         
         Pass::call(design, "design -load original");
         
         previous_state = current_stage;
-        getchar();
+        #if 0
+            getchar();
+        #endif
     }
 };
 
@@ -367,7 +383,7 @@ struct RsSecPass : public Pass {
         sec_counter++;
         if (!verify)
             return;
-        log("Current State = %s, Previous State = %s\n",current_stage.c_str(),previous_state.c_str());
+        // log("Current State = %s, Previous State = %s\n",current_stage.c_str(),previous_state.c_str());
         for (auto mod : design->selected_modules()) {
             RsSECWorker worker(mod);
             worker.run_scr(design);
