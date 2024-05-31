@@ -4266,6 +4266,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             remove_print_cell();
 
+            run("rs-sec -genesis3 -stage after_proc -verify 1");
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
 #if 1
@@ -4275,7 +4276,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
             }
             sec_check("before_tribuf", true);
-
+            run("rs-sec -genesis3 -stage before_tribuf -verify 1");
             /*Added to support OBUFT  if keep_tribuf flag is given*/
             if(keep_tribuf) { //non defualt mode :we keep TRIBUF
 
@@ -4293,7 +4294,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    run("write_verilog -noattr -nohex after_tribuf_merge.v");
                 }
                 sec_check("after_tribuf_merge", true);
-
+                run("rs-sec -genesis3 -stage after_tribuf_merge -verify 1");
                 // specific Rapid Silicon logic with -rs_logic option
                 //
                 run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
@@ -4302,6 +4303,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
                 }
                 sec_check("after_tribuf_logic", true);
+                run("rs-sec -genesis3 -stage after_tribuf_logic -verify 1");
             
 #else
             // Old tri-state handling
@@ -4324,6 +4326,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
             }
             sec_check("after_opt_clean1", true);
+            run("rs-sec -genesis3 -stage after_opt_clean1 -verify 1");
 
             run("check");
 
@@ -4340,6 +4343,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_fsm.v");
             }
             sec_check("after_fsm", true);
+            run("rs-sec -genesis3 -stage after_fsm -verify 1");
 
             run("wreduce -keepdc");
             run("peepopt");
@@ -4367,6 +4371,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean2.v");
             }
             sec_check("after_opt_clean2", true);
+            run("rs-sec -genesis3 -stage after_opt_clean2 -verify 1");
         }
 
         transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
@@ -4446,7 +4451,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
                         sec_check("after_dsp_map3", true);
-
+                        run("rs-sec -genesis3 -stage after_dsp_map3 -verify 1");
                         // Fractuated mode has been disabled for Genesis2
                         // Fractuated mode has been disabled for Genesis3
                         //
@@ -4461,7 +4466,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
                         sec_check("after_dsp_map4", true);
-
+                        run("rs-sec -genesis3 -stage after_dsp_map4 -verify 1");
                         if (tech == Technologies::GENESIS)
                             run("rs-pack-dsp-regs -genesis");
                         else   
@@ -4480,6 +4485,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
                         sec_check("after_dsp_map5", true);
+                        run("rs-sec -genesis3 -stage after_dsp_map5 -verify 1");
 
                         break;
                     }
@@ -4523,6 +4529,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
                         sec_check("after_dsp_map3", true);
+                        run("rs-sec -genesis3 -stage after_dsp_map3 -verify 1");
 
                         // Fractuated mode has been enabled for Genesis3
                         if (tech == Technologies::GENESIS_3  && new_dsp19x2)
@@ -4537,6 +4544,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
                         sec_check("after_dsp_map4", true);
+                        run("rs-sec -genesis3 -stage after_dsp_map4 -verify 1");
 
                         run("rs-pack-dsp-regs -genesis3");
 
@@ -4549,6 +4557,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
                         sec_check("after_dsp_map5", true);
+                        run("rs-sec -genesis3 -stage after_dsp_map5 -verify 1");
 
 #if 1
                         //run("stat");
@@ -4572,6 +4581,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_alumacc.v");
             }
             sec_check("after_alumacc", true);
+            run("rs-sec -genesis3 -stage after_alumacc -verify 1");
 
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
@@ -4592,6 +4602,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean3.v");
             }
             sec_check("after_opt_clean3", true);
+            run("rs-sec -genesis3 -stage after_opt_clean3 -verify 1");
         }
 
         if (!nobram){
