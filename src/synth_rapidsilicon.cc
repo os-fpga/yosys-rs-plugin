@@ -3254,7 +3254,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
            json_file << ",\n";
 
            if (wire->port_input) {
-             json_file << "        \"direction\": \"input\"";
+             if (wire->port_output) {
+               json_file << "        \"direction\": \"inout\"";
+             } else {
+               json_file << "        \"direction\": \"input\"";
+             }
            } else {
              json_file << "        \"direction\": \"output\"";
            }
