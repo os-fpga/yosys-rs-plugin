@@ -306,25 +306,25 @@ struct RsSECWorker
             out<<cmd;
             out.close();
         }
+        log("Comparing : \n\n");
+        log("  %s <-> %s (%s)\n", previous_netlist_name, current_netlist_name,resName);
+        log("\n=================================================================================\n");
         string abc_exe_dir = proc_self_dirname() + "abc";
         std::string command = abc_exe_dir + std::string(" -f abc.scr > ") + resName;
         command += std::string(" ; tail -n 2 ") + resName;
+        
+        if (isSequential) {
+            log("DSEC : \n");
+        } else {
+            log("CEC : \n");
+        }
+
         int fail = system(command.c_str());
 
         if (fail) {
             log_error("Command %s failed !\n", command.c_str());
         }
-    }
-
-    std::string remove_backslashes(const std::string &input) {
-        std::string result;
-        result.reserve(input.size());
-        for (char c : input) {
-        if (c != '\\') {
-            result.push_back(c); 
-        }
-        }
-        return result;
+        log("\n=================================================================================\n");
     }
 
     void gen_netlist(RTLIL::Design *design){
