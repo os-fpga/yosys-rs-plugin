@@ -47,6 +47,8 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/latchsre.vhdl \
 				  $(GENESIS)/lut.vhdl \
 				  $(GENESIS)/shr.vhdl \
+				  $(GENESIS3)/SEC_MODELS/simcells.v \
+				  $(GENESIS3)/SEC_MODELS/simlib.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/blackbox_models/cell_sim_blackbox.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/CARRY.v \
 				  $(GENESIS3)/cells_sim.vhd \
