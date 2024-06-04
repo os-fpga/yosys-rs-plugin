@@ -376,11 +376,34 @@ struct RsSECWorker
         }
         
         add_A_B_Y_S(design,entries);
+    #if 1
+        // Load previous step to show the 'stat'
+        //
+        if (sec_counter>1){
+            Pass::call(design,"design -load previous");
 
-        if (gen_net)
+          log("\n =======================\n");
+          log("     Previous step:\n");
+          log(" =======================\n");
+
+        Pass::call(design,"stat");
+        }
+    #endif  
+
+        if (gen_net){
+            log(" =======================\n");
+            log("     Current step:\n");
+            log(" =======================\n");
             Pass::call(design, "design -load new_design");
-        else
+            Pass::call(design,"stat");
+        }
+        else{
+            log(" =======================\n");
+            log("     Current step:\n");
+            log(" =======================\n");
             Pass::call(design, "design -load original");
+            Pass::call(design,"stat");
+        }
         std::set<RTLIL::IdString> blif_models;
 
         // edit netlist subckt names according to cell (name, size)
@@ -393,7 +416,7 @@ struct RsSECWorker
             run_sec(design);
         
         Pass::call(design, "design -load original");
-        
+        Pass::call(design,"design -save previous");
         previous_state = current_stage;
         #if 0
             getchar();
