@@ -36,7 +36,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_DIR genesis
 #define GENESIS_2_DIR genesis2
 #define GENESIS_3_DIR genesis3
-#define SEC_MODELS_DIR sec_models
+#define SEC_MODELS_DIR SEC_MODEL
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define BLACKBOX_SIM_LIB_FILE cell_sim_blackbox.v
@@ -1579,9 +1579,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
 
         if (cec) {
-            run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
+            run("write_verilog -noexpr -nohex after_lut_map" + std::to_string(index) + ".v");
         }
         sec_check(step, true);
+        
+        run(stringf("rs-sec -genesis3 -stage after_lut_map%d -verify 1 -gen_net 0",index));
 
         index++;
     }
@@ -4257,7 +4259,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_proc.v");
             }
             sec_check("after_proc", true);
-
+            run("rs-sec -genesis3 -stage after_proc -verify 1 -gen_net 1");
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
             if (!no_flatten) {
@@ -4266,7 +4268,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             remove_print_cell();
 
-            run("rs-sec -genesis3 -stage after_proc -verify 1");
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
 #if 1
@@ -4276,7 +4277,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
             }
             sec_check("before_tribuf", true);
-            run("rs-sec -genesis3 -stage before_tribuf -verify 1");
+            run("rs-sec -genesis3 -stage before_tribuf -verify 1 -gen_net 1");
             /*Added to support OBUFT  if keep_tribuf flag is given*/
             if(keep_tribuf) { //non defualt mode :we keep TRIBUF
 
@@ -4294,7 +4295,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    run("write_verilog -noattr -nohex after_tribuf_merge.v");
                 }
                 sec_check("after_tribuf_merge", true);
-                run("rs-sec -genesis3 -stage after_tribuf_merge -verify 1");
+                run("rs-sec -genesis3 -stage after_tribuf_merge -verify 1 -gen_net 1");
                 // specific Rapid Silicon logic with -rs_logic option
                 //
                 run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
@@ -4303,7 +4304,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
                 }
                 sec_check("after_tribuf_logic", true);
-                run("rs-sec -genesis3 -stage after_tribuf_logic -verify 1");
+                run("rs-sec -genesis3 -stage after_tribuf_logic -verify 1 -gen_net 1");
             
 #else
             // Old tri-state handling
@@ -4326,7 +4327,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
             }
             sec_check("after_opt_clean1", true);
-            run("rs-sec -genesis3 -stage after_opt_clean1 -verify 1");
+            run("rs-sec -genesis3 -stage after_opt_clean1 -verify 1 -gen_net 1");
 
             run("check");
 
@@ -4343,7 +4344,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_fsm.v");
             }
             sec_check("after_fsm", true);
-            run("rs-sec -genesis3 -stage after_fsm -verify 1");
+            run("rs-sec -genesis3 -stage after_fsm -verify 1 -gen_net 1");
 
             run("wreduce -keepdc");
             run("peepopt");
@@ -4371,7 +4372,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean2.v");
             }
             sec_check("after_opt_clean2", true);
-            run("rs-sec -genesis3 -stage after_opt_clean2 -verify 1");
+            run("rs-sec -genesis3 -stage after_opt_clean2 -verify 1 -gen_net 1");
         }
 
         transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
@@ -4451,7 +4452,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
                         sec_check("after_dsp_map3", true);
-                        run("rs-sec -genesis3 -stage after_dsp_map3 -verify 1");
+                        run("rs-sec -genesis3 -stage after_dsp_map3 -verify 1 -gen_net 1");
                         // Fractuated mode has been disabled for Genesis2
                         // Fractuated mode has been disabled for Genesis3
                         //
@@ -4466,7 +4467,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
                         sec_check("after_dsp_map4", true);
-                        run("rs-sec -genesis3 -stage after_dsp_map4 -verify 1");
+                        run("rs-sec -genesis3 -stage after_dsp_map4 -verify 1 -gen_net 1");
                         if (tech == Technologies::GENESIS)
                             run("rs-pack-dsp-regs -genesis");
                         else   
@@ -4485,7 +4486,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
                         sec_check("after_dsp_map5", true);
-                        run("rs-sec -genesis3 -stage after_dsp_map5 -verify 1");
+                        run("rs-sec -genesis3 -stage after_dsp_map5 -verify 1 -gen_net 1");
 
                         break;
                     }
@@ -4529,7 +4530,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
                         sec_check("after_dsp_map3", true);
-                        run("rs-sec -genesis3 -stage after_dsp_map3 -verify 1");
+                        run("rs-sec -genesis3 -stage after_dsp_map3 -verify 1 -gen_net 1");
 
                         // Fractuated mode has been enabled for Genesis3
                         if (tech == Technologies::GENESIS_3  && new_dsp19x2)
@@ -4544,7 +4545,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
                         sec_check("after_dsp_map4", true);
-                        run("rs-sec -genesis3 -stage after_dsp_map4 -verify 1");
+                        run("rs-sec -genesis3 -stage after_dsp_map4 -verify 1 -gen_net 1");
 
                         run("rs-pack-dsp-regs -genesis3");
 
@@ -4557,7 +4558,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
                         sec_check("after_dsp_map5", true);
-                        run("rs-sec -genesis3 -stage after_dsp_map5 -verify 1");
+                        run("rs-sec -genesis3 -stage after_dsp_map5 -verify 1 -gen_net 1");
 
 #if 1
                         //run("stat");
@@ -4581,7 +4582,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_alumacc.v");
             }
             sec_check("after_alumacc", true);
-            run("rs-sec -genesis3 -stage after_alumacc -verify 1");
+            run("rs-sec -genesis3 -stage after_alumacc -verify 1 -gen_net 1");
 
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
@@ -4602,7 +4603,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean3.v");
             }
             sec_check("after_opt_clean3", true);
-            run("rs-sec -genesis3 -stage after_opt_clean3 -verify 1");
+            run("rs-sec -genesis3 -stage after_opt_clean3 -verify 1 -gen_net 1");
         }
 
         if (!nobram){
@@ -4711,7 +4712,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_tech_map.v");
             }
             sec_check("after_tech_map", false);
-
+            run("rs-sec -genesis3 -stage after_tech_map -verify 1 -gen_net 1");
+            
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
             }
@@ -4722,6 +4724,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt-fast-full.v");
             }
             sec_check("after_opt-fast-full", true);
+            run("rs-sec -genesis3 -stage after_opt-fast-full -verify 1 -gen_net 1");
         }
 
 #if 1
@@ -4767,6 +4770,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     run("write_verilog -noattr -nohex before_simplify.v");
                 }
                 sec_check("before_simplify", true);
+                run("rs-sec -genesis3 -stage before_simplify -verify 1 -gen_net 1");
 
                 int dfl = 0;
 
@@ -4861,6 +4865,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     run("write_verilog -noattr -nohex after_simplify.v");
                 }
                 sec_check("after_simplify", true);
+                run("rs-sec -genesis3 -stage after_simplify -verify 1 -gen_net 1");
             }
         }
 
@@ -4907,6 +4912,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
                         sec_check("after_dfflegalize", true);
+                        run("rs-sec -genesis3 -stage after_dfflegalize -verify 1 -gen_net 0");
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -4930,6 +4936,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
                         sec_check("after_dfflegalize", true);
+                        run("rs-sec -genesis3 -stage after_dfflegalize -verify 1 -gen_net 0");
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -4955,6 +4962,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
                         sec_check("after_dfflegalize", true);
+                        run("rs-sec -genesis3 -stage after_dfflegalize -verify 1 -gen_net 0");
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -4978,6 +4986,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     run("write_verilog -noattr -nohex after_techmap_ff_map.v");
                 }
                 sec_check("after_techmap_ff_map", true);
+                run("rs-sec -genesis3 -stage after_techmap_ff_map -verify 1 -gen_net 0");
             }
             run("opt_expr -mux_undef");
             run("simplemap");
@@ -4990,7 +4999,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
             }
             sec_check("after_opt_clean4", true);
-
+            run("rs-sec -genesis3 -stage after_opt_clean4 -verify 1 -gen_net 0");
             if (!fast)
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
         }
@@ -5089,6 +5098,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
 
         sec_check("final_netlist", true);
+        run("rs-sec -genesis3 -stage final_netlist -verify 0 -gen_net 1");
 
         writeNetlistInfo("netlist_info.json");
 
