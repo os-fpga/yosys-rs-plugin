@@ -11,11 +11,19 @@ USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
 #define MODE_BITS_OUTPUT_SELECT_WIDTH 3
+#define GENESIS_3_DIR genesis3
+#define XSTR(val) #val
+#define STR(val) XSTR(val)
+#define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
+#define SEC_SIM_CELLS SEC_MODELS/simcells.v
+#define SEC_SIM_LIB SEC_MODELS/simlib.v
 
 bool is_genesis3;
 string current_stage;
 string previous_state = "";
 int sec_counter = 0;
+string  mod_name = "";
+int gen_net = 0;
 
 struct RsSECWorker
 {
@@ -33,10 +41,11 @@ struct RsSECWorker
         int inB;
         int outY;
         bool signed_opr;
+        int inS;
 
         // Overload == operator to compare two Entry objects
         bool operator==(const Entry& other) const {
-            return type == other.type && inA == other.inA && inB == other.inB && outY == other.outY && signed_opr == other.signed_opr;
+            return type == other.type && inA == other.inA && inB == other.inB && outY == other.outY && signed_opr == other.signed_opr && inS == other.inS;
         }
     };
     
@@ -47,6 +56,7 @@ struct RsSECWorker
             if (a.inB != b.inB) return a.inB < b.inB;
             if (a.outY != b.outY) return a.outY < b.outY;
             return a.signed_opr < b.signed_opr;
+            if (a.inS != b.inS) return a.inS < b.inS;
         }
     };
     
@@ -60,7 +70,8 @@ struct RsSECWorker
     void add_A_B_Y_S (RTLIL::Design *design, const std::vector<Entry>& entries){
         for (auto entry : entries){
             log("%s: %d, %d, %d, %d\n",entry.type.c_str(),entry.inA, entry.inB, entry.outY, entry.signed_opr);
-            string  mod_name =  entry.type+ "_" + std::to_string(entry.inA) + "_" + std::to_string(entry.inB) + "_" + std::to_string(entry.outY);
+            string  mod_name =  entry.type+ "_" + std::to_string(entry.inA) + "_" + std::to_string(entry.inB) + "_" + std::to_string(entry.outY)+"_"+std::to_string(entry.inS);
+            log("Module = %s\n",mod_name.c_str());
             design->addModule(RTLIL::escape_id(mod_name));
             
             for (auto &module : design->selected_modules()) {
@@ -68,12 +79,15 @@ struct RsSECWorker
                     SigSpec A;
                     SigSpec B; 
                     SigSpec Y; 
+                    SigSpec S; 
+
 
                     A = module->addWire(RTLIL::escape_id("A"), entry.inA);
                     if (entry.inB!=0)
                         B =  module->addWire(RTLIL::escape_id("B"), entry.inB);
                     Y =  module->addWire(RTLIL::escape_id("Y"), entry.outY);
-                    
+                    if (entry.inS!=0)
+                        S =  module->addWire(RTLIL::escape_id("Y"), entry.inS);
                     for (auto wire : module->wires()){
                         if (wire->name == "\\A") {
                             wire->port_input = true;
@@ -90,18 +104,32 @@ struct RsSECWorker
                             else
                                 wire->port_id=2;
                         }
+                        if (wire->name == "\\S") {
+                            wire->port_input = true;
+                            wire->port_id=4;
+                        }
                     }
                     module->ports.push_back(RTLIL::escape_id("A"));
                     if (entry.inB != 0)
                         module->ports.push_back(RTLIL::escape_id("B"));
                     module->ports.push_back(RTLIL::escape_id("Y"));
+                    if (entry.inS != 0)
+                        module->ports.push_back(RTLIL::escape_id("S"));
 
                     if (entry.type == "$add")
                         module->addAdd(RTLIL::escape_id(mod_name), A, B, Y, false);
                     else if (entry.type == "$reduce_xor")
                         module->addReduceXor(RTLIL::escape_id(mod_name), A, Y, false);
+                    else if (entry.type == "$not")
+                        module->addNot(RTLIL::escape_id(mod_name), A, Y, false);
                     else if (entry.type == "$xor")
                         module->addXor(RTLIL::escape_id(mod_name), A, B, Y, false);
+                    else if (entry.type == "$and")
+                        module->addAnd(RTLIL::escape_id(mod_name), A, B, Y, false);
+                    else if (entry.type == "$or")
+                        module->addOr(RTLIL::escape_id(mod_name), A, B, Y, false);
+                    else if (entry.type == "$or")
+                        module->addMux(RTLIL::escape_id(mod_name), A, B, S, Y);
                 }
             }
             Pass::call(design, stringf("hierarchy -top %s",mod_name.c_str()));
@@ -120,25 +148,36 @@ struct RsSECWorker
     }
 
     void edit_design(RTLIL::Design *design, std::set<RTLIL::IdString>& blif_models){
-        // Pass::call(design, "design -save new_design");
+        if (!gen_net)
+            Pass::call(design, "design -save original");
         Pass::call(design,"opt_clean");
         
         for(auto& modules : design->selected_modules()){
             for (auto &cell : modules->selected_cells()) {
-                if (cell->type.in(ID($add),ID($xor))){
+                if (cell->type.in(ID($add),ID($xor),ID($and),ID($or))){
                     string cell_type = log_id(cell->type);
                     RTLIL::IdString cell_name = cell_type + "_" + \
                     std::to_string(GetSize(cell->getPort(ID::A))) + "_" + \
                     std::to_string(GetSize(cell->getPort(ID::B))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Y)));
+                    std::to_string(GetSize(cell->getPort(ID::Y))) + "_0";
                     blif_models.insert(cell_name);
                     cell->type = cell_name;
                 }
-                if (cell->type.in(ID($reduce_xor))){
+                if (cell->type.in(ID($reduce_xor),ID($not))){
                     string cell_type = log_id(cell->type);
                     RTLIL::IdString cell_name = cell_type + "_" + \
                     std::to_string(GetSize(cell->getPort(ID::A))) + "_0_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Y)));
+                    std::to_string(GetSize(cell->getPort(ID::Y))) + "_0";
+                    blif_models.insert(cell_name);
+                    cell->type = cell_name;
+                }
+                if (cell->type.in(ID($mux))){
+                    string cell_type = log_id(cell->type);
+                    RTLIL::IdString cell_name = cell_type + "_" + \
+                    std::to_string(GetSize(cell->getPort(ID::A))) + "_" + \
+                    std::to_string(GetSize(cell->getPort(ID::B))) + "_" + \
+                    std::to_string(GetSize(cell->getPort(ID::Y))) + "_" + \
+                    std::to_string(GetSize(cell->getPort(ID::S)));
                     blif_models.insert(cell_name);
                     cell->type = cell_name;
                 }
@@ -287,19 +326,20 @@ struct RsSECWorker
         }
         return result;
     }
-  
-    void run_scr (RTLIL::Design *design) {
+
+    void gen_netlist(RTLIL::Design *design){
+        std::string simcells = GET_FILE_PATH(GENESIS_3_DIR, SEC_SIM_CELLS);
+        std::string simlib = GET_FILE_PATH(GENESIS_3_DIR, SEC_SIM_LIB);
         Module* topModule = design->top_module();
 
         const char* topName = topModule->name.c_str();
         topName++;
 
-        Pass::call(design, "design -save original");
         Pass::call(design, "write_verilog -selected -noexpr -nodec design.v");
         Pass::call(design, "design -reset");
         
-        Pass::call(design, "read_verilog -sv /nfs_scratch/scratch/FV/awais/Synthesis/yosys_opensource/EDA-2073/yosys_verific_rs_sec_project/yosys-rs-plugin/genesis3/SEC_MODELS/simcells.v");
-        Pass::call(design, "read_verilog -sv /nfs_scratch/scratch/FV/awais/Synthesis/yosys_opensource/EDA-2073/yosys_verific_rs_sec_project/yosys-rs-plugin/genesis3/SEC_MODELS/simlib.v");
+        Pass::call(design, stringf("read_verilog -sv %s", simcells.c_str()));
+        Pass::call(design, stringf("read_verilog -sv %s", simlib.c_str()));
         Pass::call(design, "read_verilog design.v");
         
         Pass::call(design, stringf("hierarchy -top %s",topName));
@@ -311,27 +351,36 @@ struct RsSECWorker
 
         Pass::call(design, "opt_clean -purge");
         Pass::call(design, "design -save new_design");
-        Pass::call(design, "stat");
+    }
+
+    void run_scr (RTLIL::Design *design) {
         
+        Pass::call(design, "design -save original");
+        if (gen_net)
+            gen_netlist(design);
+
         std::vector<Entry> entries;
         std::set<Entry, CompareEntry> uniqueSet;
         
         for (auto cell : design->top_module()->cells()) {
-            // Pass::call(design, "stat");
             if (cell->type.in(ID($add), ID($sub), ID($div), ID($mod), ID($divfloor), ID($modfloor), ID($pow), ID($mul),\
                 ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand))){
-                addEntry(entries,uniqueSet,{log_id(cell->type),GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false});
+                addEntry(entries,uniqueSet,{log_id(cell->type),GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
-            if (cell->type.in(ID($reduce_xor))){
-                addEntry(entries,uniqueSet,{log_id(cell->type), GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false});
+            if (cell->type.in(ID($reduce_xor),ID($not))){
+                addEntry(entries,uniqueSet,{log_id(cell->type), GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false,0});
+            }
+            if (cell->type.in(ID($mux))){
+                addEntry(entries,uniqueSet,{log_id(cell->type), GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false, GetSize(cell->getPort(ID::S))});
             }
         }
-        for (auto entry : entries){
-            log("%s: %d, %d, %d, %d\n",entry.type.c_str(),entry.inA, entry.inB, entry.outY, entry.signed_opr);
-        }
+        
         add_A_B_Y_S(design,entries);
 
-        Pass::call(design, "design -load new_design");
+        if (gen_net)
+            Pass::call(design, "design -load new_design");
+        else
+            Pass::call(design, "design -load original");
         std::set<RTLIL::IdString> blif_models;
 
         // edit netlist subckt names according to cell (name, size)
@@ -376,6 +425,8 @@ struct RsSecPass : public Pass {
                 current_stage = a_Args[++argidx];
             if (a_Args[argidx] == "-verify")
                 verify = -stoi(a_Args[++argidx]);
+            if (a_Args[argidx] == "-gen_net")
+                gen_net = -stoi(a_Args[++argidx]);
            
         }
         
