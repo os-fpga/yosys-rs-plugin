@@ -27,7 +27,8 @@ string previous_state = "";
 int sec_counter = 0;
 string  mod_name = "";
 int gen_net = 0;
-
+dict<RTLIL::IdString, RTLIL::IdString> sbckt_name;
+std::set<RTLIL::IdString> cell_mod_name;
 struct RsSECWorker
 {
     RTLIL::Module *m_module;
@@ -40,6 +41,7 @@ struct RsSECWorker
     
     struct Entry {
         std::string type;
+        RTLIL::IdString name;
         int inA;
         int inB;
         int outY;
@@ -48,12 +50,13 @@ struct RsSECWorker
 
         // Overload == operator to compare two Entry objects
         bool operator==(const Entry& other) const {
-            return type == other.type && inA == other.inA && inB == other.inB && outY == other.outY && signed_opr == other.signed_opr && inS == other.inS;
+            return type == other.type && name == other.name && inA == other.inA && inB == other.inB && outY == other.outY && signed_opr == other.signed_opr && inS == other.inS;
         }
     };
     
     struct Entry_ff_sync {
         RTLIL::IdString type;
+        RTLIL::IdString name;
         int inCLK;
         int inEN;
         int inSET;
@@ -65,7 +68,7 @@ struct RsSECWorker
         int srst_value;
         // Overload == operator to compare two Entry objects
         bool operator==(const Entry_ff_sync& other) const {
-            return type == other.type && inCLK == other.inCLK && inEN == other.inEN && inSET == other.inSET && \
+            return type == other.type && name == other.name && inCLK == other.inCLK && inEN == other.inEN && inSET == other.inSET && \
             inCLR == other.inCLR && inD == other.inD && outQ == other.outQ && clk_polarity == other.clk_polarity &&\
             srst_polarity == other.srst_polarity && srst_value == other.srst_value;
         }
@@ -75,6 +78,7 @@ struct RsSECWorker
     struct CompareEntry {
         bool operator()(const Entry& a, const Entry& b) const {
             if (a.type != b.type) return a.type < b.type;
+            if (a.name != b.name) return a.name < b.name;
             if (a.inA != b.inA) return a.inA < b.inA;
             if (a.inB != b.inB) return a.inB < b.inB;
             if (a.outY != b.outY) return a.outY < b.outY;
@@ -86,6 +90,7 @@ struct RsSECWorker
     struct CompareEntry_ff_sync {
         bool operator()(const Entry_ff_sync& a, const Entry_ff_sync& b) const {
             if (a.type != b.type) return a.type < b.type;
+            if (a.name != b.name) return a.name < b.name;
             if (a.inEN != b.inEN) return a.inEN < b.inEN;
             if (a.inSET != b.inSET) return a.inSET < b.inSET;
             if (a.inCLR != b.inCLR) return a.inCLR < b.inCLR;
@@ -115,14 +120,16 @@ struct RsSECWorker
     void add_ff_sync (RTLIL::Design *design, const std::vector<Entry_ff_sync>& entries){
         for (auto entry : entries){
             if (entry.type.in(ID($ff), ID($dff), ID($dffe), ID($dffsr),ID($dffsre),ID($_DFF_P_),ID($_DFF_N_),ID($dff))){
-                log("%s: %d, %d, %d, %d, %d, %d\n",entry.type.c_str(),entry.inCLK, entry.inEN, entry.inSET, entry.inCLR, entry.inD, entry.outQ);
                 std::string cell_type_str = entry.type.str();
-                string  mod_name = cell_type_str + "_" + std::to_string(entry.inCLK) + "_" + std::to_string(entry.inEN) + "_" + std::to_string(entry.inD)+"_"+std::to_string(entry.outQ);
-                log("Module = %s\n",mod_name.c_str());
-                design->addModule(RTLIL::escape_id(mod_name));
-
+                RTLIL::IdString  mod_name = cell_type_str + "_" + std::to_string(entry.inCLK) + "_" + std::to_string(entry.inEN) + "_" + std::to_string(entry.inD)+"_"+std::to_string(entry.outQ);
+                sbckt_name[entry.name] = mod_name;
+                if (cell_mod_name.find(mod_name) != cell_mod_name.end()) {
+                    continue;
+                }
+                design->addModule(mod_name);
+                cell_mod_name.insert(mod_name);
                 for (auto &module : design->selected_modules()) {
-                    if (module->name == RTLIL::escape_id(mod_name) && entry.type== ID($dff)){
+                    if (module->name == mod_name && entry.type== ID($dff)){
                         SigSpec CLK;
                         SigSpec D; 
                         SigSpec Q;  
@@ -148,9 +155,9 @@ struct RsSECWorker
                         module->ports.push_back(RTLIL::escape_id("D"));
                         module->ports.push_back(RTLIL::escape_id("Q"));
                         if (entry.type == "$dff")
-                            module->addDff(RTLIL::escape_id(mod_name), CLK, D, Q,true);
+                            module->addDff(mod_name, CLK, D, Q,true);
                     }
-                    else if (module->name == RTLIL::escape_id(mod_name) && entry.type== ID($sdff)){
+                    else if (module->name == mod_name && entry.type== ID($sdff)){
                         SigSpec CLK;
                         SigSpec SRST;
                         SigSpec D; 
@@ -184,9 +191,9 @@ struct RsSECWorker
                         module->ports.push_back(RTLIL::escape_id("SRST"));
                         module->ports.push_back(RTLIL::escape_id("D"));
                         module->ports.push_back(RTLIL::escape_id("Q"));
-                        module->addSdff(RTLIL::escape_id(mod_name), CLK, SRST, D, Q,entry.srst_value,clk_polarity,srst_polarity);
+                        module->addSdff(mod_name, CLK, SRST, D, Q,entry.srst_value,clk_polarity,srst_polarity);
                     }
-                    else if (module->name == RTLIL::escape_id(mod_name) && (entry.type== ID($_DFF_P_) || entry.type== ID($_DFF_N_))){
+                    else if (module->name == mod_name && (entry.type== ID($_DFF_P_) || entry.type== ID($_DFF_N_))){
                         SigSpec C;
                         SigSpec D; 
                         SigSpec Q;  
@@ -212,14 +219,13 @@ struct RsSECWorker
                         module->ports.push_back(RTLIL::escape_id("D"));
                         module->ports.push_back(RTLIL::escape_id("Q"));
                         if (entry.type == "$_DFF_P_")
-                            module->addDffGate(RTLIL::escape_id(mod_name), C, D, Q,true);
+                            module->addDffGate(mod_name, C, D, Q,true);
                         else
-                            module->addDffGate(RTLIL::escape_id(mod_name), C, D, Q,false);
+                            module->addDffGate(mod_name, C, D, Q,false);
                     }
                 }
                 Pass::call(design, stringf("hierarchy -top %s",mod_name.c_str()));
 
-                // Pass::call(design, "stat");
                 Pass::call(design, "proc");
                 Pass::call(design, "flatten");
                 Pass::call(design, "opt_expr");
@@ -232,19 +238,21 @@ struct RsSECWorker
     
     void add_A_B_Y_S (RTLIL::Design *design, const std::vector<Entry>& entries){
         for (auto entry : entries){
-            log("%s: %d, %d, %d, %d\n",entry.type.c_str(),entry.inA, entry.inB, entry.outY, entry.signed_opr);
-            string  mod_name =  entry.type+ "_" + std::to_string(entry.inA) + "_" + std::to_string(entry.inB) + "_" + std::to_string(entry.outY)+"_"+std::to_string(entry.inS);
-            
-            log("Module = %s\n",mod_name.c_str());
-            design->addModule(RTLIL::escape_id(mod_name));
+            RTLIL::IdString  mod_name =  entry.type+ "_" + std::to_string(entry.inA) + "_" + std::to_string(entry.inB) + "_" + std::to_string(entry.outY)+"_"+std::to_string(entry.inS);
+            sbckt_name[entry.name] = mod_name;
+            if (cell_mod_name.find(mod_name) != cell_mod_name.end()) {
+                continue;
+            }
 
+            design->addModule(mod_name);
+            
+            cell_mod_name.insert(mod_name);
             for (auto &module : design->selected_modules()) {
-                if (module->name == RTLIL::escape_id(mod_name)){
+                if (module->name == mod_name){
                     SigSpec A;
                     SigSpec B; 
                     SigSpec Y; 
                     SigSpec S; 
-
 
                     A = module->addWire(RTLIL::escape_id("A"), entry.inA);
                     if (entry.inB!=0)
@@ -281,32 +289,29 @@ struct RsSECWorker
                         module->ports.push_back(RTLIL::escape_id("S"));
 
                     if (entry.type == "$add")
-                        module->addAdd(RTLIL::escape_id(mod_name), A, B, Y, false);
+                        module->addAdd(mod_name, A, B, Y, false);
                     else if (entry.type == "$reduce_xor")
-                        module->addReduceXor(RTLIL::escape_id(mod_name), A, Y, false);
+                        module->addReduceXor(mod_name, A, Y, false);
                     else if (entry.type == "$not")
-                        module->addNot(RTLIL::escape_id(mod_name), A, Y, false);
+                        module->addNot(mod_name, A, Y, false);
                     else if (entry.type == "$xor")
-                        module->addXor(RTLIL::escape_id(mod_name), A, B, Y, false);
+                        module->addXor(mod_name, A, B, Y, false);
                     else if (entry.type == "$and")
-                        module->addAnd(RTLIL::escape_id(mod_name), A, B, Y, false);
+                        module->addAnd(mod_name, A, B, Y, false);
                     else if (entry.type == "$or")
-                        module->addOr(RTLIL::escape_id(mod_name), A, B, Y, false);
+                        module->addOr(mod_name, A, B, Y, false);
                     else if (entry.type == "$or")
-                        module->addMux(RTLIL::escape_id(mod_name), A, B, S, Y);
+                        module->addMux(mod_name, A, B, S, Y);
                 }
             }
             Pass::call(design, stringf("hierarchy -top %s",mod_name.c_str()));
 
-            // Pass::call(design, "stat");
             Pass::call(design, "proc");
             Pass::call(design, "flatten");
             Pass::call(design, "opt_expr");
             Pass::call(design, "techmap");
             Pass::call(design, "opt_clean");
             
-            // Pass::call(design, "stat");
-            // log("Before Writing Blif\n");
             Pass::call(design, stringf("write_blif %s.blif",mod_name.c_str()));
         }
     }
@@ -315,61 +320,20 @@ struct RsSECWorker
         if (!gen_net)
             Pass::call(design, "design -save original");
         Pass::call(design,"opt_clean");
-
+        
         for(auto& modules : design->selected_modules()){
             for (auto &cell : modules->selected_cells()) {
+                for (auto name_mod : sbckt_name){
+                    if (cell->name != name_mod.first) continue;
 
-                if (cell->type.in(ID($add),ID($xor),ID($and),ID($or))){
-                    string cell_type = log_id(cell->type);
-                    RTLIL::IdString cell_name = cell_type + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::A))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::B))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Y))) + "_0";
-                    blif_models.insert(cell_name);
-                    cell->type = cell_name;
+                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($or),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_))){
+                        blif_models.insert(name_mod.second);
+                        cell->type = name_mod.second;
+                    }
+                    if (cell->type == RTLIL::escape_id("\\DFFRE")){ 
+                        blif_models.insert(cell->type);
+                    }
                 }
-                if (cell->type.in(ID($reduce_xor),ID($not))){
-                    string cell_type = log_id(cell->type);
-                    RTLIL::IdString cell_name = cell_type + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::A))) + "_0_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Y))) + "_0";
-                    blif_models.insert(cell_name);
-                    cell->type = cell_name;
-                }
-                if (cell->type.in(ID($mux))){
-                    string cell_type = log_id(cell->type);
-                    RTLIL::IdString cell_name = cell_type + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::A))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::B))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Y))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::S)));
-                    blif_models.insert(cell_name);
-                    cell->type = cell_name;
-                }
-                if (cell->type.in(ID($dff),ID($sdff))){
-                    string cell_type = log_id(cell->type);
-                    RTLIL::IdString cell_name = cell_type + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::CLK))) + "_" +"0" + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::D))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Q)));
-                    blif_models.insert(cell_name);
-                    cell->type = cell_name;
-                }
-                if (cell->type.in(ID($_DFF_P_),ID($_DFF_N_))){
-                    string cell_type = log_id(cell->type);
-                    RTLIL::IdString cell_name = cell_type + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::C))) + "_" +"0" + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::D))) + "_" + \
-                    std::to_string(GetSize(cell->getPort(ID::Q)));
-                    blif_models.insert(cell_name);
-                    cell->type = cell_name;
-                }
-                if (cell->type == RTLIL::escape_id("\\DFFRE")){
-                    RTLIL::IdString cell_name = cell->type; 
-                    blif_models.insert(cell->type);
-                    
-                }
-
             }
         }
     }
@@ -568,6 +532,7 @@ struct RsSECWorker
     }
 
     void run_scr (RTLIL::Design *design) {
+        cell_mod_name.clear();
         isSequential = design_has_clk(design);
         Pass::call(design, "design -save original");
         if (gen_net)
@@ -582,25 +547,25 @@ struct RsSECWorker
         for (auto cell : design->top_module()->cells()) {
             if (cell->type.in(ID($add), ID($sub), ID($div), ID($mod), ID($divfloor), ID($modfloor), ID($pow), ID($mul),\
                 ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand))){
-                addEntry(entries,uniqueSet,{log_id(cell->type),GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
+                addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
             if (cell->type.in(ID($reduce_xor),ID($not), ID($logic_not))){
-                addEntry(entries,uniqueSet,{log_id(cell->type), GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false,0});
+                addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false,0});
             }
             if (cell->type.in(ID($mux))){
-                addEntry(entries,uniqueSet,{log_id(cell->type), GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false, GetSize(cell->getPort(ID::S))});
+                addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false, GetSize(cell->getPort(ID::S))});
             }
             if (cell->type.in(ID($shl), ID($shr), ID($sshl), ID($sshr))){
-                addEntry(entries,uniqueSet,{log_id(cell->type),GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
+                addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
             if (cell->type.in(ID($dff))){
-                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), GetSize(cell->getPort(ID::CLK)), 0, 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)), false,false,0});
+                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), 0, 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)), false,false,0});
             }
             if (cell->type.in(ID($_DFF_P_),ID($_DFF_N_))){
-                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), GetSize(cell->getPort(ID::C)), 0, 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),false, false, 0});
+                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::C)), 0, 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),false, false, 0});
             }
             if (cell->type.in(ID($sdff))){
-                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), GetSize(cell->getPort(ID::CLK)), 0, 0, GetSize(cell->getPort(ID::SRST)),GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),cell->getParam(ID::CLK_POLARITY).as_int(),cell->getParam(ID::SRST_POLARITY).as_int(),cell->getParam(ID::SRST_VALUE).as_int()});
+                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), 0, 0, GetSize(cell->getPort(ID::SRST)),GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),cell->getParam(ID::CLK_POLARITY).as_int(),cell->getParam(ID::SRST_POLARITY).as_int(),cell->getParam(ID::SRST_VALUE).as_int()});
             }
         }
         add_ff_sync(design,entries_ff);
@@ -684,10 +649,11 @@ struct RsSecPass : public Pass {
         }
         
         extra_args(a_Args, argidx, design);
+        
         sec_counter++;
         if (!verify)
             return;
-        // log("Current State = %s, Previous State = %s\n",current_stage.c_str(),previous_state.c_str());
+            
         for (auto mod : design->selected_modules()) {
             RsSECWorker worker(mod);
             worker.run_scr(design);
