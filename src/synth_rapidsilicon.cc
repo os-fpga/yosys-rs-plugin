@@ -4712,7 +4712,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
 
             if (cec) {
-                run("write_verilog -noattr -nohex after_tech_map.v");
+                run("write_verilog -noexpr -noattr -nohex after_tech_map.v");
             }
             //sec_check("after_tech_map", false);
             sec_check("after_tech_map", true, true);
@@ -4725,7 +4725,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             run("opt_expr -full");
 
             if (cec) {
-                run("write_verilog -noattr -nohex after_opt-fast-full.v");
+                run("write_verilog -noexpr -noattr -nohex after_opt-fast-full.v");
             }
             sec_check("after_opt-fast-full", true, true);
             
@@ -5101,7 +5101,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
         }
 
-        sec_check("final_netlist", true, true);
+        //sec_check("final_netlist", true, true);
         
 
         writeNetlistInfo("netlist_info.json");

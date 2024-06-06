@@ -1,0 +1,56 @@
+.model DFFRE
+.inputs D R E C
+.outputs Q
+.names $false
+.names $true
+1
+.names $undef
+.subckt $mux A=$false B=$auto$async2sync.cc:228:execute$7 S=R Y=Q
+.subckt $sdff CLK=C D=$0\Q[0:0] Q=$auto$async2sync.cc:228:execute$7 SRST=R
+.subckt $mux A=Q B=D S=E Y=$0\Q[0:0]
+.end
+###############################################################
+.model $logic_not
+.inputs A
+.outputs Y
+
+.names A Y
+0 1
+.end
+###############################################################
+.model $sdff
+.inputs CLK SRST D
+.outputs Q
+.names $false
+.names $true
+1
+.names $undef
+.subckt $logic_not A=SRST Y=$logic_not$top.v:14$2_Y
+.subckt $dff CLK=CLK D=$procmux$4_Y Q=Q
+.subckt $mux A=$false B=D S=SRST Y=$procmux$4_Y
+.names $logic_not$top.v:14$2_Y $procmux$5_CMP
+1 1
+.names $procmux$4_Y $0\Q[0:0]
+1 1
+.end
+
+#################################################################
+.model $dff
+.inputs D
+.outputs Q
+.clock CLK
+.latch D Q re CLK 0
+.end
+
+#################################################################
+.model $mux
+.inputs A B S
+.outputs Y
+
+.names S A B Y
+010 1
+011 1
+101 1
+111 1
+.end
+#################################################################
