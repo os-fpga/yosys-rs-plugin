@@ -254,12 +254,17 @@ struct RsSECWorker
                     SigSpec Y; 
                     SigSpec S; 
 
+
                     A = module->addWire(RTLIL::escape_id("A"), entry.inA);
                     if (entry.inB!=0)
                         B =  module->addWire(RTLIL::escape_id("B"), entry.inB);
+                    else if (entry.inB ==0 && entry.type== "$mux"){
+                        B =  module->addWire(RTLIL::escape_id("B"), entry.inA);
+                    }
+
                     Y =  module->addWire(RTLIL::escape_id("Y"), entry.outY);
                     if (entry.inS!=0)
-                        S =  module->addWire(RTLIL::escape_id("Y"), entry.inS);
+                        S =  module->addWire(RTLIL::escape_id("S"), entry.inS);
                     for (auto wire : module->wires()){
                         if (wire->name == "\\A") {
                             wire->port_input = true;
@@ -273,6 +278,8 @@ struct RsSECWorker
                             wire->port_output = true;
                             if (entry.inB != 0)
                                 wire->port_id=3;
+                            else if(entry.inB == 0 && entry.type == "$mux")
+                                wire->port_id=3;
                             else
                                 wire->port_id=2;
                         }
@@ -284,6 +291,9 @@ struct RsSECWorker
                     module->ports.push_back(RTLIL::escape_id("A"));
                     if (entry.inB != 0)
                         module->ports.push_back(RTLIL::escape_id("B"));
+                    else if(entry.inB == 0 && entry.type == "$mux")
+                        module->ports.push_back(RTLIL::escape_id("B"));
+
                     module->ports.push_back(RTLIL::escape_id("Y"));
                     if (entry.inS != 0)
                         module->ports.push_back(RTLIL::escape_id("S"));
@@ -300,8 +310,10 @@ struct RsSECWorker
                         module->addAnd(mod_name, A, B, Y, false);
                     else if (entry.type == "$or")
                         module->addOr(mod_name, A, B, Y, false);
-                    else if (entry.type == "$or")
+                    else if (entry.type == "$mux")
                         module->addMux(mod_name, A, B, S, Y);
+                    else if (entry.type == "$shr")
+                        module->addShr(mod_name, A, B, Y,false);
                 }
             }
             Pass::call(design, stringf("hierarchy -top %s",mod_name.c_str()));
@@ -326,7 +338,7 @@ struct RsSECWorker
                 for (auto name_mod : sbckt_name){
                     if (cell->name != name_mod.first) continue;
 
-                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($or),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_))){
+                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_))){
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
                     }
@@ -553,7 +565,7 @@ struct RsSECWorker
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false,0});
             }
             if (cell->type.in(ID($mux))){
-                addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false, GetSize(cell->getPort(ID::S))});
+                addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), GetSize(cell->getPort(ID::B)), GetSize(cell->getPort(ID::Y)), false, GetSize(cell->getPort(ID::S))});
             }
             if (cell->type.in(ID($shl), ID($shr), ID($sshl), ID($sshr))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
