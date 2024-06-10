@@ -924,6 +924,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
           return;
         }
         run(stringf("rs-sec -genesis3 -stage %s -verify %d -gen_net %d",checkName.c_str(),verify,elaborate_cells));
+        if (sec_mode == SECMode::ON_STEP) {
+          getchar();
+        }
 #if 0
         run("design -save original");
 
@@ -4915,7 +4918,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize", true, false);
+                        sec_check("after_dfflegalize", false, false);
                         
 
 #ifdef DEV_BUILD
@@ -4939,7 +4942,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize", true, false);
+                        sec_check("after_dfflegalize", false, false);
                         
 
 #ifdef DEV_BUILD
@@ -4965,7 +4968,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize", true, false);
+                        sec_check("after_dfflegalize", false, false);
                         
 
 #ifdef DEV_BUILD

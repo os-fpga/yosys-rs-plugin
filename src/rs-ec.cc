@@ -22,6 +22,7 @@ namespace fs = std::filesystem;
 
 bool is_genesis3;
 bool isSequential =false;
+bool blif_models_appended =false;
 string current_stage;
 string previous_state = "";
 int sec_counter = 0;
@@ -29,6 +30,7 @@ string  mod_name = "";
 int gen_net = 0;
 dict<RTLIL::IdString, RTLIL::IdString> sbckt_name;
 std::set<RTLIL::IdString> cell_mod_name;
+
 struct RsSECWorker
 {
     RTLIL::Module *m_module;
@@ -335,6 +337,9 @@ struct RsSECWorker
         
         for(auto& modules : design->selected_modules()){
             for (auto &cell : modules->selected_cells()) {
+                if (cell->type == RTLIL::escape_id("\\DFFRE") || cell->type.in(ID($_DFFE_PP_),ID($_DFFE_PP0P_)) ){ 
+                        blif_models.insert(cell->type);
+                }
                 for (auto name_mod : sbckt_name){
                     if (cell->name != name_mod.first) continue;
 
@@ -342,9 +347,7 @@ struct RsSECWorker
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
                     }
-                    if (cell->type == RTLIL::escape_id("\\DFFRE")){ 
-                        blif_models.insert(cell->type);
-                    }
+
                 }
             }
         }
@@ -358,10 +361,11 @@ struct RsSECWorker
         std::filesystem::path currentPath = std::filesystem::current_path();
         std::string currentPathStr = currentPath.string();
         string model_file_name,netlist_name;
-
+        blif_models_appended =false;
         for (auto blif_model : blif_models){
-
-            if(blif_model == RTLIL::escape_id("DFFRE")){
+            if((blif_model == RTLIL::escape_id("\\DFFRE")) || blif_model.in(ID($_DFFE_PP_),ID($_DFFE_PP0P_))){
+                if (blif_models_appended) //blif models are appended once only
+                    continue;
                 std::string model_file_name = GET_FILE_PATH_SEC_MODEL(GENESIS_3_DIR, SEC_DFFRE_blif);
                 string plugin_dir = proc_self_dirname() + "../share/yosys/";
                 model_file_name = plugin_dir + model_file_name;
@@ -381,6 +385,7 @@ struct RsSECWorker
 
                 inputFile.close();
                 outputFile.close();
+                blif_models_appended =true; 
 
             }else {
                 model_file_name = currentPathStr + "/" + log_id(blif_model) +".blif";
@@ -579,6 +584,7 @@ struct RsSECWorker
             if (cell->type.in(ID($sdff))){
                 addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), 0, 0, GetSize(cell->getPort(ID::SRST)),GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),cell->getParam(ID::CLK_POLARITY).as_int(),cell->getParam(ID::SRST_POLARITY).as_int(),cell->getParam(ID::SRST_VALUE).as_int()});
             }
+
         }
         add_ff_sync(design,entries_ff);
        
@@ -661,10 +667,10 @@ struct RsSecPass : public Pass {
         }
         
         extra_args(a_Args, argidx, design);
-        
-        sec_counter++;
         if (!verify)
             return;
+        sec_counter++;
+        
             
         for (auto mod : design->selected_modules()) {
             RsSECWorker worker(mod);
