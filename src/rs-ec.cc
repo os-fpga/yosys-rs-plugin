@@ -261,7 +261,7 @@ struct RsSECWorker
                     A = module->addWire(RTLIL::escape_id("A"), entry.inA);
                     if (entry.inB!=0)
                         B =  module->addWire(RTLIL::escape_id("B"), entry.inB);
-                    else if (entry.inB ==0 && entry.type== "$mux"){
+                    else if (entry.inB ==0 && (entry.type== "$mux" || entry.type== "$pmux")){
                         B =  module->addWire(RTLIL::escape_id("B"), entry.inA);
                     }
 
@@ -281,7 +281,7 @@ struct RsSECWorker
                             wire->port_output = true;
                             if (entry.inB != 0)
                                 wire->port_id=3;
-                            else if(entry.inB == 0 && entry.type == "$mux")
+                            else if(entry.inB == 0 && (entry.type== "$mux" || entry.type== "$pmux"))
                                 wire->port_id=3;
                             else
                                 wire->port_id=2;
@@ -294,7 +294,7 @@ struct RsSECWorker
                     module->ports.push_back(RTLIL::escape_id("A"));
                     if (entry.inB != 0)
                         module->ports.push_back(RTLIL::escape_id("B"));
-                    else if(entry.inB == 0 && entry.type == "$mux")
+                    else if(entry.inB == 0 && (entry.type== "$mux" || entry.type== "$pmux"))
                         module->ports.push_back(RTLIL::escape_id("B"));
 
                     module->ports.push_back(RTLIL::escape_id("Y"));
@@ -307,9 +307,19 @@ struct RsSECWorker
                         module->addSub(mod_name, A, B,Y, false);
                     else if (entry.type == "$reduce_xor")
                         module->addReduceXor(mod_name, A, Y, false);
+                    else if (entry.type == "$reduce_or")
+                        module->addReduceOr(mod_name, A, Y, false);
+                    else if (entry.type == "$reduce_and")
+                        module->addReduceAnd(mod_name, A, Y, false);
+                    else if (entry.type == "$reduce_bool")
+                        module->addReduceBool(mod_name, A, Y, false);
+                    else if (entry.type == "$reduce_xnor")
+                        module->addReduceXnor(mod_name, A, Y, false);
 
                     else if (entry.type == "$eq")
                         module->addEq(mod_name, A, B,Y, false);
+                    else if (entry.type == "$ne")
+                        module->addNe(mod_name, A, B,Y, false);
                     else if (entry.type == "$ge")
                         module->addGe(mod_name, A, B,Y, false);
                     else if (entry.type == "$gt")
@@ -336,6 +346,8 @@ struct RsSECWorker
                         module->addOr(mod_name, A, B, Y, false);
                     else if (entry.type == "$mux")
                         module->addMux(mod_name, A, B, S, Y);
+                    else if (entry.type == "$pmux")
+                        module->addPmux(mod_name, A, B, S, Y);
                     else if (entry.type == "$shr")
                         module->addShr(mod_name, A, B, Y,false);
                 }
@@ -366,7 +378,7 @@ struct RsSECWorker
                     if (cell->name != name_mod.first) continue;
 
                     if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
-                                    ID($logic_or),ID($lt),ID($logic_not))){
+                                    ID($logic_or),ID($lt),ID($ne),ID($logic_not),ID($pmux), ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
                     }
@@ -587,14 +599,14 @@ struct RsSECWorker
         
         for (auto cell : design->top_module()->cells()) {
             if (cell->type.in(ID($add), ID($sub), ID($div), ID($mod), ID($divfloor), ID($modfloor), ID($pow), ID($mul),\
-                ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
+                ID($xor),ID($or),ID($or),ID($and),ID($ne),ID($nor),ID($nand),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
                 ID($logic_or),ID($lt))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
-            if (cell->type.in(ID($reduce_xor),ID($not), ID($logic_not))){
+            if (cell->type.in(ID($reduce_xor),ID($not), ID($logic_not),ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false,0});
             }
-            if (cell->type.in(ID($mux))){
+            if (cell->type.in(ID($mux),ID($pmux))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), GetSize(cell->getPort(ID::B)), GetSize(cell->getPort(ID::Y)), false, GetSize(cell->getPort(ID::S))});
             }
             if (cell->type.in(ID($shl), ID($shr), ID($sshl), ID($sshr))){
