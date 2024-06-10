@@ -302,8 +302,29 @@ struct RsSECWorker
 
                     if (entry.type == "$add")
                         module->addAdd(mod_name, A, B, Y, false);
+                    else if (entry.type == "$sub")
+                        module->addSub(mod_name, A, B,Y, false);
                     else if (entry.type == "$reduce_xor")
                         module->addReduceXor(mod_name, A, Y, false);
+
+                    else if (entry.type == "$eq")
+                        module->addEq(mod_name, A, B,Y, false);
+                    else if (entry.type == "$ge")
+                        module->addGe(mod_name, A, B,Y, false);
+                    else if (entry.type == "$gt")
+                        module->addGt(mod_name, A, B,Y, false);
+                    else if (entry.type == "$le")
+                        module->addLe(mod_name, A, B,Y, false);
+                    else if (entry.type == "$lt")
+                        module->addLt(mod_name, A, B,Y, false);
+                    else if (entry.type == "$logic_and")
+                        module->addLogicAnd(mod_name, A, B,Y, false);
+                    else if (entry.type == "$logic_or")
+                        module->addLogicOr(mod_name, A, B,Y, false);
+                    else if (entry.type == "$logic_not")
+                        module->addLogicNot(mod_name, A, Y, false);
+
+
                     else if (entry.type == "$not")
                         module->addNot(mod_name, A, Y, false);
                     else if (entry.type == "$xor")
@@ -343,7 +364,8 @@ struct RsSECWorker
                 for (auto name_mod : sbckt_name){
                     if (cell->name != name_mod.first) continue;
 
-                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_))){
+                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($gt),ID($le),ID($logic_and),\
+                                    ID($logic_or),ID($lt),ID($logic_not))){
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
                     }
@@ -563,7 +585,8 @@ struct RsSECWorker
         
         for (auto cell : design->top_module()->cells()) {
             if (cell->type.in(ID($add), ID($sub), ID($div), ID($mod), ID($divfloor), ID($modfloor), ID($pow), ID($mul),\
-                ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand))){
+                ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand),ID($eq),ID($ge),ID($gt),ID($gt),ID($le),ID($logic_and),\
+                ID($logic_or),ID($lt))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
             if (cell->type.in(ID($reduce_xor),ID($not), ID($logic_not))){
