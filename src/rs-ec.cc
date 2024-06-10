@@ -358,13 +358,13 @@ struct RsSECWorker
         
         for(auto& modules : design->selected_modules()){
             for (auto &cell : modules->selected_cells()) {
-                if (cell->type == RTLIL::escape_id("\\DFFRE") || cell->type.in(ID($_DFFE_PP_),ID($_DFFE_PP0P_)) ){ 
+                if (cell->type == RTLIL::escape_id("\\DFFRE") || cell->type.in(ID($_DFFE_PP_),ID($_DFFE_PN_)) ){ 
                         blif_models.insert(cell->type);
                 }
                 for (auto name_mod : sbckt_name){
                     if (cell->name != name_mod.first) continue;
 
-                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($gt),ID($le),ID($logic_and),\
+                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
                                     ID($logic_or),ID($lt),ID($logic_not))){
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
@@ -385,7 +385,7 @@ struct RsSECWorker
         string model_file_name,netlist_name;
         blif_models_appended =false;
         for (auto blif_model : blif_models){
-            if((blif_model == RTLIL::escape_id("\\DFFRE")) || blif_model.in(ID($_DFFE_PP_),ID($_DFFE_PP0P_))){
+            if((blif_model == RTLIL::escape_id("\\DFFRE")) || blif_model.in(ID($_DFFE_PP_),ID(ID($_DFFE_PN_)))){
                 if (blif_models_appended) //blif models are appended once only
                     continue;
                 std::string model_file_name = GET_FILE_PATH_SEC_MODEL(GENESIS_3_DIR, SEC_DFFRE_blif);
@@ -585,7 +585,7 @@ struct RsSECWorker
         
         for (auto cell : design->top_module()->cells()) {
             if (cell->type.in(ID($add), ID($sub), ID($div), ID($mod), ID($divfloor), ID($modfloor), ID($pow), ID($mul),\
-                ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand),ID($eq),ID($ge),ID($gt),ID($gt),ID($le),ID($logic_and),\
+                ID($xor),ID($or),ID($or),ID($and),ID($nor),ID($nand),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
                 ID($logic_or),ID($lt))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
