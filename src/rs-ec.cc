@@ -6,6 +6,7 @@
 #include "kernel/ffinit.h"
 #include "kernel/ff.h"
 #include <filesystem>
+#include <chrono>
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -378,8 +379,9 @@ struct RsSECWorker
     void create_blif_models(RTLIL::Design *design, std::set<RTLIL::IdString>& blif_models){
         char current_netlist_name[528];
         sprintf(current_netlist_name, "%03d_%s", sec_counter, current_stage.c_str());
+        
         Pass::call(design, stringf("write_blif %s.blif",current_netlist_name));
-
+        
         std::filesystem::path currentPath = std::filesystem::current_path();
         std::string currentPathStr = currentPath.string();
         string model_file_name,netlist_name;
@@ -628,7 +630,7 @@ struct RsSECWorker
 
         if (gen_net){
             log(" =======================\n");
-            log("     Current step:\n");
+            log("     Current step Gen:\n");
             log(" =======================\n");
             Pass::call(design, "design -load new_design");
             Pass::call(design,"stat");
@@ -648,8 +650,11 @@ struct RsSECWorker
         // append current netlist with subckt models
         create_blif_models(design, blif_models);
         
-        if (current_stage != "" && previous_state != "")
+        if (current_stage != "" && previous_state != ""){
+            
             run_sec(isSequential);
+            
+        }
         
         Pass::call(design, "design -load original");
         Pass::call(design,"design -save previous");
@@ -657,7 +662,9 @@ struct RsSECWorker
         #if 0
             getchar();
         #endif
+        
     }
+    
 };
 
 struct RsSecPass : public Pass {
@@ -695,10 +702,11 @@ struct RsSecPass : public Pass {
         sec_counter++;
         
             
-        for (auto mod : design->selected_modules()) {
-            RsSECWorker worker(mod);
+        // for (auto mod : design->top_module()) {
+            RsSECWorker worker(design->top_module());
             worker.run_scr(design);
-        }
+        // }
+        
     }
 } RsSecPass;
 
