@@ -399,7 +399,7 @@ struct RsSECWorker
         string model_file_name,netlist_name;
         blif_models_appended =false;
         for (auto blif_model : blif_models){
-            if((blif_model == RTLIL::escape_id("\\DFFRE")) || blif_model.in(ID($_DFFE_PP_),ID(ID($_DFFE_PN_)))){
+            if((blif_model == RTLIL::escape_id("\\DFFRE")) || blif_model.in(ID($_DFFE_PP_),ID($_DFFE_PN_))){
                 if (blif_models_appended) //blif models are appended once only
                     continue;
                 std::string model_file_name = GET_FILE_PATH_SEC_MODEL(GENESIS_3_DIR, SEC_DFFRE_blif);
@@ -565,7 +565,9 @@ struct RsSECWorker
 
         const char* topName = topModule->name.c_str();
         topName++;
+        //Pass::call(design, "opt_clean -purge");
 
+        //Pass::call(design, stringf("hierarchy -check -top %s", topName));
         Pass::call(design, "write_verilog -selected -noexpr -nodec design.v");
         Pass::call(design, "design -reset");
         
