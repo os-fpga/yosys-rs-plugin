@@ -2827,20 +2827,7 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
             log_error("Cannot map %d internal 3-states Abort Synthesis  \n",tri_nError);
         }
     }
-    // Add error message when clock signal is used in expression EDA-2953
-    void illegal_clk_connection(){
-        for (auto cell : _design->top_module()->cells()){
-            if (RTLIL::builtin_ff_cell_types().count(cell->type)){
-                if (cell->getPort(ID::CLK) == cell->getPort(ID::D)){
-                    std::stringstream buf;
-                    for (auto &it : cell->attributes) {
-                        RTLIL_BACKEND::dump_const(buf, it.second);
-                    }
-                    log_error("Use of clock signal '%s' in the expression is not supported %s\n", log_signal(cell->getPort(ID::CLK)),buf.str().c_str());
-                }
-            }
-        }
-    }
+
     // Check if DLATCH has been found.
     // This is specific for Genesis3 since it does not support DLATCH   
     //
@@ -4278,7 +4265,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
 
             remove_print_cell();
-            illegal_clk_connection();
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
