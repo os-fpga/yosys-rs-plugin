@@ -3631,6 +3631,26 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
         }
     }
 
+    // Add error message when clock signal is used in expression EDA-2953
+    void illegal_clk_connection(){
+        for (auto cell : _design->top_module()->cells()){
+            if (RTLIL::builtin_ff_cell_types().count(cell->type)){
+                bool has_clk = false;
+                for (auto conn : cell->connections()){
+                    if (conn.first == ID::CLK || conn.first == ID::C){
+                        if (conn.second == cell->getPort(ID::D)){
+                            std::stringstream buf;
+                            for (auto &it : cell->attributes) {
+                                RTLIL_BACKEND::dump_const(buf, it.second);
+                            }
+                            log_error("Use of clock signal '%s' in the expression is not supported %s\n", log_signal(cell->getPort(ID::CLK)),buf.str().c_str());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Check if DLATCH has been found.
     // This is specific for Genesis3 since it does not support DLATCH   
     //
@@ -5068,6 +5088,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
 
             remove_print_cell();
+            illegal_clk_connection();
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
