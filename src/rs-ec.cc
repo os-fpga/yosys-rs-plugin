@@ -196,6 +196,42 @@ struct RsSECWorker
                         module->ports.push_back(RTLIL::escape_id("Q"));
                         module->addSdff(mod_name, CLK, SRST, D, Q,entry.srst_value,clk_polarity,srst_polarity);
                     }
+                    else if (module->name == mod_name && entry.type== ID($dffe)){
+                        SigSpec CLK;
+                        SigSpec EN;
+                        SigSpec D; 
+                        SigSpec Q;  
+                        bool clk_polarity= entry.clk_polarity;
+                        bool en_polarity = entry.srst_polarity;
+                        CLK = module->addWire(RTLIL::escape_id("CLK"), entry.inCLK);
+                        EN = module->addWire(RTLIL::escape_id("EN"), entry.inEN);
+                        D   = module->addWire(RTLIL::escape_id("D"), entry.inD);
+                        Q   = module->addWire(RTLIL::escape_id("Q"), entry.outQ);
+                        for (auto wire : module->wires()){
+                            if (wire->name == "\\CLK") {
+                                wire->port_input = true;
+                                wire->port_id=1;
+                            }
+                            if (wire->name == "\\EN") {
+                                wire->port_input = true;
+                                wire->port_id=2;
+                            }
+                            if (wire->name == "\\D") {
+                                wire->port_input = true;
+                                wire->port_id=3;
+                            }
+
+                            if (wire->name == "\\Q") {
+                                wire->port_output = true;
+                                    wire->port_id=4;
+                            }
+                        }
+                        module->ports.push_back(RTLIL::escape_id("CLK"));
+                        module->ports.push_back(RTLIL::escape_id("EN"));
+                        module->ports.push_back(RTLIL::escape_id("D"));
+                        module->ports.push_back(RTLIL::escape_id("Q"));
+                        module->addDffe(mod_name, CLK, EN, D, Q,clk_polarity,en_polarity);
+                    }
                     else if (module->name == mod_name && (entry.type== ID($_DFF_P_) || entry.type== ID($_DFF_N_))){
                         SigSpec C;
                         SigSpec D; 
@@ -377,7 +413,7 @@ struct RsSECWorker
                 for (auto name_mod : sbckt_name){
                     if (cell->name != name_mod.first) continue;
 
-                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
+                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($dffe),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
                                     ID($logic_or),ID($lt),ID($ne),ID($logic_not),ID($pmux), ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
@@ -616,6 +652,9 @@ struct RsSECWorker
             }
             if (cell->type.in(ID($dff))){
                 addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), 0, 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)), false,false,0});
+            }
+            if (cell->type.in(ID($dffe))){
+                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), GetSize(cell->getPort(ID::EN)), 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)), cell->getParam(ID::CLK_POLARITY).as_int(),cell->getParam(ID::EN_POLARITY).as_int(),0});
             }
             if (cell->type.in(ID($_DFF_P_),ID($_DFF_N_))){
                 addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::C)), 0, 0, 0,GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),false, false, 0});
