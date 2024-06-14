@@ -5125,8 +5125,21 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
 
         if (check_label("prepare")) {
+
             run(stringf("hierarchy -check %s", top_opt.c_str()));
+
             run("proc");
+
+            // Show the first design resources stat before
+            // starting anything.
+            //
+            run("design -save original");
+            run("flatten");
+            log("\n# -------------------- \n");
+            log("#  Design entry stats  \n");
+            log("# -------------------- \n");
+            run("stat");
+            run("design -load original");
             
             // Collect ports properties
             //
@@ -5992,6 +6005,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
 
         sec_report();
+
+        log("\n# -------------------- \n");
+        log("# Core Synthesis done \n");
+        log("# -------------------- \n");
     }
 
 } SynthRapidSiliconPass;
