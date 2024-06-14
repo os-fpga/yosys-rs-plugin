@@ -246,8 +246,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Use a specific ABC script instead of the embedded one.\n");
         log("\n");
 #endif
-        log("    -post_cleanup\n");
-        log("        Performs a post synthesis netlist cleanup.\n");
+        log("    -post_cleanup <0|1|2>\n");
+        log("        Performs a post synthesis netlist cleanup. '0' value means post cleanup is OFF. '1' means post cleanup is ON and '2' is ON in debug mode.\n");
         log("\n");
         log("    -cec\n");
         log("        Use internal equivalence checking (ABC based) during optimization\n");
@@ -385,7 +385,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     string abc_script;
     bool cec;
     bool sec;
-    bool post_cleanup;
+    int post_cleanup;
     bool new_tdp36k;
     bool new_dsp19x2;
     bool nodsp;
@@ -458,7 +458,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_sat = false;
         no_flatten = false;
         no_iobuf= false;
-        post_cleanup= false;
+        post_cleanup= 0;
         nobram = false;
         new_tdp36k = false;
         new_dsp19x2 =false;
@@ -553,10 +553,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-no_iobuf") {
 				no_iobuf = true;
-				continue;
-			}
-            if (args[argidx] == "-post_cleanup") {
-				post_cleanup = true;
 				continue;
 			}
             if (args[argidx] == "-new_tdp36k") {
@@ -660,6 +656,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
                 de_max_threads = stoi(args[++argidx]);
+                continue;
+            }
+            if (args[argidx] == "-post_cleanup" && argidx + 1 < args.size()) {
+                post_cleanup = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-clock_enable_strategy" && argidx + 1 < args.size()) {
@@ -780,6 +780,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (de_max_threads < 2 && de_max_threads > 64) {
             log_cmd_error("Invalid max number of threads for DE is specified: '%i'\n", de_max_threads);
         }
+        if (post_cleanup < 0 && post_cleanup > 2) {
+            log_cmd_error("Invalid post cleanup value: '%i'\n", post_cleanup);
+        }
+
 
         if (clke_strategy_str == "early")
             clke_strategy = ClockEnableStrategy::EARLY;
@@ -1289,7 +1293,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         // handle some clean traversals. By having a single bit to single bit
         // correspondance the traversals will behave correctly
         //
-        run("splitnets -ports");
+        run("splitnets"); // do not split ports !
 
         // Use "write_verilog -simple_lhs" to deal with complex LHS. It is costly
         // in term of runtime so it would be better to fix it in "sig2sig" and avoid
@@ -1836,18 +1840,50 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        for (auto wire : _design->top_module()->wires()) {
+        // Look at all signals driven by cells and which correspond to
+        // Primary outputs : start backward traversal from them.
+        //
+        for (auto elt : sig2CellsInFanin){
 
-           if (!wire->port_output) {
+           RTLIL::SigSpec po = elt.first;
+
+           RTLIL::Wire *w = po[0].wire;
+
+           if (!w->port_id) { // port_id <> 0 means it is an output
              continue;
            }
 
-           // Start from top module Primary Outputs (POs)
-           //
-           RTLIL::SigSpec po = wire;
+           if (post_cleanup == 2) {
+             log("Starts from cell PO : ");
+             show_sig(po);
+             log("\n");
+           }
 
            backCleanRec(po, sig2CellsInFanin, lhsSig2RhsSig, 
-                            visitedCells, visitedSigSpec);
+                        visitedCells, visitedSigSpec);
+        }
+        
+        // Look at all signals driven by assigns and which correspond to
+        // Primary outputs : start backward traversal from them.
+        //
+        for (auto elt : lhsSig2RhsSig){
+
+           RTLIL::SigSpec po = elt.first;
+
+           RTLIL::Wire *w = po[0].wire;
+
+           if (!w->port_id) { // port_id <> 0 means it is an output
+             continue;
+           }
+
+           if (post_cleanup == 2) {
+             log("Starts from assign PO : ");
+             show_sig(po);
+             log("\n");
+           }
+
+           backCleanRec(po, sig2CellsInFanin, lhsSig2RhsSig, 
+                        visitedCells, visitedSigSpec);
         }
 
         auto endTime = std::chrono::high_resolution_clock::now();
@@ -1857,6 +1893,27 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         log("Backward clean up ...  ");
         log(" [%.2f sec.]\n", totalTime);
+
+        // Keep specific cells/signals even if they do not drive primary outputs
+        //
+        for (auto cell : _design->top_module()->cells()) {
+
+           if(cell->type == RTLIL::escape_id("I_BUF")) {
+
+              visitedCells.insert(cell); 
+              RTLIL::SigSpec out = cell->getPort(ID::O);
+              visitedSigSpec.insert(out);
+              continue;
+           }
+
+           if(cell->type == RTLIL::escape_id("CLK_BUF")) {
+
+              visitedCells.insert(cell); 
+              RTLIL::SigSpec out = cell->getPort(ID::O);
+              visitedSigSpec.insert(out);
+              continue;
+           }
+        }
 
 
         log("Before cleanup :\n");
@@ -1910,6 +1967,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
            RTLIL::Wire *w = sig[0].wire;
 
+           // Do not remove ports
+           //
+           if (w->port_id) {
+              continue;
+           }
 #if 0
            std::string sig_name = w->name.str();
            log("   %s\n", sig_name.c_str());
@@ -1941,7 +2003,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log(" --------------------------\n");
 
         for (auto cell : cellsToRemove) {
-          //log("Removing cell '%s'\n", id(cell->name).c_str());
+
+          if (post_cleanup == 2) {
+
+            RTLIL::IdString cellType = cell->type;
+
+            log("Removing cell '%s (%s)'\n", id(cell->name).c_str(),
+                 cellType.c_str());
+          }
+
           _design->top_module()->remove(cell);
         }
 
@@ -1949,13 +2019,13 @@ struct SynthRapidSiliconPass : public ScriptPass {
         run("stat");
     }
 
-    // This functions will do a PO "observability" clean-up, e.g. any object not 
-    // participating in the top module Primary Outputs functionality will be 
+    // This functions will do a from-PO "observability" clean-up, e.g. any object not 
+    // contributing in the top module Primary Outputs functionality will be 
     // removed.
     // NOTE: this pass will transform also the current design as it will bit 
-    // split it and transform complex LHS into simple LHS.
+    // split it and transform complex LHS assigns into simple LHS assigns.
     //
-    void design_cleanup() {
+    void obs_clean() {
 
         //run("design -save before_post_cleanup");
 
@@ -1963,7 +2033,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        // we need to slit busses in ihe netlsi to make sure the forward and  bacward
+        // we need to split busses in the netlist to make sure the forward and backward
         // traversals will work correctly. Indeed when we have mixed up of single bit 
         // signals (ex: s[5]) and busses (ex: s[6:4]) it is extremely difficult to 
         // handle some clean traversals. By having a single bit to single bit
@@ -1995,11 +2065,17 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //
         sig2sig(rhsSig2LhsSig, lhsSig2RhsSig);
 
-        //run("write_verilog -noexpr -simple-lhs before_design_cleanup.v");
+        if (post_cleanup == 2) { // for debug
+          run("write_verilog -noexpr -simple-lhs -org-name before_obs_clean.v");
+        }
 
         // Perform the real clean up by doing a backward traversal from the POs.
         //
         backClean(sig2CellsInFanin, lhsSig2RhsSig);
+
+        if (post_cleanup == 2) { // for debug
+          run("write_verilog -noexpr -simple-lhs -org-name after_obs_clean.v");
+        }
 
         // Dispose objects created with 'new' when building the dictionaries
         //
@@ -5889,7 +5965,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
         // Eventually performs post synthesis clean up
         //
         if (post_cleanup){
-          design_cleanup();
+          obs_clean();
         }
 
         if (check_label("blif")) {
