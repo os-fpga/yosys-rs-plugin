@@ -246,6 +246,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        Use a specific ABC script instead of the embedded one.\n");
         log("\n");
 #endif
+        log("    -legalize_ram_clk_ports \n");
+        log("        Connect unconnected TDP Ram clock ports with associated clock.\n");
+        log("\n");
         log("    -post_cleanup <0|1|2>\n");
         log("        Performs a post synthesis netlist cleanup. '0' value means post cleanup is OFF. '1' means post cleanup is ON and '2' is ON in debug mode.\n");
         log("\n");
@@ -386,6 +389,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool cec;
     bool sec;
     int post_cleanup;
+    bool legalize_ram_clk_ports;
     bool new_tdp36k;
     bool new_dsp19x2;
     bool nodsp;
@@ -459,6 +463,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_flatten = false;
         no_iobuf= false;
         post_cleanup= 0;
+        legalize_ram_clk_ports= false;
         nobram = false;
         new_tdp36k = false;
         new_dsp19x2 =false;
@@ -652,6 +657,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             }
             if (args[argidx] == "-keep_tribuf") {
                 keep_tribuf = true;
+                continue;
+            }
+            if (args[argidx] == "-legalize_ram_clk_ports") {
+                legalize_ram_clk_ports = true;
                 continue;
             }
             if (args[argidx] == "-de_max_threads" && argidx + 1 < args.size()) {
@@ -3711,7 +3720,6 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
     void illegal_clk_connection(){
         for (auto cell : _design->top_module()->cells()){
             if (RTLIL::builtin_ff_cell_types().count(cell->type)){
-                bool has_clk = false;
                 for (auto conn : cell->connections()){
                     if (conn.first == ID::CLK || conn.first == ID::C){
                         if (conn.second == cell->getPort(ID::D)){
@@ -5091,6 +5099,218 @@ static void show_sig(const RTLIL::SigSpec &sig)
         run("design -load original");
     }
 
+    void legalize_tdp_ram_clock_ports(Cell* cell)
+    {
+      if (cell->type == RTLIL::escape_id("TDP_RAM18KX2")) {
+    
+         bool found_CLK1 = false;
+         bool found_CLK2 = false;
+         RTLIL::SigSpec clk1;
+         RTLIL::SigSpec clk2;
+
+         // Look for clocks first in TDP
+         //
+         for (auto &conn : cell->connections()) {
+
+            IdString portName = conn.first;
+            RTLIL::SigSpec actual = conn.second;
+
+            if (portName == RTLIL::escape_id("CLK_A1")) {
+              if ((actual.is_chunk() && (actual.as_chunk()).wire != NULL)) {
+                found_CLK1 = true;
+                clk1 = actual;
+              }
+              continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_B1")) {
+              if ((actual.is_chunk() && (actual.as_chunk()).wire != NULL)) {
+                found_CLK1 = true;
+                clk1 = actual;
+              }
+              continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_A2")) {
+              if ((actual.is_chunk() && (actual.as_chunk()).wire != NULL)) {
+                found_CLK2 = true;
+                clk2 = actual;
+              }
+              continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_B2")) {
+              if ((actual.is_chunk() && (actual.as_chunk()).wire != NULL)) {
+                found_CLK2 = true;
+                clk2 = actual;
+              }
+              continue;
+            }
+         }
+
+         if (!found_CLK1 && !found_CLK2) {
+           log_error("cell '%s' has no associated clock\n", (cell->name).c_str());
+         }
+
+         // Reconnect clock ports if they are unconnected
+         //
+         for (auto &conn : cell->connections()) {
+
+            IdString portName = conn.first;
+            RTLIL::SigSpec actual = conn.second;
+
+            if (portName == RTLIL::escape_id("CLK_A1")) {
+               // If port not connected
+               //
+               if ((actual.is_chunk() && (actual.as_chunk()).wire == NULL)) {
+                 if (found_CLK1) {
+                   cell->setPort(portName, clk1);
+                 } else {
+                   cell->setPort(portName, clk2);
+                 }
+                 log_warning("Reconnect TDP_RAM clock port '%s' with '", portName.c_str());
+                 show_sig(conn.second);
+                 log("' for cell '%s'\n", (cell->name).c_str());
+               }
+               continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_B1")) {
+               // If port not connected
+               //
+               if ((actual.is_chunk() && (actual.as_chunk()).wire == NULL)) {
+                 if (found_CLK1) {
+                   cell->setPort(portName, clk1);
+                 } else {
+                   cell->setPort(portName, clk2);
+                 }
+                 log_warning("Reconnect TDP_RAM clock port '%s' with '", portName.c_str());
+                 show_sig(conn.second);
+                 log("' for cell '%s'\n", (cell->name).c_str());
+               }
+               continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_A2")) {
+               // If port not connected
+               //
+               if ((actual.is_chunk() && (actual.as_chunk()).wire == NULL)) {
+                 if (found_CLK2) {
+                   cell->setPort(portName, clk2);
+                 } else {
+                   cell->setPort(portName, clk1);
+                 }
+                 log_warning("Reconnect TDP_RAM clock port '%s' with '", portName.c_str());
+                 show_sig(conn.second);
+                 log("' for cell '%s'\n", (cell->name).c_str());
+               }
+               continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_B2")) {
+               // If port not connected
+               //
+               if ((actual.is_chunk() && (actual.as_chunk()).wire == NULL)) {
+                 if (found_CLK2) {
+                   cell->setPort(portName, clk2);
+                 } else {
+                   cell->setPort(portName, clk1);
+                 }
+                 log_warning("Reconnect TDP_RAM clock port '%s' with '", portName.c_str());
+                 show_sig(conn.second);
+                 log("' for cell '%s'\n", (cell->name).c_str());
+               }
+               continue;
+            }
+         }
+
+         return;
+      }
+
+      if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
+    
+         bool found_CLK = false;
+         RTLIL::SigSpec clk;
+
+         // Look for clocks first in TDP
+         //
+         for (auto &conn : cell->connections()) {
+
+            IdString portName = conn.first;
+            RTLIL::SigSpec actual = conn.second;
+
+            if (portName == RTLIL::escape_id("CLK_A")) {
+              if ((actual.is_chunk() && (actual.as_chunk()).wire != NULL)) {
+                found_CLK = true;
+                clk = actual;
+              }
+              continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_B")) {
+              if ((actual.is_chunk() && (actual.as_chunk()).wire != NULL)) {
+                found_CLK = true;
+                clk = actual;
+              }
+              continue;
+            }
+         }
+
+         if (!found_CLK) {
+           log_error("cell '%s' has no associated clock\n", (cell->name).c_str());
+         }
+
+         // Reconnect clock ports if they are unconnected
+         //
+         for (auto &conn : cell->connections()) {
+
+            IdString portName = conn.first;
+            RTLIL::SigSpec actual = conn.second;
+
+            if (portName == RTLIL::escape_id("CLK_A")) {
+               // If port not connected
+               //
+               if ((actual.is_chunk() && (actual.as_chunk()).wire == NULL)) {
+                 cell->setPort(portName, clk);
+                 log_warning("Reconnect TDP_RAM clock port '%s' with '", portName.c_str());
+                 show_sig(conn.second);
+                 log("' for cell '%s'\n", (cell->name).c_str());
+               }
+               continue;
+            }
+            if (portName == RTLIL::escape_id("CLK_B")) {
+               // If port not connected
+               //
+               if ((actual.is_chunk() && (actual.as_chunk()).wire == NULL)) {
+                 cell->setPort(portName, clk);
+                 log_warning("Reconnect TDP_RAM clock port '%s' with '", portName.c_str());
+                 show_sig(conn.second);
+                 log("' for cell '%s'\n", (cell->name).c_str());
+               }
+               continue;
+            }
+         }
+
+         return;
+      }
+
+    }
+
+
+    void legalize_all_tdp_ram_clock_ports()
+    {
+       for (auto &module : _design->selected_modules()) {
+
+           for(auto& cell : module->selected_cells()){
+
+              if (cell->type == RTLIL::escape_id("TDP_RAM18KX2")) {
+                legalize_tdp_ram_clock_ports(cell);
+                continue;
+              }
+
+              if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
+                legalize_tdp_ram_clock_ports(cell);
+                continue;
+              }
+
+           }
+       }
+
+    }
+
     void script() override
     {
         string readArgs;
@@ -5969,6 +6189,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
            string techMaplutArgs = GET_TECHMAP_FILE_PATH(GENESIS_3_DIR, LUT_FINAL_MAP_FILE);// LUTx Mapping
            run("techmap -map" + techMaplutArgs);
 #endif
+
+          
+           if (legalize_ram_clk_ports) {
+             legalize_all_tdp_ram_clock_ports();
+           }
         }
 
         run("opt_clean");
