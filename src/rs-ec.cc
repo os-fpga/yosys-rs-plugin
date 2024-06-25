@@ -712,9 +712,6 @@ struct RsSECWorker
         Pass::call(design, "design -load original");
         Pass::call(design,"design -save previous");
         previous_state = current_stage;
-        #if 0
-            getchar();
-        #endif
         
     }
     
@@ -726,9 +723,18 @@ struct RsSecPass : public Pass {
     {
         //   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
         log("\n");
-        log("    SEC [selection]\n");
+        log("    rs-ec [option]\n");
         log("\n");
         log("    This pass verifies netlist(n) agaist netlist(n-1)\n");
+        log("\n");
+        log("    -genesis3\n");
+        log("        Use the specified devices fo sec run\n");
+        log("\n");
+        log("    -verify\n");
+        log("        select if want to run the sec for n stage\n");
+        log("\n");
+        log("    -gen_net\n");
+        log("        elaborate the netlist to basic cell form\n");
         log("\n");
     }
 
@@ -755,10 +761,8 @@ struct RsSecPass : public Pass {
         sec_counter++;
         
             
-        // for (auto mod : design->top_module()) {
-            RsSECWorker worker(design->top_module());
-            worker.run_scr(design);
-        // }
+        RsSECWorker worker(design->top_module());
+        worker.run_scr(design);
         
     }
 } RsSecPass;
