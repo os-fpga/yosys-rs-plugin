@@ -407,7 +407,7 @@ struct RsSECWorker
         
         for(auto& modules : design->selected_modules()){
             for (auto &cell : modules->selected_cells()) {
-                if (cell->type == RTLIL::escape_id("\\DFFRE") || cell->type.in(ID($_DFFE_PP_),ID($_DFFE_PN_)) ){ 
+                if (cell->type == RTLIL::escape_id("\\DFFRE")||cell->type == RTLIL::escape_id("\\CARRY") || cell->type.in(ID($_DFFE_PP_),ID($_DFFE_PN_)) ){ 
                         blif_models.insert(cell->type);
                 }
                 for (auto name_mod : sbckt_name){
@@ -435,7 +435,7 @@ struct RsSECWorker
         string model_file_name,netlist_name;
         blif_models_appended =false;
         for (auto blif_model : blif_models){
-            if((blif_model == RTLIL::escape_id("\\DFFRE")) || blif_model.in(ID($_DFFE_PP_),ID($_DFFE_PN_))){
+            if((blif_model == RTLIL::escape_id("\\DFFRE")) || (blif_model == RTLIL::escape_id("\\CARRY")) || blif_model.in(ID($_DFFE_PP_),ID($_DFFE_PN_))){
                 if (blif_models_appended) //blif models are appended once only
                     continue;
                 std::string model_file_name = GET_FILE_PATH_SEC_MODEL(GENESIS_3_DIR, SEC_DFFRE_blif);

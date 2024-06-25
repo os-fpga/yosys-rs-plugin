@@ -83,6 +83,17 @@
 .end
 
 #################################################################
+.model CARRY
+.inputs P G CIN
+.outputs O COUT
+.names $false
+.names $true
+1
+.names $undef
+.subckt $mux A=G B=CIN S=P Y=COUT
+.subckt $xor A=P B=CIN Y=O
+.end
+################################################################
 .model $mux
 .inputs A B S
 .outputs Y
@@ -94,3 +105,10 @@
 111 1
 .end
 #################################################################
+.model $xor
+.inputs A B
+.outputs Y
+.names B A Y
+01 1
+10 1
+.end
