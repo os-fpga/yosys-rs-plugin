@@ -122,7 +122,7 @@ struct RsSECWorker
     
     void add_ff_sync (RTLIL::Design *design, const std::vector<Entry_ff_sync>& entries){
         for (auto entry : entries){
-            if (entry.type.in(ID($ff), ID($dff), ID($dffe), ID($dffsr),ID($dffsre),ID($_DFF_P_),ID($_DFF_N_),ID($dff))){
+            if (entry.type.in(ID($ff), ID($dff), ID($dffe),ID($sdff),ID($sdffe),ID($dffsr),ID($dffsre),ID($_DFF_P_),ID($_DFF_N_),ID($dff))){
                 std::string cell_type_str = entry.type.str();
                 RTLIL::IdString  mod_name = cell_type_str + "_" + std::to_string(entry.inCLK) + "_" + std::to_string(entry.inEN) + "_" + std::to_string(entry.inD)+"_"+std::to_string(entry.outQ);
                 sbckt_name[entry.name] = mod_name;
@@ -160,7 +160,7 @@ struct RsSECWorker
                         if (entry.type == "$dff")
                             module->addDff(mod_name, CLK, D, Q,true);
                     }
-                    else if (module->name == mod_name && entry.type== ID($sdff)){
+                    else if (module->name == mod_name && entry.type.in(ID($sdff))){
                         SigSpec CLK;
                         SigSpec SRST;
                         SigSpec D; 
@@ -195,6 +195,48 @@ struct RsSECWorker
                         module->ports.push_back(RTLIL::escape_id("D"));
                         module->ports.push_back(RTLIL::escape_id("Q"));
                         module->addSdff(mod_name, CLK, SRST, D, Q,entry.srst_value,clk_polarity,srst_polarity);
+                    }
+                    else if (module->name == mod_name && entry.type.in(ID($sdffe))){
+                        SigSpec CLK;
+                        SigSpec EN;
+                        SigSpec SRST;
+                        SigSpec D; 
+                        SigSpec Q;  
+                        bool clk_polarity= entry.clk_polarity;
+                        bool srst_polarity = entry.srst_polarity;
+                        CLK = module->addWire(RTLIL::escape_id("CLK"), entry.inCLK);
+                        EN = module->addWire(RTLIL::escape_id("EN"), entry.inEN);
+                        SRST = module->addWire(RTLIL::escape_id("SRST"), entry.inCLR);
+                        D   = module->addWire(RTLIL::escape_id("D"), entry.inD);
+                        Q   = module->addWire(RTLIL::escape_id("Q"), entry.outQ);
+                        for (auto wire : module->wires()){
+                            if (wire->name == "\\CLK") {
+                                wire->port_input = true;
+                                wire->port_id=1;
+                            }
+                            if (wire->name == "\\EN") {
+                                wire->port_input = true;
+                                wire->port_id=2;
+                            }
+                            if (wire->name == "\\SRST") {
+                                wire->port_input = true;
+                                wire->port_id=3;
+                            }
+                            if (wire->name == "\\D") {
+                                wire->port_input = true;
+                                wire->port_id=4;
+                            }
+                            if (wire->name == "\\Q") {
+                                wire->port_output = true;
+                                    wire->port_id=4;
+                            }
+                        }
+                        module->ports.push_back(RTLIL::escape_id("CLK"));
+                        module->ports.push_back(RTLIL::escape_id("EN"));
+                        module->ports.push_back(RTLIL::escape_id("SRST"));
+                        module->ports.push_back(RTLIL::escape_id("D"));
+                        module->ports.push_back(RTLIL::escape_id("Q"));
+                        module->addSdffe(mod_name, CLK,EN,SRST, D, Q,entry.srst_value,clk_polarity,srst_polarity);
                     }
                     else if (module->name == mod_name && entry.type== ID($dffe)){
                         SigSpec CLK;
@@ -374,6 +416,8 @@ struct RsSECWorker
 
                     else if (entry.type == "$not")
                         module->addNot(mod_name, A, Y, false);
+                    else if (entry.type == "$neg")
+                        module->addNeg(mod_name, A, Y, false);
                     else if (entry.type == "$xor")
                         module->addXor(mod_name, A, B, Y, false);
                     else if (entry.type == "$and")
@@ -386,6 +430,8 @@ struct RsSECWorker
                         module->addPmux(mod_name, A, B, S, Y);
                     else if (entry.type == "$shr")
                         module->addShr(mod_name, A, B, Y,false);
+                    else if (entry.type == "$mul")
+                        module->addMul(mod_name, A, B, Y,false);
                 }
             }
             Pass::call(design, stringf("hierarchy -top %s",mod_name.c_str()));
@@ -413,8 +459,8 @@ struct RsSECWorker
                 for (auto name_mod : sbckt_name){
                     if (cell->name != name_mod.first) continue;
 
-                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($dffe),ID($sdff),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
-                                    ID($logic_or),ID($lt),ID($ne),ID($logic_not),ID($pmux), ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
+                    if (cell->type.in(ID($add),ID($xor),ID($and),ID($sub),ID($or),ID($shr),ID($reduce_xor),ID($not),ID($mux),ID($dff),ID($dffe),ID($sdff),ID($sdffe),ID($_DFF_P_),ID($_DFF_N_),ID($eq),ID($ge),ID($gt),ID($le),ID($logic_and),\
+                                    ID($logic_or),ID($lt),ID($ne),ID($neg),ID($logic_not),ID($pmux), ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
                         blif_models.insert(name_mod.second);
                         cell->type = name_mod.second;
                     }
@@ -604,6 +650,7 @@ struct RsSECWorker
         //Pass::call(design, "opt_clean -purge");
 
         //Pass::call(design, stringf("hierarchy -check -top %s", topName));
+        Pass::call(design, "opt_clean -purge");
         Pass::call(design, "write_verilog -selected -noexpr -nodec design.v");
         Pass::call(design, "design -reset");
         
@@ -641,7 +688,7 @@ struct RsSECWorker
                 ID($logic_or),ID($lt))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)),GetSize(cell->getPort(ID::B)),GetSize(cell->getPort(ID::Y)),false,0});
             }
-            if (cell->type.in(ID($reduce_xor),ID($not), ID($logic_not),ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
+            if (cell->type.in(ID($reduce_xor),ID($not),ID($neg), ID($logic_not),ID($reduce_and), ID($reduce_or), ID($reduce_xnor), ID($reduce_bool))){
                 addEntry(entries,uniqueSet,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::A)), 0, GetSize(cell->getPort(ID::Y)), false,0});
             }
             if (cell->type.in(ID($mux),ID($pmux))){
@@ -661,6 +708,9 @@ struct RsSECWorker
             }
             if (cell->type.in(ID($sdff))){
                 addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), 0, 0, GetSize(cell->getPort(ID::SRST)),GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),cell->getParam(ID::CLK_POLARITY).as_int(),cell->getParam(ID::SRST_POLARITY).as_int(),cell->getParam(ID::SRST_VALUE).as_int()});
+            }
+            if (cell->type.in(ID($sdffe))){
+                addEntry_ff_sync(entries_ff,uniqueSet_ff,{log_id(cell->type), cell->name, GetSize(cell->getPort(ID::CLK)), GetSize(cell->getPort(ID::EN)), 0, GetSize(cell->getPort(ID::SRST)),GetSize(cell->getPort(ID::D)), GetSize(cell->getPort(ID::Q)),cell->getParam(ID::CLK_POLARITY).as_int(),cell->getParam(ID::SRST_POLARITY).as_int(),cell->getParam(ID::SRST_VALUE).as_int()});
             }
 
         }
