@@ -47,6 +47,9 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS)/latchsre.vhdl \
 				  $(GENESIS)/lut.vhdl \
 				  $(GENESIS)/shr.vhdl \
+				  $(GENESIS3)/SEC_MODELS/simcells.v \
+				  $(GENESIS3)/SEC_MODELS/simlib.v \
+				  $(GENESIS3)/SEC_MODELS/DFFRE.blif \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/blackbox_models/cell_sim_blackbox.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/CARRY.v \
 				  $(GENESIS3)/cells_sim.vhd \
@@ -102,7 +105,8 @@ SOURCES = src/rs-dsp.cc \
 		  src/rs-bram-split.cc \
 		  src/rs-bram-asymmetric.cc \
 		  src/rs-pack-dsp-regs.cc \
-		  src/rs-dsp-multadd.cc
+		  src/rs-dsp-multadd.cc \
+		  src/rs-ec.cc
 
 DEPS = pmgen/rs-dsp-pm.h \
 	   pmgen/rs-dsp-macc.h \
@@ -131,7 +135,7 @@ OBJS := $(SOURCES:cc=o)
 all: $(NAME).so
 
 $(OBJS): %.o: %.cc $(DEPS)
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) -c -o $@ $(filter %.cc, $^)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(EXTRA_FLAGS) -std=c++17 -c -o $@ $(filter %.cc, $^)
 
 $(NAME).so: $(OBJS)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)

@@ -38,7 +38,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define GENESIS_DIR genesis
 #define GENESIS_2_DIR genesis2
 #define GENESIS_3_DIR genesis3
-#define SEC_MODELS_DIR sec_models
+#define SEC_MODELS_DIR SEC_MODEL
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define BLACKBOX_SIM_LIB_FILE cell_sim_blackbox.v
@@ -942,171 +942,15 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
     }
 
-    void sec_check(string checkName, bool verify) {
+    void sec_check(string checkName, bool verify, bool elaborate_cells) {
         
         if (sec_mode == SECMode::OFF) {
           return;
         }
-
-        run("design -save original");
-
-        // Generate the corresponding Blif to compare with
-        //
-        char name[528];
-
-        sec_counter++;
-
-        sprintf(name, "%03d_%s", sec_counter, checkName.c_str());
-
-        string currentBlifName = "b" + string(name) + ".blif";
-        string verilogName = "v" + string(name) + ".v";
-        string resName = "r" + string(name) + ".res";
- 
-        run("opt_clean -purge");
-
-        run(stringf("hierarchy -check %s", top_opt.c_str()));
-
-        Module* topModule = _design->top_module();
-
-        const char* topName = topModule->name.c_str();
-        topName++; // skip the escape 
-
-        // Dump a verilog image of the current design in memory
-        //
-        run(stringf("write_verilog -selected -noexpr -nodec %s", verilogName.c_str()));
-
-        bool isSequential = designIsSequential();
-
-        run("design -reset");
-
-        read_SEC_models();
-
-        // Read the previously dumped design. This mechanism helps to succeed on 'blob_merge'
-        // otherwise if we work directly on the 'design' 'dsec' returns "NOT equivalent" for 
-        // some reasons.
-        //
-        run(stringf("read_verilog -sv %s", verilogName.c_str()));
-
-        run(stringf("hierarchy -top %s", topName));
-
-        run("flatten");
-
-        run(stringf("hierarchy -top %s", topName));
-        
-        run("proc");
-        run("opt_expr");
-
-        run("opt_clean -purge");
-
-        // Transform the network so that the blif dumped is easier to process for 'dsec'
-        //
-        // run("abc -script prepare_for_dsec.scr");
-
-        run(stringf("write_blif %s", currentBlifName.c_str()));
-
-        appendBlifModels(currentBlifName);
-
-        // If there was a previous step (<=> 'sec_counter > 1') then 'stat' the previous design cells
-        //
-        if (sec_counter > 1) {
-
-          // Load previous step to show the 'stat'
-          //
-          run("design -load previous");
-
-          log("\n =======================\n");
-          log("     Previous step:\n");
-          log(" =======================\n");
-
-          run("stat");
+        run(stringf("rs-sec -genesis3 -stage %s -verify %d -gen_net %d",checkName.c_str(),verify,elaborate_cells));
+        if (sec_mode == SECMode::ON_STEP) {
+          getchar();
         }
-
-        log(" =======================\n");
-        log("     Current step:\n");
-        log(" =======================\n");
-
-        run("design -load original");
-
-        run("stat");
-
-        run("design -save original");
-
-        // If there was a previous step then perform Formal Verification between 
-        // previous and current steps
-        //
-        if (sec_counter > 1) {
-
-            std::string abc_script = "abc.scr";
-
-            string abc_exe_dir = proc_self_dirname() + "abc";
-
-            log("Comparing : \n\n");
-            log("  %s <-> %s (%s)\n", previousBlifName.c_str(), currentBlifName.c_str(),
-                resName.c_str());
-
-            std::string command = abc_exe_dir + " -f abc.scr > " + resName;
-
-            // Show the last two lines of the 'dsec' output showing if FV either : 
-            //
-            //   1/ succeeded : "Networks are equivalent."
-            //   2/ failed : "Networks are NOT equivalent."
-            //   3/ unknown : UNDECIDABLE
-            //   4/ error : error in reading (ex: missing cell)
-            //
-            command += " ; tail -n 2 " + resName;
-
-            std::string command2 = "";
-
-            if (isSequential) {
-              command2 += "dsec ";
-            } else {
-              command2 += "cec ";
-            }
-            command2 += previousBlifName +" " + currentBlifName +"; quit;" ;
-
-            std::ofstream out(abc_script);
-
-            if (out.is_open()){
-
-                out<<command2;
-                out.close();
-            }
-
-            log("\n=================================================================================\n");
-
-            if (!verify) {
-
-               log("Formal Verification skipped\n");
-
-            } else {
-
-               if (isSequential) {
-                  log("DSEC : \n");
-               } else {
-                  log("CEC : \n");
-               }
-   
-               // Call ABC which calls command "dsec" underneath
-               //
-               int fail = system(command.c_str());
-
-               if (fail) {
-                 log_error("Command %s failed !\n", command.c_str());
-               }
-            }
-
-            log("=================================================================================\n");
-
-            if (sec_mode == SECMode::ON_STEP) {
-              getchar();
-            }
-        }
-
-        previousBlifName =  currentBlifName;
-        
-        run("design -load original");
-
-        run("design -save previous");
     }
 
     void cec_check(string checkName) {
@@ -2467,9 +2311,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
             top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
 
         if (cec) {
-            run("write_verilog -noattr -nohex after_lut_map" + std::to_string(index) + ".v");
+            run("write_verilog -noexpr -nohex after_lut_map" + std::to_string(index) + ".v");
         }
-        sec_check(step, true);
+        sec_check(step, true, false);
+        
+        //run(stringf("rs-sec -genesis3 -stage after_lut_map%d -verify 1 -gen_net 0",index));
 
         index++;
     }
@@ -2609,7 +2455,7 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl, const string step)
         run("write_verilog -noattr -nohex after_abc-dff" + std::to_string(n) + ".v");
     }
 
-    sec_check(step, true);
+    sec_check(step, true, true);
 
 }
 
@@ -5388,8 +5234,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_proc.v");
             }
-            sec_check("after_proc", true);
-
+            sec_check("after_proc", true, true); 
+            
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
             if (!no_flatten) {
@@ -5407,8 +5253,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                run("write_verilog -noexpr -noattr -nohex before_tribuf.v");
             }
-            sec_check("before_tribuf", true);
-
+            sec_check("before_tribuf", true, true);
+            
             /*Added to support OBUFT  if keep_tribuf flag is given*/
             if(keep_tribuf) { //non defualt mode :we keep TRIBUF
 
@@ -5425,8 +5271,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    run("write_verilog -noexpr -noattr -nohex after_tribuf_merge_noexpr.v");
                    run("write_verilog -noattr -nohex after_tribuf_merge.v");
                 }
-                sec_check("after_tribuf_merge", true);
-
+                sec_check("after_tribuf_merge", true, true);
+                
                 // specific Rapid Silicon logic with -rs_logic option
                 //
                 run("tribuf -rs_logic -formal"); // fix EDA-1536 : add -formal to process tristate on IOs
@@ -5434,7 +5280,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                    run("write_verilog -noexpr -noattr -nohex after_tribuf_logic.v");
                 }
-                sec_check("after_tribuf_logic", true);
+                sec_check("after_tribuf_logic", true, true);
+                
             
 #else
             // Old tri-state handling
@@ -5456,7 +5303,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean1.v");
             }
-            sec_check("after_opt_clean1", true);
+            sec_check("after_opt_clean1", true, true);
+            
 
             run("check");
 
@@ -5472,7 +5320,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_fsm.v");
             }
-            sec_check("after_fsm", true);
+            sec_check("after_fsm", true, true);
+            
 
             run("wreduce -keepdc");
             run("peepopt");
@@ -5499,7 +5348,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean2.v");
             }
-            sec_check("after_opt_clean2", true);
+            sec_check("after_opt_clean2", true, true);
+            
         }
 
         transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
@@ -5578,8 +5428,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
-                        sec_check("after_dsp_map3", true);
-
+                        sec_check("after_dsp_map3", true, true);
+                        
                         // Fractuated mode has been disabled for Genesis2
                         // Fractuated mode has been disabled for Genesis3
                         //
@@ -5593,8 +5443,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
-                        sec_check("after_dsp_map4", true);
-
+                        sec_check("after_dsp_map4", true, true);
+                        
                         if (tech == Technologies::GENESIS)
                             run("rs-pack-dsp-regs -genesis");
                         else   
@@ -5612,7 +5462,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
-                        sec_check("after_dsp_map5", true);
+                        sec_check("after_dsp_map5", true, true);
+                        
 
                         break;
                     }
@@ -5655,7 +5506,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map3.v");
                         }
-                        sec_check("after_dsp_map3", true);
+                        sec_check("after_dsp_map3", true, true);
+                        
 
                         // Fractuated mode has been enabled for Genesis3
                         if (tech == Technologies::GENESIS_3  && new_dsp19x2)
@@ -5669,7 +5521,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map4.v");
                         }
-                        sec_check("after_dsp_map4", true);
+                        sec_check("after_dsp_map4", true, true);
+                       
 
                         run("rs-pack-dsp-regs -genesis3");
 
@@ -5681,7 +5534,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dsp_map5.v");
                         }
-                        sec_check("after_dsp_map5", true);
+                        sec_check("after_dsp_map5", true, true);
+                        
 
 #if 1
                         //run("stat");
@@ -5704,7 +5558,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_alumacc.v");
             }
-            sec_check("after_alumacc", true);
+            sec_check("after_alumacc", true, true);
+            
 
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
@@ -5724,7 +5579,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean3.v");
             }
-            sec_check("after_opt_clean3", true);
+            sec_check("after_opt_clean3", true,true);
+            
         }
 
         if (!nobram){
@@ -5830,10 +5686,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
 
             if (cec) {
-                run("write_verilog -noattr -nohex after_tech_map.v");
+                run("write_verilog -noexpr -noattr -nohex after_tech_map.v");
             }
-            sec_check("after_tech_map", false);
-
+            //sec_check("after_tech_map", false);
+            sec_check("after_tech_map", true, true);
+            
+            
             if (!fast) {
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 0 /* force nosdff */, 1, 12, 0);
             }
@@ -5841,9 +5699,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
             run("opt_expr -full");
 
             if (cec) {
-                run("write_verilog -noattr -nohex after_opt-fast-full.v");
+                run("write_verilog -noexpr -noattr -nohex after_opt-fast-full.v");
             }
-            sec_check("after_opt-fast-full", true);
+            sec_check("after_opt-fast-full", true, true);
+            
         }
 
 #if 1
@@ -5888,7 +5747,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                     run("write_verilog -noattr -nohex before_simplify.v");
                 }
-                sec_check("before_simplify", true);
+                sec_check("before_simplify", true, true);
+                
 
                 int dfl = 0;
 
@@ -5982,7 +5842,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                     run("write_verilog -noattr -nohex after_simplify.v");
                 }
-                sec_check("after_simplify", true);
+                sec_check("after_simplify", true, true);
+                
             }
         }
 
@@ -6028,7 +5889,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize", true);
+                        sec_check("after_dfflegalize", false, false);
+                        
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -6051,7 +5913,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize", true);
+                        sec_check("after_dfflegalize", false, false);
+                        
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -6076,7 +5939,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         if (cec) {
                             run("write_verilog -noattr -nohex after_dfflegalize.v");
                         }
-                        sec_check("after_dfflegalize", true);
+                        sec_check("after_dfflegalize", false, false);
+                        
 
 #ifdef DEV_BUILD
                         run("stat");
@@ -6099,7 +5963,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 if (cec) {
                     run("write_verilog -noattr -nohex after_techmap_ff_map.v");
                 }
-                sec_check("after_techmap_ff_map", true);
+                sec_check("after_techmap_ff_map", true,false);
+               
             }
             run("opt_expr -mux_undef");
             run("simplemap");
@@ -6111,8 +5976,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
             }
-            sec_check("after_opt_clean4", true);
-
+            sec_check("after_opt_clean4", true,false);
+            
             if (!fast)
                 top_run_opt(1 /* nodffe */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
         }
@@ -6224,7 +6089,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
             }
         }
 
-        sec_check("final_netlist", true);
+        //sec_check("final_netlist", true, true);
+        
 
         writeNetlistInfo("netlist_info.json");
 
