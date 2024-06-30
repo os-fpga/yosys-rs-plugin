@@ -328,13 +328,6 @@ begin
     wait for HALF_PERIOD * 1 ns; -- Adjusting for real to time conversion, assuming ns as base unit
     O <= not O;
   end process;
-
-  begin
-    if ((PERIOD < 16.0) or (PERIOD > 30.0)) then
-      report "BOOT_CLOCK instance " & to_string(instance_name) & " PERIOD set to incorrect value, " & real'image(PERIOD) & ".  Values must be between 16.0 and 30.0.";
-      wait for 1 ps; -- Smallest time unit for simulation to acknowledge the stop
-      assert false report "Simulation stopped due to incorrect PERIOD value." severity failure;
-    end if;
 end Behavioral;
 
 --------------------------------------------------------------------------------
@@ -375,7 +368,7 @@ end architecture Behavioral;
 --------------------------------------------------------------------------------
 -- CLK_BUF 
 --------------------------------------------------------------------------------
-llibrary ieee;
+library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
@@ -463,12 +456,12 @@ begin
     O <= I after 30.0 ps + 21.56 ps * dly_tap_val;  -- Adjusted Delay for TT corner
 
     -- Initial block equivalent in VHDL
+    process
     begin
         if (DELAY < 0 or DELAY > 63) then
             assert false report "I_DELAY instance DELAY set to incorrect value. Values must be between 0 and 63." severity failure;
         end if;
-    end;
-
+    end process;
 end architecture Behavioral;
 
 --------------------------------------------------------------------------------
@@ -576,11 +569,12 @@ begin
             O <= 'Z';
         end if;
     end process;
-
+process
 begin
     assert not (WEAK_KEEPER /= "NONE" and WEAK_KEEPER /= "PULLUP" and WEAK_KEEPER /= "PULLDOWN")
     report "\nError: O_BUFT instance has parameter WEAK_KEEPER set to " & WEAK_KEEPER & ".  Valid values are NONE, PULLUP, PULLDOWN\n"
     severity failure;
+end process;
 
 end Behavioral;
 
@@ -673,49 +667,3 @@ entity O_SERDES_CLK is
     PLL_CLK : in std_logic -- PLL clock input
   );
 end entity O_SERDES_CLK;
-
-architecture Behavioral of O_SERDES_CLK is
-  signal period : real := 0.0; -- This is the calculated period for OUTPUT_CLOCK after PLL_LOCK
-  constant ddr_multiplier : real := (DATA_RATE = "DDR") ? 2.0 : 1.0; -- If operating in DDR, must multiply period by 2
-  constant phase_multiplier : real := (CLOCK_PHASE = 90) ? 0.25 :  -- Phase offset
-                                    (CLOCK_PHASE = 180) ? 0.5 :
-                                    (CLOCK_PHASE = 270) ? 0.75 :
-                                    0;
-  signal clock_enabled : std_logic := '0'; -- Enables clock 256 cycles after LOCK
-begin
-  process(PLL_CLK, PLL_LOCK, CLK_EN)
-  begin
-    if not clock_enabled and PLL_LOCK = '1' then
-      wait until rising_edge(PLL_CLK);
-      period := real'to_integer(now);
-      wait until rising_edge(PLL_CLK);
-      period := real'to_integer(now) - period;
-      period := period * ddr_multiplier * 2.0; -- Calculated period for output clock
-      clock_enabled <= '1';
-      for i in 1 to 254 loop
-        wait until rising_edge(PLL_CLK); -- Wait 256 PLL_CLKs after lock to enable clock
-      end loop;
-      wait for period * phase_multiplier;
-    elsif PLL_LOCK = '0' then
-      clock_enabled <= '0';
-      wait until rising_edge(PLL_LOCK);
-    elsif CLK_EN = '1' then
-      wait for period / 2.0;
-      OUTPUT_CLK <= not OUTPUT_CLK;
-    else
-      OUTPUT_CLK <= '0';
-      wait until rising_edge(CLK_EN);
-    end if;
-  end process;
-  
-  -- Parameter checking
-  begin
-    if DATA_RATE /= "SDR" and DATA_RATE /= "DDR" then
-      assert false report "Error: O_SERDES_CLK instance has parameter DATA_RATE set to " & DATA_RATE & ".  Valid values are SDR, DDR" severity failure;
-    end if;
-    
-    if CLOCK_PHASE /= 0 and CLOCK_PHASE /= 90 and CLOCK_PHASE /= 180 and CLOCK_PHASE /= 270 then
-      assert false report "Error: O_SERDES_CLK instance has parameter CLOCK_PHASE set to " & integer'image(CLOCK_PHASE) & ".  Valid values are 0, 90, 180, 270" severity failure;
-    end if;
-  end;
-end Behavioral;
