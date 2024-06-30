@@ -303,4 +303,419 @@ begin
   end process;
 end architecture behave;
 
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
+--------------------------------------------------------------------------------
+-- BOOT_CLOCK 
+--------------------------------------------------------------------------------
+entity BOOT_CLOCK is
+  generic(
+    PERIOD : real := 25.0 -- Clock period for simulation purposes (nS)
+  );
+  port(
+    O : out std_logic := '0' -- Clock output
+  );
+end entity BOOT_CLOCK;
+
+architecture Behavioral of BOOT_CLOCK is
+  constant HALF_PERIOD : real := PERIOD / 2.0;
+begin
+
+  process
+  begin
+    wait for HALF_PERIOD * 1 ns; -- Adjusting for real to time conversion, assuming ns as base unit
+    O <= not O;
+  end process;
+
+  begin
+    if ((PERIOD < 16.0) or (PERIOD > 30.0)) then
+      report "BOOT_CLOCK instance " & to_string(instance_name) & " PERIOD set to incorrect value, " & real'image(PERIOD) & ".  Values must be between 16.0 and 30.0.";
+      wait for 1 ps; -- Smallest time unit for simulation to acknowledge the stop
+      assert false report "Simulation stopped due to incorrect PERIOD value." severity failure;
+    end if;
+end Behavioral;
+
+--------------------------------------------------------------------------------
+-- I_BUF 
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity I_BUF is
+    generic (
+        WEAK_KEEPER: string := "NONE"  -- Specify Pull-up/Pull-down on input (NONE/PULLUP/PULLDOWN)
+    );
+    port (
+        I : in std_logic;  -- Data input (connect to top-level port)
+        EN : in std_logic;  -- Enable the input
+        O : out std_logic  -- Data output
+    );
+end entity I_BUF;
+
+architecture Behavioral of I_BUF is
+begin
+    process(I, EN)
+    begin
+        if EN = '1' then
+            O <= I;
+        else
+            O <= '0';
+        end if;
+    end process;
+
+    assert not (WEAK_KEEPER = "NONE" or WEAK_KEEPER = "PULLUP" or WEAK_KEEPER = "PULLDOWN")
+        report "Error: I_BUF instance has parameter WEAK_KEEPER set to " & WEAK_KEEPER & ". Valid values are NONE, PULLUP, PULLDOWN"
+        severity error;
+
+end architecture Behavioral;
+
+--------------------------------------------------------------------------------
+-- CLK_BUF 
+--------------------------------------------------------------------------------
+llibrary ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity CLK_BUF is
+    Port ( I : in std_logic;
+           O : out std_logic);
+end CLK_BUF;
+
+architecture Behavioral of CLK_BUF is
+begin
+    O <= I;
+end Behavioral;
+
+--------------------------------------------------------------------------------
+-- FCLK_BUF 
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity FCLK_BUF is
+    Port ( I : in std_logic;
+           O : out std_logic);
+end CLK_BUF;
+
+architecture Behavioral of FCLK_BUF is
+begin
+    O <= I;
+end Behavioral;
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+--------------------------------------------------------------------------------
+-- I_DELAY
+--------------------------------------------------------------------------------
+entity I_DELAY is
+    generic (
+        DELAY : integer := 0  -- TAP delay value (0-63)
+    );
+    port (
+        I : in std_logic;  -- Data Input (Connect to input port or buffer)
+        DLY_LOAD : in std_logic;  -- Delay load input
+        DLY_ADJ : in std_logic;  -- Delay adjust input
+        DLY_INCDEC : in std_logic;  -- Delay increment / decrement input
+        DLY_TAP_VALUE : out std_logic_vector(5 downto 0);  -- Delay tap value output
+        CLK_IN : in std_logic;  -- Clock input
+        O : out std_logic  -- Data output
+    );
+end entity I_DELAY;
+
+architecture Behavioral of I_DELAY is
+    -- Local variables
+    signal dly_ld_0, dly_ld_1 : std_logic := '0';
+    signal dly_adj_0, dly_adj_1 : std_logic := '0';
+    signal dly_tap_val : integer range 0 to 63 := 0;
+    signal dly_ld_p, dly_adj_p : std_logic;
+begin
+
+    -- Detecting 0 to 1 transition
+    dly_ld_p <= dly_ld_0 and not dly_ld_1;
+    dly_adj_p <= dly_adj_0 and not dly_adj_1;
+
+    process(CLK_IN)
+    begin
+        if rising_edge(CLK_IN) then
+            dly_ld_0 <= DLY_LOAD;
+            dly_ld_1 <= dly_ld_0;
+            dly_adj_0 <= DLY_ADJ;
+            dly_adj_1 <= dly_adj_0;
+
+            if dly_ld_p = '1' then
+                dly_tap_val <= DELAY;
+            elsif dly_adj_p = '1' and DLY_INCDEC = '1' and dly_tap_val /= 63 then
+                dly_tap_val <= dly_tap_val + 1;
+            elsif dly_adj_p = '1' and DLY_INCDEC = '0' and dly_tap_val /= 0 then
+                dly_tap_val <= dly_tap_val - 1;
+            end if;
+        end if;
+    end process;
+
+    DLY_TAP_VALUE <= std_logic_vector(to_unsigned(dly_tap_val, 6));
+
+    O <= I after 30.0 ps + 21.56 ps * dly_tap_val;  -- Adjusted Delay for TT corner
+
+    -- Initial block equivalent in VHDL
+    begin
+        if (DELAY < 0 or DELAY > 63) then
+            assert false report "I_DELAY instance DELAY set to incorrect value. Values must be between 0 and 63." severity failure;
+        end if;
+    end;
+
+end architecture Behavioral;
+
+--------------------------------------------------------------------------------
+-- O_BUF_DS
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity O_BUF_DS is
+    Port (
+        I : in std_logic; -- Data input
+        O_P : out std_logic; -- Data positive output (connect to top-level port)
+        O_N : out std_logic -- Data negative output (connect to top-level port)
+    );
+end O_BUF_DS;
+
+architecture Behavioral of O_BUF_DS is
+begin
+    O_P <= I;
+    O_N <= not I;
+end Behavioral;
+
+--------------------------------------------------------------------------------
+-- O_BUF
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity O_BUF is
+    Port (
+        I : in std_logic;
+        O : out std_logic
+    );
+end O_BUF;
+
+architecture Behavioral of O_BUF is
+begin
+    O <= I;
+end Behavioral;
+
+--------------------------------------------------------------------------------
+-- O_BUFT_DS
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity O_BUFT_DS is
+    generic (
+        WEAK_KEEPER : string := "NONE"  -- Enable pull-up/pull-down on output (NONE/PULLUP/PULLDOWN)
+    );
+    port (
+        I   : in  std_logic;  -- Data input
+        T   : in  std_logic;  -- Tri-state control input
+        O_P : out std_logic;  -- Data positive output (connect to top-level port)
+        O_N : out std_logic    -- Data negative output (connect to top-level port)
+    );
+end entity O_BUFT_DS;
+
+architecture Behavioral of O_BUFT_DS is
+begin
+    O_P <= 'Z' when T = '0' else
+           I when T = '1' else
+           'X';  -- Undefined state, should never occur
+
+    O_N <= 'Z' when T = '0' else
+           not I when T = '1' else
+           'X';  -- Undefined state, should never occur
+    process
+    begin
+        if WEAK_KEEPER /= "NONE" and WEAK_KEEPER /= "PULLUP" and WEAK_KEEPER /= "PULLDOWN" then
+            report "\nError: O_BUFT_DS instance has parameter WEAK_KEEPER set to " & WEAK_KEEPER & ". Valid values are NONE, PULLUP, PULLDOWN\n" severity failure;
+        end if;
+    end process;
+
+end Behavioral;
+
+--------------------------------------------------------------------------------
+-- O_BUFT
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity O_BUFT is
+    generic (
+        WEAK_KEEPER : string := "NONE" -- Enable pull-up/pull-down on output (NONE/PULLUP/PULLDOWN)
+    );
+    port (
+        I : in std_logic; -- Data input
+        T : in std_logic; -- Tri-state control input
+        O : out std_logic -- Data output (connect to top-level port)
+    );
+end entity O_BUFT;
+
+architecture Behavioral of O_BUFT is
+begin
+    process(I, T)
+    begin
+        if T = '1' then
+            O <= I;
+        else
+            O <= 'Z';
+        end if;
+    end process;
+
+begin
+    assert not (WEAK_KEEPER /= "NONE" and WEAK_KEEPER /= "PULLUP" and WEAK_KEEPER /= "PULLDOWN")
+    report "\nError: O_BUFT instance has parameter WEAK_KEEPER set to " & WEAK_KEEPER & ".  Valid values are NONE, PULLUP, PULLDOWN\n"
+    severity failure;
+
+end Behavioral;
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+--------------------------------------------------------------------------------
+-- O_DELAY
+--------------------------------------------------------------------------------
+entity O_DELAY is
+  generic (
+    DELAY : integer := 0 -- TAP delay value (0-63)
+  );
+  port (
+    I : in std_logic; -- Data input
+    DLY_LOAD : in std_logic; -- Delay load input
+    DLY_ADJ : in std_logic; -- Delay adjust input
+    DLY_INCDEC : in std_logic; -- Delay increment / decrement input
+    DLY_TAP_VALUE : out std_logic_vector(5 downto 0); -- Delay tap value output
+    CLK_IN : in std_logic; -- Clock input
+    O : out std_logic -- Data output
+  );
+end entity O_DELAY;
+
+architecture Behavioral of O_DELAY is
+
+  signal dly_ld_0, dly_ld_1 : std_logic := '0';
+  signal dly_adj_0, dly_adj_1 : std_logic := '0';
+  signal dly_ld_p, dly_adj_p : std_logic;
+  signal dly_tap_val : std_logic_vector(5 downto 0) := (others => '0');
+
+begin
+
+  process(CLK_IN)
+  begin
+    if rising_edge(CLK_IN) then
+      dly_ld_0 <= DLY_LOAD;
+      dly_ld_1 <= dly_ld_0;
+      
+      dly_adj_0 <= DLY_ADJ;
+      dly_adj_1 <= dly_adj_0;
+    end if;
+  end process;
+
+  -- Detecting 0 to 1 transition
+  dly_ld_p <= dly_ld_0 and not dly_ld_1;
+  dly_adj_p <= dly_adj_0 and not dly_adj_1;
+
+  process(CLK_IN)
+  begin
+    if rising_edge(CLK_IN) then
+      if dly_ld_p = '1' then
+        dly_tap_val <= std_logic_vector(to_unsigned(DELAY, 6));
+      elsif dly_adj_p = '1' and DLY_INCDEC = '1' and dly_tap_val /= "111111" then
+        dly_tap_val <= std_logic_vector(unsigned(dly_tap_val) + 1);
+      elsif dly_adj_p = '1' and DLY_INCDEC = '0' and dly_tap_val /= "000000" then
+        dly_tap_val <= std_logic_vector(unsigned(dly_tap_val) - 1);
+      end if;
+    end if;
+  end process;
+
+  DLY_TAP_VALUE <= dly_tap_val;
+
+  O <= I after 30.0 ps + (21.56 ps * to_integer(unsigned(dly_tap_val)));
+
+  -- Check for DELAY value correctness on initialization
+  assert (DELAY >= 0 and DELAY <= 63)
+  report "O_DELAY instance DELAY set to incorrect value. Values must be between 0 and 63."
+  severity failure;
+
+end Behavioral;
+
+--------------------------------------------------------------------------------
+-- O_SERDES_CLK
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity O_SERDES_CLK is
+  generic(
+    DATA_RATE : string := "SDR"; -- Single or double data rate (SDR/DDR)
+    CLOCK_PHASE : integer := 0 -- Clock phase (0,90,180,270)
+  );
+  port(
+    CLK_EN : in std_logic; -- Gates output OUTPUT_CLK
+    OUTPUT_CLK : out std_logic := '0'; -- Clock output (Connect to output port, buffer or O_DELAY)
+    PLL_LOCK : in std_logic; -- PLL lock input
+    PLL_CLK : in std_logic -- PLL clock input
+  );
+end entity O_SERDES_CLK;
+
+architecture Behavioral of O_SERDES_CLK is
+  signal period : real := 0.0; -- This is the calculated period for OUTPUT_CLOCK after PLL_LOCK
+  constant ddr_multiplier : real := (DATA_RATE = "DDR") ? 2.0 : 1.0; -- If operating in DDR, must multiply period by 2
+  constant phase_multiplier : real := (CLOCK_PHASE = 90) ? 0.25 :  -- Phase offset
+                                    (CLOCK_PHASE = 180) ? 0.5 :
+                                    (CLOCK_PHASE = 270) ? 0.75 :
+                                    0;
+  signal clock_enabled : std_logic := '0'; -- Enables clock 256 cycles after LOCK
+begin
+  process(PLL_CLK, PLL_LOCK, CLK_EN)
+  begin
+    if not clock_enabled and PLL_LOCK = '1' then
+      wait until rising_edge(PLL_CLK);
+      period := real'to_integer(now);
+      wait until rising_edge(PLL_CLK);
+      period := real'to_integer(now) - period;
+      period := period * ddr_multiplier * 2.0; -- Calculated period for output clock
+      clock_enabled <= '1';
+      for i in 1 to 254 loop
+        wait until rising_edge(PLL_CLK); -- Wait 256 PLL_CLKs after lock to enable clock
+      end loop;
+      wait for period * phase_multiplier;
+    elsif PLL_LOCK = '0' then
+      clock_enabled <= '0';
+      wait until rising_edge(PLL_LOCK);
+    elsif CLK_EN = '1' then
+      wait for period / 2.0;
+      OUTPUT_CLK <= not OUTPUT_CLK;
+    else
+      OUTPUT_CLK <= '0';
+      wait until rising_edge(CLK_EN);
+    end if;
+  end process;
+  
+  -- Parameter checking
+  begin
+    if DATA_RATE /= "SDR" and DATA_RATE /= "DDR" then
+      assert false report "Error: O_SERDES_CLK instance has parameter DATA_RATE set to " & DATA_RATE & ".  Valid values are SDR, DDR" severity failure;
+    end if;
+    
+    if CLOCK_PHASE /= 0 and CLOCK_PHASE /= 90 and CLOCK_PHASE /= 180 and CLOCK_PHASE /= 270 then
+      assert false report "Error: O_SERDES_CLK instance has parameter CLOCK_PHASE set to " & integer'image(CLOCK_PHASE) & ".  Valid values are 0, 90, 180, 270" severity failure;
+    end if;
+  end;
+end Behavioral;
