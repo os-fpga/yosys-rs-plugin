@@ -399,7 +399,7 @@ use ieee.numeric_std.all;
 entity FCLK_BUF is
     Port ( I : in std_logic;
            O : out std_logic);
-end CLK_BUF;
+end FCLK_BUF;
 
 architecture Behavioral of FCLK_BUF is
 begin
