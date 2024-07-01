@@ -729,3 +729,299 @@ begin
     end process Check_param;
   
 end Behavioral;
+
+--------------------------------------------------------------------------------
+-- PLL
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity PLL is
+  generic (
+    DIVIDE_CLK_IN_BY_2 : string := "FALSE";    -- Enable input divider (TRUE/FALSE)
+    PLL_MULT           : integer := 16;         -- VCO clock multiplier (16-1000)
+    PLL_DIV            : integer := 1;          -- VCO clock divider (1-63)
+    PLL_POST_DIV       : integer := 2           -- VCO clock post-divider 
+  );
+  port (
+    PLL_EN           : in  std_logic;          -- PLL Enable
+    CLK_IN           : in  std_logic;          -- Clock input
+    CLK_OUT          : out std_logic;          -- Output clock
+    CLK_OUT_DIV2     : out std_logic;          -- CLK_OUT divided by 2
+    CLK_OUT_DIV3     : out std_logic;          -- CLK_OUT divided by 3
+    CLK_OUT_DIV4     : out std_logic;          -- CLK_OUT divided by 4
+    SERDES_FAST_CLK  : out std_logic;          -- Gearbox fast clock output
+    LOCK             : out std_logic           -- PLL lock signal
+  );
+end entity PLL;
+
+architecture rtl of PLL is
+
+
+  -- Selection Function
+  function sel_int(Cond : boolean; If_True, If_False : integer) return integer is
+  begin
+    if Cond then
+      return If_True;
+    else
+      return If_False;
+    end if;
+  end function sel_int;
+
+function sel_time(Cond : boolean; If_True, If_False : time) return time is
+  begin
+    if Cond then
+      return If_True;
+    else
+      return If_False;
+    end if;
+  end function sel_time;
+  
+  -- Constants and Signals -----------------------------------------------------
+
+  -- Input clock divider and period calculations
+
+  constant div_input_clk     : integer := sel_int(DIVIDE_CLK_IN_BY_2 = "TRUE", 2, 1);
+  constant clk_in_max_period : time    := sel_time(DIVIDE_CLK_IN_BY_2 = "TRUE", 62500000 ns , 125000000 ns);
+  constant clk_in_min_period : time    := sel_time(DIVIDE_CLK_IN_BY_2 = "TRUE", 1000000 ns, 2000000 ns);
+
+                                                                                                  
+  -- VCO (Voltage Controlled Oscillator) period limits
+  constant vco_max_period    : time    := 1_250_000 ns;
+  constant vco_min_period    : time    := 312_000 ns;
+
+  -- Signals to track periods
+  signal clk_in_period, old_clk_in_period : time := 0 ns;
+
+  -- Control signals and counters
+  signal pll_start, vco_clk_start, clk_out_start : std_logic := '0';
+  signal vco_count : integer range 0 to PLL_MULT * PLL_DIV * 2 := PLL_MULT * PLL_DIV * 2;
+  signal div3_count : integer range 0 to 2 := 1;
+  signal clk_in_count, old_clk_in_count : unsigned(3 downto 0) := (others => '0');
+  signal vco_period : time := vco_max_period; -- Initial VCO period (maximum)
+
+  -- Other signals
+  signal clk_in_start : time;
+
+begin  -- Architecture Body ---------------------------------------------------
+
+  -- Main PLL Control Process ------------------------------------------------
+  main_control_process : process
+  begin
+    -- Initialize signals at the start or when PLL is disabled
+    LOCK <= '0';
+    pll_start <= '0';
+    clk_in_period <= 0 ns;
+    clk_in_count <= (others => '0');
+    old_clk_in_count <= (others => '0');
+    vco_period <= 1_250_000 ns;  -- Initial VCO period 
+    vco_clk_start <= '0';
+    clk_out_start <= '0';
+    div3_count <= 1;
+    vco_count <= PLL_MULT * PLL_DIV * 2;
+    SERDES_FAST_CLK <= '0';
+    CLK_OUT <= '0';
+    CLK_OUT_DIV2 <= '0';
+    CLK_OUT_DIV3 <= '0';
+    CLK_OUT_DIV4 <= '0';
+
+    wait for 100 ns;
+
+    -- Wait for PLL enable signal
+    if PLL_EN = '1' then
+      pll_start <= '1';
+      wait until PLL_EN = '0' or LOCK = '1';
+    else
+      wait until PLL_EN = '1';
+    end if;
+  end process main_control_process; 
+  
+-- Lock Detection and Initial Clock Outputs --------------------------------
+lock_detection_process : process(CLK_IN)  -- Now sensitive to CLK_IN
+  variable rising_edge_counter : integer := 0; -- To count rising edges
+begin
+  if rising_edge(CLK_IN) then
+    if pll_start = '1' then
+      if rising_edge_counter < 9 then
+        rising_edge_counter := rising_edge_counter + 1;
+      else  -- 9 rising edges have been seen
+        vco_clk_start <= '1';
+      end if;
+    else
+      rising_edge_counter := 0; -- Reset the counter when pll_start is low
+    end if;
+  end if;
+
+  if rising_edge(SERDES_FAST_CLK) then
+    if vco_clk_start = '1' then
+      if rising_edge_counter < 19 then  -- Count 10 rising edges of SERDES_FAST_CLK
+        rising_edge_counter := rising_edge_counter + 1;
+      elsif rising_edge_counter = 19 then -- Additional rising edge of CLK_IN
+        clk_out_start <= '1';
+      end if;
+    end if;
+  end if;
+
+  if rising_edge(CLK_OUT) then
+    if clk_out_start = '1' then
+      if rising_edge_counter < 24 then  -- Count 5 rising edges of CLK_OUT
+        rising_edge_counter := rising_edge_counter + 1;
+      else
+        LOCK <= '1';                     -- Set LOCK after stabilization
+      end if;
+    end if;
+  end if;
+end process lock_detection_process;
+  
+-- VCO Clock Generation Process -------------------------------------------
+vco_clock_generation : process(CLK_IN)
+begin
+  if rising_edge(CLK_IN) then  
+    if vco_clk_start = '1' then
+      if vco_count = PLL_MULT * PLL_DIV * 2 then 
+        SERDES_FAST_CLK <= '0';
+        vco_count <= 1;
+      else
+        SERDES_FAST_CLK <= not SERDES_FAST_CLK; 
+        vco_count <= vco_count + 1;              
+      end if;
+    else
+      SERDES_FAST_CLK <= '0';                 
+    end if;
+  end if;  
+end process vco_clock_generation;
+
+-- Output Clock Generation Process -----------------------------------------
+output_clock_generation : process(SERDES_FAST_CLK)
+  variable post_div_counter : integer range 0 to PLL_POST_DIV / 2 := 0; -- Counter for post-divider
+begin
+  if rising_edge(SERDES_FAST_CLK) then
+    if clk_out_start = '1' then
+      if post_div_counter = PLL_POST_DIV / 2 - 1 then  -- Toggle after half the post-divider cycles
+        CLK_OUT <= not CLK_OUT;
+        post_div_counter := 0;                       -- Reset counter
+      else
+        post_div_counter := post_div_counter + 1;    -- Increment counter
+      end if;
+    else
+      CLK_OUT <= '0';                                 -- Disable output clock before lock
+    end if;
+  end if;
+end process output_clock_generation;
+
+-- Divided Clock Generation Processes -------------------------------------
+divided_clocks_generation : process
+begin
+  CLK_OUT_DIV2 <= not CLK_OUT_DIV2;  -- Divide by 2
+  wait until rising_edge(CLK_OUT);
+end process divided_clocks_generation;
+
+-- Frequency Adjustment Based on Input Clock -----------------------------
+frequency_adjustment : process(CLK_IN)
+  variable rising_edge_counter : unsigned(3 downto 0) := (others => '0');
+begin
+  if rising_edge(CLK_IN) then -- Execute on rising edge of CLK_IN
+    if pll_start = '1' then
+      clk_in_start <= now; -- Record start time of clock period
+
+      -- Count rising edges while locked
+      if LOCK = '1' then
+        rising_edge_counter := rising_edge_counter + 1;
+      end if;
+
+      if rising_edge_counter = 1 then  -- After two rising edges...
+        if clk_in_period = 0 ns then
+          old_clk_in_period <= now - clk_in_start; -- First period measurement
+        else
+          old_clk_in_period <= clk_in_period;
+        end if;
+
+        clk_in_period <= now - clk_in_start; -- Update input clock period
+
+        -- Calculate VCO period based on input clock frequency
+        vco_period <= clk_in_period * div_input_clk * PLL_DIV / PLL_MULT;
+
+        clk_in_start <= now;                -- Reset start time for the next period
+        if LOCK = '1' then
+          rising_edge_counter := rising_edge_counter + 1; -- Continue counting for next period
+        end if;
+
+        -- Error checking for input clock and VCO frequencies
+        if clk_in_period < clk_in_min_period then
+          report "Warning: PLL input clock, CLK_IN, is too fast." severity warning;
+          LOCK <= '0';
+        end if;
+
+        if clk_in_period > clk_in_max_period then
+          report "Warning: PLL input clock, CLK_IN, is too slow." severity warning;
+          LOCK <= '0';
+        end if;
+
+        if LOCK = '1' and (clk_in_period > old_clk_in_period * 1.05 or clk_in_period < old_clk_in_period * 0.95) then
+          report "Warning: PLL input clock, CLK_IN, changed frequency and lost lock." severity warning;
+          LOCK <= '0';
+        end if;
+      end if; -- End of rising_edge_counter = 1 condition
+    end if; -- End of pll_start = '1' condition
+
+    if rising_edge_counter = 15 then -- Reset counter after checking two periods
+      rising_edge_counter := (others => '0');
+    end if;
+  end if; -- End of rising_edge(CLK_IN) condition
+end process frequency_adjustment;
+
+-- Divide-by-3 Clock Generation Process -----------------------------------
+divided_by_3_clock : process(CLK_OUT) -- Sensitive to CLK_OUT
+begin
+  if div3_count = 2 then           -- Every third CLK_OUT cycle...
+    CLK_OUT_DIV3 <= not CLK_OUT_DIV3;  -- ...toggle the output
+    div3_count <= 0;                -- ...and reset the counter
+  else
+    div3_count <= div3_count + 1;   -- Increment counter
+  end if;
+end process divided_by_3_clock;
+
+-- Divide-by-4 Clock Generation ----------------------------------------------
+divided_by_4_clock : process(CLK_OUT_DIV2)
+begin
+  CLK_OUT_DIV4 <= not CLK_OUT_DIV4; -- Toggle CLK_OUT_DIV4 on every rising edge of CLK_OUT_DIV2
+end process divided_by_4_clock;
+
+-- Initial Blocks -----------------------------------------------------------
+
+-- Timescale Check 
+initial_check_1 : process
+begin
+  assert (1 fs = 1 fs) -- Check if the timescale is set correctly
+    report "Error: The timescale for PLL must be set to 1fs/1fs" severity failure;
+
+  wait;  -- Wait indefinitely to prevent process from ending
+end process initial_check_1;
+
+-- Parameter Checks -----------------------------------------------------------
+initial_check_2 : process
+begin
+  -- Check DIVIDE_CLK_IN_BY_2 parameter
+  assert (DIVIDE_CLK_IN_BY_2 = "TRUE" or DIVIDE_CLK_IN_BY_2 = "FALSE")
+    report "Error: Invalid DIVIDE_CLK_IN_BY_2 value. Must be 'TRUE' or 'FALSE'." severity failure;
+
+  -- Check PLL_MULT range
+  assert (PLL_MULT >= 16 and PLL_MULT <= 1000)
+    report "Error: PLL_MULT must be between 16 and 1000." severity failure;
+
+  -- Check PLL_DIV range
+  assert (PLL_DIV >= 1 and PLL_DIV <= 63)
+    report "Error: PLL_DIV must be between 1 and 63." severity failure;
+
+  -- Check PLL_POST_DIV value
+  case PLL_POST_DIV is
+    when 2 | 4 | 6 | 8 | 10 | 12 | 14 | 16 | 18 | 20 | 24 | 28 | 30 | 32 | 36 | 40 | 42 | 48 | 50 | 56 | 60 | 70 | 72 | 84 | 98 => null; -- Valid values
+    when others =>
+      report "Error: Invalid PLL_POST_DIV value." severity failure;
+  end case;
+
+  wait; -- Wait indefinitely to prevent process from ending
+end process initial_check_2;
+                                                                               
+end architecture rtl;
