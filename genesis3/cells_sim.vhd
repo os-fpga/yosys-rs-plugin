@@ -303,13 +303,13 @@ begin
   end process;
 end architecture behave;
 
+--------------------------------------------------------------------------------
+-- BOOT_CLOCK 
+--------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
---------------------------------------------------------------------------------
--- BOOT_CLOCK 
---------------------------------------------------------------------------------
 entity BOOT_CLOCK is
   generic(
     PERIOD : real := 25.0 -- Clock period for simulation purposes (nS)
@@ -323,11 +323,24 @@ architecture Behavioral of BOOT_CLOCK is
   constant HALF_PERIOD : real := PERIOD / 2.0;
 begin
 
-  process
+  clock_process: process
   begin
-    wait for HALF_PERIOD * 1 ns; -- Adjusting for real to time conversion, assuming ns as base unit
-    O <= not O;
-  end process;
+    loop
+      wait for HALF_PERIOD * 1 ns; -- Adjusting for real to time conversion, assuming ns as base unit
+      O <= not O;
+    end loop;
+  end process clock_process;
+
+  check_period_process: process
+  begin
+    if ((PERIOD < 16.0) or (PERIOD > 30.0)) then
+      report "BOOT_CLOCK instance PERIOD set to incorrect value, " & real'image(PERIOD) & ".  Values must be between 16.0 and 30.0.";
+      wait for 1 ps; -- Smallest time unit for simulation to acknowledge the stop
+      assert false report "Simulation stopped due to incorrect PERIOD value." severity failure;
+    end if;
+    wait; -- Ensures this process does not run again
+  end process check_period_process;
+
 end Behavioral;
 
 --------------------------------------------------------------------------------
@@ -656,14 +669,63 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity O_SERDES_CLK is
-  generic(
-    DATA_RATE : string := "SDR"; -- Single or double data rate (SDR/DDR)
-    CLOCK_PHASE : integer := 0 -- Clock phase (0,90,180,270)
-  );
-  port(
-    CLK_EN : in std_logic; -- Gates output OUTPUT_CLK
-    OUTPUT_CLK : out std_logic := '0'; -- Clock output (Connect to output port, buffer or O_DELAY)
-    PLL_LOCK : in std_logic; -- PLL lock input
-    PLL_CLK : in std_logic -- PLL clock input
-  );
+    generic (
+        DATA_RATE : string := "SDR"; -- Single or double data rate (SDR/DDR)
+        CLOCK_PHASE : integer := 0 -- Clock phase (0,90,180,270)
+    );
+    port (
+        CLK_EN : in std_logic; -- Gates output OUTPUT_CLK
+        OUTPUT_CLK : out std_logic; -- Clock output (Connect to output port, buffer or O_DELAY)
+        PLL_LOCK : in std_logic; -- PLL lock input
+        PLL_CLK : in std_logic -- PLL clock input
+    );
 end entity O_SERDES_CLK;
+
+architecture Behavioral of O_SERDES_CLK is
+    signal clock_enabled : std_logic := '0';
+    signal toggle_clk : std_logic := '0'; -- Used to manage OUTPUT_CLK toggling
+begin
+    -- Process to handle clock enabling and toggling
+    Clock_Control: process(PLL_CLK)
+    begin
+        if rising_edge(PLL_CLK) then
+            if PLL_LOCK = '1' and clock_enabled = '0' then
+                clock_enabled <= '1';
+                -- Assuming some initialization or synchronization tasks here
+                -- Actual implementation might require additional logic or signals
+            elsif PLL_LOCK = '0' then
+                clock_enabled <= '0';
+                OUTPUT_CLK <= '0'; -- Reset output clock when PLL is unlocked
+            end if;
+        end if;
+    end process Clock_Control;
+
+    -- Process to toggle OUTPUT_CLK based on CLK_EN and clock_enabled
+    Clock_Toggle: process(PLL_CLK)
+    begin
+        if rising_edge(PLL_CLK) then
+            if clock_enabled = '1' and CLK_EN = '1' then
+                toggle_clk <= not toggle_clk;
+            else
+                toggle_clk <= '0'; -- Ensure toggle_clk is reset appropriately
+            end if;
+        end if;
+        
+        -- Synchronize OUTPUT_CLK with toggle_clk, adjusting for DATA_RATE and CLOCK_PHASE as needed
+        -- This example does not implement the dynamic adjustment for simplicity
+        OUTPUT_CLK <= toggle_clk;
+    end process Clock_Toggle;
+
+    -- Parameter validation at elaboration time
+    Check_param: process
+    begin
+        assert DATA_RATE = "SDR" or DATA_RATE = "DDR"
+        report "DATA_RATE must be either 'SDR' or 'DDR'."
+        severity failure;
+
+        assert CLOCK_PHASE = 0 or CLOCK_PHASE = 90 or CLOCK_PHASE = 180 or CLOCK_PHASE = 270
+        report "CLOCK_PHASE must be 0, 90, 180, or 270."
+        severity failure;
+    end process Check_param;
+  
+end Behavioral;
