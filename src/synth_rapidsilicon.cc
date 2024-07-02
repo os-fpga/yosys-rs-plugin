@@ -90,6 +90,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define BRAM_FINAL_MAP_NEW_FILE brams_final_map_new.v
 #define IO_cells_FILE io_cells_map1.v
 #define IO_CELLs_final_map io_cell_final_map.v
+#define GEN3_TECHMAP gen3_techmap.v
 #define GET_FILE_PATH(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/" STR(file)
 #define GET_FILE_PATH_RS_FPGA_SIM(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/FPGA_PRIMITIVES_MODELS/sim_models/verilog/" STR(file)
 #define GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(tech_dir,file) " +/rapidsilicon/" STR(tech_dir) "/FPGA_PRIMITIVES_MODELS/blackbox_models/" STR(file)
@@ -5135,6 +5136,24 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
     }
 
+    void check_blackbox_param(){
+	    std::set<RTLIL::IdString> primitive_names = {
+		/* genesis3 blackbox primitives*/
+		"\\I_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\O_SERDES_CLK","\\PLL",
+        "\\SOC_FPGA_TEMPERATURE"};
+
+        for (auto &module : _design->selected_modules()) {
+           for(auto& cell : module->selected_cells()){
+              if (!primitive_names.count(cell->type)) {
+                continue;
+              }
+              std::string cell_type_str = cell->type.str();
+              RTLIL::IdString  newtype = cell_type_str + "_rs";
+              cell->type=newtype;
+              run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,GEN3_TECHMAP));
+           }
+        }
+    }
 
     void legalize_all_tdp_ram_clock_ports()
     {
@@ -6055,7 +6074,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
            run("techmap -map" + techMaplutArgs);
 #endif
 
-          
+           check_blackbox_param();
            if (legalize_ram_clk_ports) {
              legalize_all_tdp_ram_clock_ports();
            }
