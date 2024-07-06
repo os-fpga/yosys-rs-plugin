@@ -1896,8 +1896,6 @@ struct SynthRapidSiliconPass : public ScriptPass {
     //
     void obs_clean() {
 
-        post_cleanup= 2;
-
         //run("design -save before_post_cleanup");
 
         log("\n==========================\n");
