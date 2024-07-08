@@ -6899,12 +6899,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
-          log_cmd_error("Final netlist LUTs number [%d] exceeds '-max_lut' specified value [%d].\n", nbLUTx, max_lut);
+          log_error("Final netlist LUTs number [%d] exceeds '-max_lut' specified value [%d].\n", nbLUTx, max_lut);
         }
 
         if ((max_reg != -1) && (nbREGs > max_reg)) {
           log("\n");
-          log_cmd_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
+          log_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
         }
 
         sec_report();
