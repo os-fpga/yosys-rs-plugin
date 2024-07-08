@@ -5329,70 +5329,71 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
-    void map_obuft(int remove_obuft)
+    // Map the $TBUF cells into OBUFT equivalent.
+    //
+    void map_obuft(RTLIL::Module* top_module)
     {
+       log(" *****************************\n");
+       log("   Mapping Tri-state Buffers\n");
+       log(" *****************************\n");
+
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_map_obuft.v");
        }
 
-       for (auto &module : _design->selected_modules()) {
+       vector<RTLIL::Cell*> tbufCells;
 
-         vector<RTLIL::Cell*> tbufCells;
-
-         for (auto cell : module->cells()) {
+       for (auto cell : top_module->cells()) {
 
            if (cell->type != RTLIL::escape_id("$_TBUF_")) {
               continue;
            }
 
            tbufCells.push_back(cell);
-         }
+       }
 
-         if (remove_obuft) {
-         } else {
+       for (auto cell : tbufCells) {
 
-           for (auto cell : tbufCells) {
+          log_assert(cell->type == RTLIL::escape_id("$_TBUF_"));
 
-             log_assert(cell->type == RTLIL::escape_id("$_TBUF_"));
-
-             RTLIL::IdString newName = module->uniquify(stringf("$o_buft_%s", 
+          RTLIL::IdString newName = top_module->uniquify(stringf("$o_buft_%s", 
                                                   log_id(cell->name)));
 
-             RTLIL::Cell* newcell = module->addCell(newName, "\\O_BUFT");
+          RTLIL::Cell* newcell = top_module->addCell(newName, "\\O_BUFT");
 
-             for (auto &conn : cell->connections()) {
+          newcell->set_bool_attribute(ID::keep);
 
-                  IdString portName = conn.first;
-                  RTLIL::SigSpec actual = conn.second;
+          for (auto &conn : cell->connections()) {
 
-                  if (portName == RTLIL::escape_id("A")) {
+               IdString portName = conn.first;
+               RTLIL::SigSpec actual = conn.second;
 
-                     newcell->setPort(ID::I, actual);
+               if (portName == RTLIL::escape_id("A")) {
 
-                    continue;
-                  }
-                  if (portName == RTLIL::escape_id("E")) {
+                  newcell->setPort(ID::I, actual);
 
-                     newcell->setPort(ID::T, actual);
+                 continue;
+               }
+               if (portName == RTLIL::escape_id("E")) {
 
-                    continue;
-                  }
-                  if (portName == RTLIL::escape_id("Y")) {
+                  newcell->setPort(ID::T, actual);
 
-                     newcell->setPort(ID::O, actual);
+                 continue;
+               }
+               if (portName == RTLIL::escape_id("Y")) {
 
-                    continue;
-                  }
-                  log_assert(0);
-             }
-           }
-         }
+                  newcell->setPort(ID::O, actual);
 
-         // remove the TBUFcells
-         //
-         for (auto cell : tbufCells) {
-            module->remove(cell);
-         }
+                 continue;
+               }
+               log_assert(0);
+          }
+       }
+
+       // remove the original $TBUF cells
+       //
+       for (auto cell : tbufCells) {
+            top_module->remove(cell);
        }
 
        if (new_iobuf_map == 2) {
@@ -5400,43 +5401,32 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
-    
-    void rm_inout_ports()
+    void insert_input_buffers(RTLIL::Module* top_module)
     {
-       for (auto wire : _design->top_module()->wires()) {
+       log(" ***************************\n");
+       log("   Inserting Input Buffers\n");
+       log(" ***************************\n");
 
-          if (wire->port_output && wire->port_input) {
-             wire->port_output = 0;
-             continue;
-          }
-       }
-    }
-
-
-    void insert_input_buffers()
-    {
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_input_buffers.v");
-         Pass::call(_design, stringf("write_rtlil before_input_buffers.rtlil"));
        }
 
-       for (auto &module : _design->selected_modules()) {
+       pool<RTLIL::Cell*> ibuf_cells;
 
-         pool<RTLIL::Cell*> ibuf_cells;
+       collect_ibuf(top_module, ibuf_cells);
 
-         collect_ibuf(module, ibuf_cells);
+       std::vector<RTLIL::Wire*> w2ibuf;
 
-         std::vector<RTLIL::Wire*> w2ibuf;
+       for (auto wire : top_module->wires()) {
 
-         for (auto wire : module->wires()) {
-
-
-            // we can consider input and inout because in both cases
+            // Here we can process both input and inout because in both cases
             // we have to infer a I_BUF
             //
             if (!wire->port_input) {
                continue;
             }
+
+            log_assert(wire->port_input); // either input or inout
 
             if (is_input_ibuf(ibuf_cells, wire)) {
               log("NOTE: port '%s' has an associated IBUF\n", (wire->name).c_str());
@@ -5446,88 +5436,100 @@ static void show_sig(const RTLIL::SigSpec &sig)
             log("WARNING: port '%s' has no associated IBUF\n", (wire->name).c_str());
 
             w2ibuf.push_back(wire);
-         } 
+       } 
 
-         pool<RTLIL::Cell*> newCells;
-         dict<RTLIL::IdString, RTLIL::IdString> name2name;
-         dict<RTLIL::Wire*, RTLIL::Wire*> wire2wire;
+       pool<RTLIL::Cell*> newCells;
+       dict<RTLIL::IdString, RTLIL::IdString> name2name;
+       dict<RTLIL::Wire*, RTLIL::Wire*> wire2wire;
 
-         for (auto wire : w2ibuf) {
+       for (auto wire : w2ibuf) {
 
              RTLIL::IdString orgName = wire->name;
 
-             RTLIL::IdString newName = module->uniquify(stringf("$ibuf_%s", log_id(wire)));
+             RTLIL::IdString newName = top_module->uniquify(stringf("$ibuf_%s", log_id(wire)));
 
              name2name[newName] = orgName;
 
-             module->rename(wire, newName);
+             // The original Primary input is renamed as the IBUF wire output
+             //
+             top_module->rename(wire, newName);
 
-             RTLIL::Wire *new_wire = module->addWire(orgName, wire); 
+             // The new created wire will become the new Primary input
+             //
+             RTLIL::Wire *new_wire = top_module->addWire(orgName, wire); 
 
              wire2wire[wire] = new_wire;
 
+             // Wire which was a port becomes a regular wire
+             //
              wire->port_input = 0;
              wire->port_output = 0;
              wire->port_id = 0;
 
-             RTLIL::Cell *cell = module->addCell(
-                                   module->uniquify(stringf("$insert_ibuf$%s.%s", 
-                                     log_id(module->name), log_id(wire->name))),
+             // new_wire becomes the new port
+             //
+             // work directly on the primary input/inout wire if its with is 1
+             //
+             if (GetSize(new_wire) == 1) {
+
+               RTLIL::Cell *cell = top_module->addCell(
+                                    top_module->uniquify(stringf("$ibuf$%s.%s", 
+                                     log_id(top_module->name), log_id(wire->name))),
                                      RTLIL::escape_id("rs__I_BUF"));
 
-             cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
-             cell->setPort(ID::O, RTLIL::SigSpec(wire));
+               cell->set_bool_attribute(ID::keep);
 
-         }
+               cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
+               cell->setPort(ID::O, RTLIL::SigSpec(wire));
 
-         module->fixup_ports();
+             } else {
 
-#if 1
-         for (auto cell : module->cells()) {
+                // If primary input/inout wire width > 1 then bit split it
+                //
+                for (int i = 0; i< wire->width; i++) {
 
-             if (cell->type != RTLIL::escape_id("O_BUFT")) {
-               continue;
+                  RTLIL::Cell *cell = top_module->addCell(
+                                       top_module->uniquify(stringf("$ibuf$%s.%s", 
+                                         log_id(top_module->name), log_id(wire->name))),
+                                         RTLIL::escape_id("rs__I_BUF"));
+
+                  cell->set_bool_attribute(ID::keep);
+
+                  RTLIL::SigSpec new_sig = RTLIL::SigSpec(new_wire, i, 1);
+                  RTLIL::SigSpec sig = RTLIL::SigSpec(wire, i, 1);
+
+                  cell->setPort(ID::I, new_sig);
+                  cell->setPort(ID::O, sig);
+
+                }
              }
-
-             RTLIL::SigSpec out = cell->getPort(ID::O);
-             RTLIL::Wire *w = out[0].wire;
-
-             if (wire2wire.find(w) == wire2wire.end()) {
-               continue;
-             }
-
-             RTLIL::Wire* newWire = wire2wire[w];
-
-             cell->unsetPort(ID::O);
-
-             cell->setPort(ID::O, newWire);
-         }
-#endif
+  
        }
+
+       top_module->fixup_ports();
 
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_input_buffers.v");
-         Pass::call(_design, stringf("write_rtlil after_input_buffers.rtlil"));
        }
     }
 
-    void insert_output_buffers()
+    void insert_output_buffers(RTLIL::Module* top_module)
     {
+       log(" *****************************\n");
+       log("   Inserting Output Buffers\n");
+       log(" *****************************\n");
+
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_output_buffers.v");
-         Pass::call(_design, stringf("write_rtlil before_output_buffers.rtlil"));
        }
 
-       for (auto &module : _design->selected_modules()) {
+       pool<RTLIL::Cell*> obuf_cells;
 
-         pool<RTLIL::Cell*> obuf_cells;
+       collect_obuf(top_module, obuf_cells);
 
-         collect_obuf(module, obuf_cells);
+       std::vector<RTLIL::Wire*> w2obuf;
 
-         std::vector<RTLIL::Wire*> w2obuf;
-
-         for (auto wire : module->wires()) {
-
+       for (auto wire : top_module->wires()) {
 
             // do not consider inout, only pure output
             //
@@ -5543,23 +5545,23 @@ static void show_sig(const RTLIL::SigSpec &sig)
             log("WARNING: OUTPUT port '%s' has no associated OBUF\n", (wire->name).c_str());
 
             w2obuf.push_back(wire);
-         } 
+       } 
 
-         pool<RTLIL::Cell*> newCells;
-         dict<RTLIL::IdString, RTLIL::IdString> name2name;
-         dict<RTLIL::Wire*, RTLIL::Wire*> wire2wire;
+       pool<RTLIL::Cell*> newCells;
+       dict<RTLIL::IdString, RTLIL::IdString> name2name;
+       dict<RTLIL::Wire*, RTLIL::Wire*> wire2wire;
 
-         for (auto wire : w2obuf) {
+       for (auto wire : w2obuf) {
 
              RTLIL::IdString orgName = wire->name;
 
-             RTLIL::IdString newName = module->uniquify(stringf("$obuf_%s", log_id(wire)));
+             RTLIL::IdString newName = top_module->uniquify(stringf("$obuf_%s", log_id(wire)));
 
              name2name[newName] = orgName;
 
-             module->rename(wire, newName);
+             top_module->rename(wire, newName);
 
-             RTLIL::Wire *new_wire = module->addWire(orgName, wire); 
+             RTLIL::Wire *new_wire = top_module->addWire(orgName, wire); 
 
              wire2wire[wire] = new_wire;
 
@@ -5567,47 +5569,49 @@ static void show_sig(const RTLIL::SigSpec &sig)
              wire->port_output = 0;
              wire->port_id = 0;
 
-             RTLIL::Cell *cell = module->addCell(
-                                   module->uniquify(stringf("$insert_obuf$%s.%s", 
-                                     log_id(module->name), log_id(wire->name))),
+             // new_wire becomes the new port
+             //
+             // work directly on the primary output wire if its with is 1
+             //
+             if (GetSize(new_wire) == 1) {
+
+               RTLIL::Cell *cell = top_module->addCell(
+                                    top_module->uniquify(stringf("$obuf$%s.%s", 
+                                     log_id(top_module->name), log_id(wire->name))),
                                      RTLIL::escape_id("rs__O_BUF"));
 
-             cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
-             cell->setPort(ID::I, RTLIL::SigSpec(wire));
+               cell->set_bool_attribute(ID::keep);
 
-         }
+               cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+               cell->setPort(ID::I, RTLIL::SigSpec(wire));
 
-         module->fixup_ports();
+             } else {
 
-#if 0
-         for (auto cell : module->cells()) {
+                // If primary output wire width > 1 then bit split it
+                //
+                for (int i = 0; i< wire->width; i++) {
+                   RTLIL::Cell *cell = top_module->addCell(
+                                         top_module->uniquify(stringf("$obuf$%s.%s", 
+                                          log_id(top_module->name), log_id(wire->name))),
+                                          RTLIL::escape_id("rs__O_BUF"));
 
-             if (cell->type != RTLIL::escape_id("rs__O_BUFT")) {
-               continue;
+                   cell->set_bool_attribute(ID::keep);
+
+                   RTLIL::SigSpec new_sig = RTLIL::SigSpec(new_wire, i, 1);
+                   RTLIL::SigSpec sig = RTLIL::SigSpec(wire, i, 1);
+
+                   cell->setPort(ID::O, new_sig);
+                   cell->setPort(ID::I, sig);
+                }
              }
-
-             RTLIL::SigSpec out = cell->getPort(ID::O);
-             RTLIL::Wire *w = out[0].wire;
-
-             if (wire2wire.find(w) == wire2wire.end()) {
-               continue;
-             }
-
-             RTLIL::Wire* newWire = wire2wire[w];
-
-             cell->unsetPort(ID::O);
-
-             cell->setPort(ID::O, newWire);
-         }
-#endif
        }
+
+       top_module->fixup_ports();
 
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_output_buffers.v");
-         Pass::call(_design, stringf("write_rtlil after_output_buffers.rtlil"));
        }
     }
-
 
     // Collect all the SigSpec that drive any clock port of a sequential cell.
     // For such a given SigSpec, stores the vector of the sequential cells
@@ -5718,30 +5722,38 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
-    void insert_clk_buffers()
+    // ASSUMPTION: the IBUF insertions should be done before calling 
+    // this function.
+    //
+    void insert_clk_buffers(RTLIL::Module* top_module)
     {
+       log(" ***************************\n");
+       log("   Inserting Clock Buffers\n");
+       log(" ***************************\n");
+
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_clk_buffers.v");
-         Pass::call(_design, stringf("write_rtlil before_clk_buffers.rtlil"));
        }
 
-       for (auto &module : _design->selected_modules()) {
 
-         dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> clock_domains;
+       dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> clock_domains;
 
-         // Collect the clocks driving the sequential cells of the
-         // module. Sequential cells are DFFRE, DFFNRE, DSP with clock port
-         // and TDP_RAM.
-         // We insert a CLK_BUF/FCLK_BUF only in front of these cells and not
-         // in front of the other cells (comb. cells) in case clocks drive them.
-         //
-         collect_clock_domains(module, clock_domains);
+       // Collect the clocks driving the sequential cells of the
+       // top module. Sequential cells are DFFRE, DFFNRE, DSP with clock port
+       // and TDP_RAM.
+       // We insert a CLK_BUF/FCLK_BUF only in front of these cells and not
+       // in front of the other cells (comb. cells) in case clocks drive them.
+       //
+       collect_clock_domains(top_module, clock_domains);
 
-         pool<RTLIL::Cell*> ibuf_cells;
+       pool<RTLIL::Cell*> ibuf_cells;
 
-         collect_ibuf(module, ibuf_cells);
+       // Collect the IBUF to decide later if we need to infer CLK_BUF (driven
+       // by IBUF) or FCLK_BUF (not driven by IBUF).
+       //
+       collect_ibuf(top_module, ibuf_cells);
 
-         for (auto cd : clock_domains) {
+       for (auto cd : clock_domains) {
 
             bool is_FCLK_BUF = false;
 
@@ -5763,19 +5775,21 @@ static void show_sig(const RTLIL::SigSpec &sig)
               log("'\n");
             }
 
-            RTLIL::IdString newName = module->uniquify(stringf(
+            RTLIL::IdString newName = top_module->uniquify(stringf(
                                        (is_FCLK_BUF ? "$fclk_buf_%s" : "$clk_buf_%s"), 
                                        log_id(w)));
 
-            RTLIL::Wire *newWire = module->addWire(newName, w); 
+            RTLIL::Wire *newWire = top_module->addWire(newName, w); 
 
             // Create the clock buf for the sequential clock domain
             //
-            RTLIL::Cell *clk_buf = module->addCell(
-                                   module->uniquify(stringf("$insert_clkbuf$%s.%s", 
-                                     log_id(module->name), log_id(w->name))),
+            RTLIL::Cell *clk_buf = top_module->addCell(
+                                   top_module->uniquify(stringf("$clkbuf$%s.%s", 
+                                     log_id(top_module->name), log_id(w->name))),
                                      (is_FCLK_BUF ? RTLIL::escape_id("FCLK_BUF") : 
                                       RTLIL::escape_id("CLK_BUF")));
+
+            clk_buf->set_bool_attribute(ID::keep);
 
             clk_buf->setPort(ID::I, RTLIL::SigSpec(w));
             clk_buf->setPort(ID::O, RTLIL::SigSpec(newWire));
@@ -5905,32 +5919,39 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             } // for all the cells of the clock domain
 
-         } // for all the clock domains
-
-       } // for all the modules
-
+       } // for all the clock domains
 
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_clk_buffers.v");
-         Pass::call(_design, stringf("write_rtlil after_clk_buffers.rtlil"));
        }
     }
 
     // New iobuf map version
+    // This works only with a flattened design and we deal with the top module
     //
     void map_iobuf() {
 
-        // We need to respect the ordering of BUF insertions 
+        if (new_iobuf_map == 2) {
+           run("write_verilog -org-name -noattr -noexpr -nohex before_map_iobuf.v");
+        }
+
+        RTLIL::Module* top_module = _design->top_module();
+
+        // We need to respect the ordering of BUF insertions input buffers first ! 
         //
-        insert_input_buffers();
- 
+        insert_input_buffers(top_module);
+
         // Map CLK_BUF and FCLK_BUF only for sequential cells
         //
-        insert_clk_buffers();
+        insert_clk_buffers(top_module);
 
-        insert_output_buffers();
+        insert_output_buffers(top_module);
 
-        map_obuft(0 /* do not remove OBUFT */);
+        map_obuft(top_module);
+
+        if (new_iobuf_map == 2) {
+           run("write_verilog -org-name -noattr -noexpr -nohex after_map_iobuf.v");
+        }
     }
 
     void script() override
@@ -6802,10 +6823,18 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 map_iobuf();
 
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
+
+                if (new_iobuf_map == 2) {
+                  run("write_verilog -org-name -noattr -noexpr -nohex after_techmap_io_cells_final_map.v");
+                }
                 
                 //EDA-2629: Remove dangling wires after CLK_BUF
                 //
                 run("opt_clean");
+
+                if (new_iobuf_map == 2) {
+                  run("write_verilog -org-name -noattr -noexpr -nohex after_new_iobuf_map_opt_clean.v");
+                }
 
            } else if (!new_iobuf_map && !no_iobuf){
                 run("read_verilog -sv -lib "+readIOArgs);
