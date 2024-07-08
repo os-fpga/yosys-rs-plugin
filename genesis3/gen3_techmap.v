@@ -29,8 +29,7 @@ _TECHMAP_REPLACE_ (
     .CLK_OUT(CLK_OUT),           
     .Q(Q),     
     .DATA_VALID(DATA_VALID),       
-    .DPA_LOCK(DPA_LOCK),
-    .DPA_ERROR(DPA_ERROR),
+    .DPA_LOCK(DPA_LOCK),          
     .PLL_LOCK(PLL_LOCK),          
     .PLL_CLK(PLL_CLK)         
   );
@@ -64,8 +63,6 @@ _TECHMAP_REPLACE_ (
   .OE_IN(OE_IN),         // Output tri-state enable input
   .OE_OUT(OE_OUT),            // Output tri-state enable output (conttect to O_BUFT or inferred tri-state signal)
   .Q(Q),             // Data output (Connect to output port, buffer or O_DELAY)
-  .CHANNEL_BOND_SYNC_IN(CHANNEL_BOND_SYNC_IN),
-  .CHANNEL_BOND_SYNC_OUT(CHANNEL_BOND_SYNC_OUT),
   .PLL_LOCK(PLL_LOCK),          // PLL lock input
   .PLL_CLK(PLL_CLK)         // PLL clock input
 );
