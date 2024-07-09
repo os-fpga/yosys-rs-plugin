@@ -1839,10 +1839,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
            if (w->port_id) {
               continue;
            }
-#if 0
-           std::string sig_name = w->name.str();
-           log("   %s\n", sig_name.c_str());
-#endif
+
+           if (post_cleanup == 2) {
+             std::string sig_name = w->name.str();
+             log("OBS_CLEAN: remove wire '%s'\n", sig_name.c_str());
+           }
 
            wiresToRemove.insert(w);
         }
@@ -1850,10 +1851,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log(" --------------------------\n");
         log("   Removed assigns : %d\n", nbConnectionsToRemove);
 
-#if 1
         _design->top_module()->remove(wiresToRemove);
+
         log("   Removed wires   : %lu\n", wiresToRemove.size());
-#endif
 
         // remove unused cells
         //
@@ -5401,6 +5401,94 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
+    // Remove I_BUF and O_BUF and replace by assigns
+    // This is usefull for instance when we start from a bad implementation
+    // of I_BUF/O_Buf like in test case : 
+    // 'Validation/RTL_testcases/RS_Primitive_example_designs/primitive_example_design_1'
+    // where I_BUF is user instantiated on a PI but sometime the PI is
+    // used directly in the logic instead of using the I-BUT output
+    // So this allows to restart from a clean sheet.
+    // WWARNING; we may need to handle case where 'keep' attribute is on
+    // the I_BUF/O_BUF so that we cannot remove them.
+    //
+    void remove_io_buffers(RTLIL::Module* top_module)
+    {
+       log(" *********************************\n");
+       log("   Removing Input/Output Buffers\n");
+       log(" *********************************\n");
+
+       if (new_iobuf_map == 2) {
+         run("write_verilog -org-name -noattr -noexpr -nohex before_remove_io_buffers.v");
+       }
+
+       vector<RTLIL::Cell*> ibufCells;
+       vector<RTLIL::Cell*> obufCells;
+
+       for (auto cell : top_module->cells()) {
+
+           if (cell->type == RTLIL::escape_id("I_BUF")) {
+              ibufCells.push_back(cell);
+              continue;
+           }
+
+           if (cell->type == RTLIL::escape_id("O_BUF")) {
+              obufCells.push_back(cell);
+              continue;
+           }
+
+       }
+
+       std::vector<RTLIL::SigSig> newConnections;
+
+       for (auto cell : ibufCells) {
+
+          log_assert(cell->type == RTLIL::escape_id("I_BUF"));
+
+          RTLIL::SigSpec input = cell->getPort(ID::I);
+          RTLIL::SigSpec output = cell->getPort(ID::O);
+
+          RTLIL::SigSig newConnection = make_pair(output, input);
+
+          newConnections.push_back(newConnection);
+       }
+
+       for (auto cell : obufCells) {
+
+          log_assert(cell->type == RTLIL::escape_id("O_BUF"));
+
+          RTLIL::SigSpec input = cell->getPort(ID::I);
+          RTLIL::SigSpec output = cell->getPort(ID::O);
+
+          RTLIL::SigSig newConnection = make_pair(output, input);
+
+          newConnections.push_back(newConnection);
+       }
+
+       top_module->new_connections(newConnections);
+
+       for (auto cell : ibufCells) {
+            top_module->remove(cell);
+       }
+
+       for (auto cell : obufCells) {
+            top_module->remove(cell);
+       }
+
+       if (new_iobuf_map == 2) {
+         run("write_verilog -org-name -noattr -noexpr -nohex after_remove_io_buffers.v");
+       }
+    }
+
+    // Creates for each primary input an associated 'rs__I_BUF' cell that will
+    // be tech mapped later.
+    // We use a trick so that the PI physical wire will be renamed into the name
+    // of the wire at the output of the 'rs__I_BUF'. This avoid to visit all the logic
+    // to replace the original PI by the output of the new 'rs__I_BUF'. So we spare
+    // run time and extra code development. On the other hand we need to create a new PI, 
+    // exactly the same as the original PI, and declare it as the new PI. We will 
+    // then connect this new PI to the input of the 'rs__I_BUF' buffer and the renamed 
+    // original PI at the output of 'rs__I_BUF' buffer.
+    //
     void insert_input_buffers(RTLIL::Module* top_module)
     {
        log(" ***************************\n");
@@ -5429,11 +5517,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
             log_assert(wire->port_input); // either input or inout
 
             if (is_input_ibuf(ibuf_cells, wire)) {
-              log("NOTE: port '%s' has an associated IBUF\n", (wire->name).c_str());
+              log("INFO: port '%s' has an associated I_BUF\n", (wire->name).c_str());
               continue;
             }
 
-            log("WARNING: port '%s' has no associated IBUF\n", (wire->name).c_str());
+            log("WARNING: port '%s' has no associated I_BUF\n", (wire->name).c_str());
 
             w2ibuf.push_back(wire);
        } 
@@ -5460,13 +5548,13 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              wire2wire[wire] = new_wire;
 
-             // Wire which was a port becomes a regular wire
+             // Wire which was a port becomes a regular wire, it is no more a PI.
              //
              wire->port_input = 0;
              wire->port_output = 0;
              wire->port_id = 0;
 
-             // new_wire becomes the new port
+             // new_wire becomes the new PI.
              //
              // work directly on the primary input/inout wire if its with is 1
              //
@@ -5506,6 +5594,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
   
        }
 
+       // rebuild the port interface
+       //
        top_module->fixup_ports();
 
        if (new_iobuf_map == 2) {
@@ -5513,6 +5603,16 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
+    // Creates for each primary output an associated 'rs__O_BUF' cell that will
+    // be tech mapped later.
+    // We use a trick so that the PO physical wire will be renamed into the name
+    // of the wire at the input of the 'rs__O_BUF'. This avoid to visit all the logic
+    // to replace the original PO by the input of the new 'rs__O_BUF'. So we spare
+    // run time and extra code development. On the other hand we need to create a new PO, 
+    // exactly the same as the original PO, and declare it as the new PO. We will 
+    // then connect this new PO to the output of the 'rs__O_BUF' buffer and the renamed 
+    // original PO at the input of 'rs__O_BUF' buffer.
+    //
     void insert_output_buffers(RTLIL::Module* top_module)
     {
        log(" *****************************\n");
@@ -5531,18 +5631,18 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        for (auto wire : top_module->wires()) {
 
-            // do not consider inout, only pure output
+            // do not consider inout, only pure output !
             //
             if (!wire->port_output || wire->port_input) {
                continue;
             }
 
             if (is_output_obuf(obuf_cells, wire)) {
-              log("NOTE: OUTPUT port '%s' has an associated OBUF\n", (wire->name).c_str());
+              log("INFO: OUTPUT port '%s' has an associated O_BUF\n", (wire->name).c_str());
               continue;
             }
 
-            log("WARNING: OUTPUT port '%s' has no associated OBUF\n", (wire->name).c_str());
+            log("WARNING: OUTPUT port '%s' has no associated O_BUF\n", (wire->name).c_str());
 
             w2obuf.push_back(wire);
        } 
@@ -5559,17 +5659,23 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              name2name[newName] = orgName;
 
+             // we rename the original PO
+             //
              top_module->rename(wire, newName);
 
+             // We create a new PO with the original PO name.
+             //
              RTLIL::Wire *new_wire = top_module->addWire(orgName, wire); 
 
              wire2wire[wire] = new_wire;
 
+             // The old PO becomes a regular wire.
+             //
              wire->port_input = 0;
              wire->port_output = 0;
              wire->port_id = 0;
 
-             // new_wire becomes the new port
+             // new_wire becomes the new PO
              //
              // work directly on the primary output wire if its with is 1
              //
@@ -5606,6 +5712,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
              }
        }
 
+       // rebuild the port interface
+       //
        top_module->fixup_ports();
 
        if (new_iobuf_map == 2) {
@@ -5626,6 +5734,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
                (cell->type == RTLIL::escape_id("DFFNRE"))) {
 
               RTLIL::SigSpec actual = cell->getPort(ID::C);
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
               if (clock_domain.find(actual) == clock_domain.end()) {
                 clock_domain[actual] = new vector<RTLIL::Cell*>;
               }
@@ -5640,6 +5753,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                   IdString portName = conn.first;
                   RTLIL::SigSpec actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
 
                   if (portName == RTLIL::escape_id("CLK")) {
 
@@ -5658,6 +5775,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                   IdString portName = conn.first;
                   RTLIL::SigSpec actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
 
                   if (portName == RTLIL::escape_id("CLK_A1")) {
 
@@ -5701,6 +5822,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
                   IdString portName = conn.first;
                   RTLIL::SigSpec actual = conn.second;
 
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
                   if (portName == RTLIL::escape_id("CLK_A")) {
 
                     if (clock_domain.find(actual) == clock_domain.end()) {
@@ -5722,8 +5847,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
+    // We either insert CLK_BUF or FCLK_BUF on clocks signals that drive 
+    // sequential cells.
+    //
     // ASSUMPTION: the IBUF insertions should be done before calling 
-    // this function.
+    // this function because it will tell whether we need to 
+    // infer a CLK_BUF or a FCLK_BUF.
     //
     void insert_clk_buffers(RTLIL::Module* top_module)
     {
@@ -5734,7 +5863,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_clk_buffers.v");
        }
-
 
        dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> clock_domains;
 
@@ -5762,7 +5890,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             if (is_output_ibuf(ibuf_cells, w)) {
 
-              log("NOTE: inserting CLK_BUF before '");
+              log("INFO: inserting CLK_BUF before '");
               show_sig(clk);
               log("'\n");
 
@@ -5770,7 +5898,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
               is_FCLK_BUF = true;
 
-              log("NOTE: inserting FCLK_BUF before '");
+              log("INFO: inserting FCLK_BUF before '");
               show_sig(clk);
               log("'\n");
             }
@@ -5937,7 +6065,26 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         RTLIL::Module* top_module = _design->top_module();
 
-        // We need to respect the ordering of BUF insertions input buffers first ! 
+
+        // Remove I_BUF and O_BUF and replace by assigns
+        // This is usefull for instance when we start from a bad implementation
+        // of I_BUF/O_Buf like in test case : 
+        // 'Validation/RTL_testcases/RS_Primitive_example_designs/primitive_example_design_1'
+        // where I_BUF is user instantiated on a PI but sometime the PI is
+        // used directly in the logic instead of using the I-BUT output
+        // So this allows to restart from a clean sheet.
+        // WWARNING; we may need to handle case where 'keep' attribute is on
+        // the I_BUF/O_BUF so that we cannot remove them.
+        //
+        remove_io_buffers(top_module);
+
+        // Bypass the assigns by replacing LHs by RHS. Assigns will be
+        // dangling but it is ok as they will be removed later.
+        //
+        run("opt_clean");
+
+        // We need to respect the ordering of BUF insertions input buffers first,
+        // then clock buffers, then output buffers then O_BUFT tristate buffers.
         //
         insert_input_buffers(top_module);
 
@@ -5948,6 +6095,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
         insert_output_buffers(top_module);
 
         map_obuft(top_module);
+
+        // Bypass the assigns by replacing LHs by RHS
+        //
+        run("opt_clean");
 
         if (new_iobuf_map == 2) {
            run("write_verilog -org-name -noattr -noexpr -nohex after_map_iobuf.v");
