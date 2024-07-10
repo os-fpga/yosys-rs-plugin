@@ -5169,13 +5169,92 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         for (auto &module : _design->selected_modules()) {
            for(auto& cell : module->selected_cells()){
-              if (!primitive_names.count(cell->type)) {
+                if (!primitive_names.count(cell->type))
                 continue;
-              }
-              std::string cell_type_str = cell->type.str();
-              RTLIL::IdString  newtype = cell_type_str + "_rs";
-              cell->type=newtype;
-              run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,GEN3_TECHMAP));
+                //PLL Default Paramters
+                if (cell->type == RTLIL::escape_id("PLL")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DEV_FAMILY")))
+                        cell->setParam(RTLIL::escape_id("DEV_FAMILY"), stringf("VIRGO"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("PLL_DIV")))
+                        cell->setParam(RTLIL::escape_id("PLL_DIV"), RTLIL::Const(1));
+
+                    if (!cell->hasParam(RTLIL::escape_id("PLL_MULT")))
+                        cell->setParam(RTLIL::escape_id("PLL_MULT"), RTLIL::Const(16));
+
+                    if (!cell->hasParam(RTLIL::escape_id("PLL_POST_DIV")))
+                        cell->setParam(RTLIL::escape_id("PLL_POST_DIV"), RTLIL::Const(17));
+
+                    if (!cell->hasParam(RTLIL::escape_id("PLL_MULT_FRAC")))
+                        cell->setParam(RTLIL::escape_id("PLL_MULT_FRAC"), RTLIL::Const(0));
+
+                    if (!cell->hasParam(RTLIL::escape_id("DIVIDE_CLK_IN_BY_2")))
+                        cell->setParam(RTLIL::escape_id("DIVIDE_CLK_IN_BY_2"), stringf("FALSE"));
+                }
+                //O_SERDES_CLK Default Paramters
+                if (cell->type == RTLIL::escape_id("O_SERDES_CLK")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DATA_RATE")))
+                        cell->setParam(RTLIL::escape_id("DATA_RATE"), stringf("SDR"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("CLOCK_PHASE")))
+                        cell->setParam(RTLIL::escape_id("CLOCK_PHASE"), RTLIL::Const(0));
+                }
+                //O_DELAY Default Paramters
+                if (cell->type == RTLIL::escape_id("O_DELAY")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DELAY")))
+                        cell->setParam(RTLIL::escape_id("DELAY"), RTLIL::Const(0));
+                }
+
+                if (cell->type == RTLIL::escape_id("BOOT_CLOCK")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("PERIOD")))
+                        cell->setParam(RTLIL::escape_id("PERIOD"), RTLIL::Const(25));
+                }
+                //I_SERDES Default Paramters
+                if (cell->type == RTLIL::escape_id("I_SERDES")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DATA_RATE")))
+                        cell->setParam(RTLIL::escape_id("DATA_RATE"), stringf("SDR"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("WIDTH")))
+                        cell->setParam(RTLIL::escape_id("WIDTH"), RTLIL::Const(4));
+
+                    if (!cell->hasParam(RTLIL::escape_id("DPA_MODE")))
+                        cell->setParam(RTLIL::escape_id("DPA_MODE"), stringf("NONE"));
+                }
+                //O_SERDES Default Paramters
+                if (cell->type == RTLIL::escape_id("O_SERDES")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DATA_RATE")))
+                        cell->setParam(RTLIL::escape_id("DATA_RATE"), stringf("SDR"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("WIDTH")))
+                        cell->setParam(RTLIL::escape_id("WIDTH"), RTLIL::Const(4));
+                }
+                //O_BUFT_DS Default Paramters
+                if (cell->type == RTLIL::escape_id("O_BUFT_DS")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("WEAK_KEEPER")))
+                        cell->setParam(RTLIL::escape_id("WEAK_KEEPER"), stringf("NONE"));
+                }
+
+                if (cell->type == RTLIL::escape_id("I_BUF_DS")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("WEAK_KEEPER")))
+                        cell->setParam(RTLIL::escape_id("WEAK_KEEPER"), stringf("NONE"));
+                }
+
+                if (cell->type == RTLIL::escape_id("SOC_FPGA_TEMPERATURE")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("INITIAL_TEMPERATURE")))
+                        cell->setParam(RTLIL::escape_id("INITIAL_TEMPERATURE"), RTLIL::Const(25));
+
+                    if (!cell->hasParam(RTLIL::escape_id("TEMPERATURE_FILE")))
+                        cell->setParam(RTLIL::escape_id("TEMPERATURE_FILE"), stringf(""));
+                }
            }
         }
     }
