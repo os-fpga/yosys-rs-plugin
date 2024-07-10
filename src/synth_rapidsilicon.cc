@@ -1147,7 +1147,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
           _design->top_module()->connect(lhs, rhs);
       }
 
+#if 0
       run("write_verilog -noexpr make_simple_lhs.v");
+#endif
     }
 
     void split2bits() {
@@ -1314,12 +1316,16 @@ struct SynthRapidSiliconPass : public ScriptPass {
                          // cells then this means this sig net is multiply driven 
                          // (which is not good !).
 
-                    nbOutputs++;
-
-#if 0
-                    if(cell->type == RTLIL::escape_id("TDP_RAM18KX2")) {
+                    // we need to make sure that we have a real direction info
+                    // on the portName otherwise the obs cleanup can be wrong.
+                    // (cause : may be the cell model has not been read).
+                    //
+                    if (!cell->output(portName)) {
+                       log_warning ("sig2cells : cannot find direction of port '%s' with Cell '%s' (%s)\n", (portName).c_str(), (cell->name).c_str(), (cell->type).c_str());
+                       continue;
                     }
-#endif
+
+                    nbOutputs++;
 
                     if (!actual.is_chunk()) {
 
@@ -1899,7 +1905,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         //run("design -save before_post_cleanup");
 
         log("\n==========================\n");
-        log(" Post design clean up ... \n");
+        log("Post Design clean up ... \n\n");
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -5280,6 +5286,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
     }
 
+    void collect_pll(RTLIL::Module* module, pool<RTLIL::Cell*>& pll_cells)
+    {
+       for (auto cell : module->cells()) {
+           if (cell->type == RTLIL::escape_id("PLL")) {
+             pll_cells.insert(cell);
+           }
+       }
+    }
+
     void collect_ibuf(RTLIL::Module* module, pool<RTLIL::Cell*>& ibuf_cells)
     {
        for (auto cell : module->cells()) {
@@ -5330,6 +5345,58 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
            if (w->name == iw->name) {
               return true;
+           }
+       }
+
+       return false;
+    }
+
+    bool is_output_pll(pool<RTLIL::Cell*>& ibuf_cells, RTLIL::Wire* w)
+    {
+
+       for (auto cell : ibuf_cells) {
+
+          for (auto &conn : cell->connections()) {
+
+               IdString portName = conn.first;
+               RTLIL::SigSpec actual = conn.second;
+
+               if (portName == RTLIL::escape_id("CLK_OUT")) {
+
+                   RTLIL::Wire *iw = actual[0].wire;
+
+                   if (w->name == iw->name) {
+                      return true;
+                   }
+                   continue;
+               }
+               if (portName == RTLIL::escape_id("CLK_OUT_DIV2")) {
+
+                   RTLIL::Wire *iw = actual[0].wire;
+
+                   if (w->name == iw->name) {
+                      return true;
+                   }
+                   continue;
+               }
+               if (portName == RTLIL::escape_id("CLK_OUT_DIV3")) {
+
+                   RTLIL::Wire *iw = actual[0].wire;
+
+                   if (w->name == iw->name) {
+                      return true;
+                   }
+                   continue;
+               }
+               if (portName == RTLIL::escape_id("CLK_OUT_DIV4")) {
+
+                   RTLIL::Wire *iw = actual[0].wire;
+
+                   if (w->name == iw->name) {
+                      return true;
+                   }
+                   continue;
+               }
            }
        }
 
@@ -5960,12 +6027,23 @@ static void show_sig(const RTLIL::SigSpec &sig)
        //
        collect_ibuf(top_module, ibuf_cells);
 
+       pool<RTLIL::Cell*> pll_cells;
+
+       collect_pll(top_module, pll_cells);
+
        for (auto cd : clock_domains) {
 
             bool is_FCLK_BUF = false;
 
             RTLIL::SigSpec clk = cd.first;
             RTLIL::Wire *w = clk[0].wire;
+
+            // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
+            // a PLL clock port.
+            //
+            if (is_output_pll(pll_cells, w)) {
+              continue;
+            }
 
             if (is_output_ibuf(ibuf_cells, w)) {
 
@@ -7048,9 +7126,20 @@ static void show_sig(const RTLIL::SigSpec &sig)
                       GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,BLACKBOX_SIM_LIB_FILE);
            
 
-           if (1 && new_iobuf_map) {
+           // New iobuf mapping flow taking care of tricky situations that could not
+           // be handled with the regular Yosys 'iopadmap' command especially on 'inout'
+           // with tristates.
+           // We can also customize the flow more easily since we have full conrol of
+           // our source code. (Thierry, Rapid Silicon)
+           //
+           if (new_iobuf_map) {
 
+                // Everything is there : mapping I_BUF, CLK_BUF/FCLK_BUF, O_BUF and
+                // O_BUFT.
+                //
                 map_iobuf();
+
+                run("read_verilog -sv -lib "+readIOArgs);
 
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
 
@@ -7067,6 +7156,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 }
 
            } else if (!new_iobuf_map && !no_iobuf){
+
                 run("read_verilog -sv -lib "+readIOArgs);
                 run("clkbufmap -buf rs__CLK_BUF O:I");
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));// TECHMAP CELLS
