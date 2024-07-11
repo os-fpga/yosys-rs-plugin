@@ -42,6 +42,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define COMMON_DIR common
 #define SIM_LIB_FILE cells_sim.v
 #define BLACKBOX_SIM_LIB_FILE cell_sim_blackbox.v
+#define BLACKBOX_SIM_LIB_OFAB_FILE cell_ofab_sim_blackbox.v
 #define SIM_LIB_CARRY_FILE CARRY.v
 #define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
@@ -256,7 +257,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -new_iobuf_map <0|1|2>\n");
         log("        Performs a new approach to map IO buffers. '0' value means mapping is OFF. '1' means new mapping is ON and '2' is ON in debug mode.\n");
         log("\n");
-        log("    -cec\n");
+        log("    -ofab_map <0|1|2>\n");
+        log("        Performs mapping of O_FAB cells to drive netlist editor. '0' value means mapping is OFF. '1' means mapping is ON and '2' is ON in debug mode.\n");
+        log("\n");
         log("    -cec\n");
         log("        Use internal equivalence checking (ABC based) during optimization\n");
         log("        and dump Verilog after key phases.\n");
@@ -395,6 +398,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sec;
     int post_cleanup;
     int new_iobuf_map;
+    int ofab_map;
     bool legalize_ram_clk_ports;
     bool new_tdp36k;
     bool new_dsp19x2;
@@ -470,6 +474,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_iobuf= false;
         post_cleanup= 0;
         new_iobuf_map= 0;
+        ofab_map= 0;
         legalize_ram_clk_ports= false;
         nobram = false;
         new_tdp36k = false;
@@ -682,6 +687,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 new_iobuf_map = stoi(args[++argidx]);
                 continue;
             }
+            if (args[argidx] == "-ofab_map" && argidx + 1 < args.size()) {
+                ofab_map = stoi(args[++argidx]);
+                continue;
+            }
             if (args[argidx] == "-clock_enable_strategy" && argidx + 1 < args.size()) {
                 clke_strategy_str = args[++argidx];
                 continue;
@@ -805,6 +814,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         if (new_iobuf_map < 0 && new_iobuf_map > 2) {
             log_cmd_error("Invalid new iobuf map value: '%i'\n", new_iobuf_map);
+        }
+        if (ofab_map < 0 && ofab_map > 2) {
+            log_cmd_error("Invalid ofab map value: '%i'\n", ofab_map);
         }
 
 
@@ -5259,7 +5271,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                         cell->setParam(RTLIL::escape_id("INITIAL_TEMPERATURE"), RTLIL::Const(25));
 
                     if (!cell->hasParam(RTLIL::escape_id("TEMPERATURE_FILE")))
-                        cell->setParam(RTLIL::escape_id("TEMPERATURE_FILE"), stringf(""));
+                        cell->setParam(RTLIL::escape_id("TEMPERATURE_FILE"), stringf(" "));
                 }
            }
         }
@@ -5586,6 +5598,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        std::vector<RTLIL::SigSig> newConnections;
 
+       for (auto conn : top_module->connections()) {
+          newConnections.push_back(conn);
+       }
+
        for (auto cell : ibufCells) {
 
           log_assert(cell->type == RTLIL::escape_id("I_BUF"));
@@ -5623,6 +5639,45 @@ static void show_sig(const RTLIL::SigSpec &sig)
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_remove_io_buffers.v");
        }
+    }
+
+    // Will insert a O_FAB cell at the signal 'actual'. The output of O_FAB
+    // will drive the sinks of 'actual'. The input of O_FAB will be driven by the 
+    // source of 'actual'.
+    //
+    void insert_ofab(RTLIL::Module* top_module, RTLIL::Cell* cell,
+                     RTLIL::IdString portName, RTLIL::SigSpec& actual)
+    {
+
+       log("Inserting O_FAB on cell '%s' (%s) on port '%s'\n", (cell->name).c_str(),
+           (cell->type).c_str(), portName.c_str());
+
+       RTLIL::Wire *wire = actual[0].wire;
+
+       // Make sure the wire is 1 bit size
+       //
+       if (GetSize(wire) != 1) {
+         log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                   (wire->name).c_str(), GetSize(wire));
+       }
+
+       RTLIL::IdString new_name = top_module->uniquify(stringf("$ofab_%s", log_id(wire)));
+
+       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+       RTLIL::Cell *new_cell = top_module->addCell(
+                               top_module->uniquify(stringf("$ofab$%s.%s", 
+                                  log_id(top_module->name), log_id(wire->name))),
+                                  RTLIL::escape_id("O_FAB"));
+
+       new_cell->set_bool_attribute(ID::keep);
+
+       new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+       new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+
+       cell->unsetPort(portName);
+
+       cell->setPort(portName, new_wire);
     }
 
     // Creates for each primary input an associated 'rs__I_BUF' cell that will
@@ -6259,6 +6314,166 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         if (new_iobuf_map == 2) {
            run("write_verilog -org-name -noattr -noexpr -nohex after_map_iobuf.v");
+        }
+    }
+
+    // O_FAB mapper:
+    // This works only with a flattened design and we deal with the top module.
+    //
+    // The algorithm has a limitation : for a given cell, we can insert only
+    // one O_FAB to one of its ports. We cannot insert more. If we want to insert 
+    // an O_FAB to several ports of the cell we need to slightly rewrite the algorithm.
+    //
+    void map_ofab() {
+
+        if (ofab_map == 2) {
+           run("write_verilog -org-name -noattr -noexpr -nohex before_ofab_map.v");
+        }
+
+        string read_O_FAB_args;
+
+#if 0
+        read_O_FAB_args = GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,
+                                     BLACKBOX_SIM_LIB_OFAB_FILE);
+
+        run("read_verilog -sv -lib "+read_O_FAB_args);
+#endif
+
+        RTLIL::Module* top_module = _design->top_module();
+
+        pool<RTLIL::Cell*> cells_processed;
+
+        int insert = 1;
+
+        while (insert) {
+
+           IdString portName;
+           RTLIL::SigSpec actual;
+           RTLIL::Cell* theCell = NULL;
+
+           insert = 0;
+
+           for (auto cell : top_module->cells()) {
+
+             theCell = cell;
+
+             // If already processed
+             //
+             if (cells_processed.find(cell) != cells_processed.end()) {
+               continue;
+             }
+
+             cells_processed.insert(cell);
+
+             // Of course do not process O_FAB
+             //
+             if (cell->type == RTLIL::escape_id("O_FAB")) {
+                continue;
+             }
+
+             // Enumerate all the cases where you want to pull into the
+             // fabric some logic that is driving some specific ports of
+             // some specific cells. Inserting a O_FAB will pull in the
+             // logic into the fabric.
+             //
+             // Right now we want to pull into fabric : 
+             //
+             //   - case 1: logic driving port 'E' of 'I_DDR'
+             //   - case 2: logic driving port 'RST' of 'I_SERDES'
+             //   - case 3: logic driving port 'RST' of 'O_SERDES'
+             //
+             
+             // ------
+             // Case 1
+             // ------
+             if (cell->type == RTLIL::escape_id("I_DDR")) {
+
+                for (auto &conn : cell->connections()) {
+
+                  portName = conn.first;
+                  actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
+                  if (portName == RTLIL::escape_id("E")) {
+                    insert = 1;
+                    break;
+                  }
+                }
+                if (insert) {
+                  break;
+                } else {
+                  continue;
+                }
+             }
+
+             // ------
+             // Case 2
+             // ------
+             if (cell->type == RTLIL::escape_id("I_SERDES")) {
+
+                for (auto &conn : cell->connections()) {
+
+                  portName = conn.first;
+                  actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
+                  if (portName == RTLIL::escape_id("RST")) {
+                    insert = 1;
+                    break;
+                  }
+                }
+                if (insert) {
+                  break;
+                } else {
+                  continue;
+                }
+             }
+
+             // ------
+             // Case 3
+             // ------
+             if (cell->type == RTLIL::escape_id("O_SERDES")) {
+
+                for (auto &conn : cell->connections()) {
+
+                  portName = conn.first;
+                  actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
+                  if (portName == RTLIL::escape_id("RST")) {
+                    insert = 1;
+                    break;
+                  }
+                }
+                if (insert) {
+                  break;
+                } else {
+                  continue;
+                }
+             }
+          } // end for cells
+
+          if (insert) {
+            insert_ofab(top_module, theCell, portName, actual);
+          }
+
+        } // end while (insert)
+
+        // rebuild the port interface
+        //
+        top_module->fixup_ports();
+
+        if (ofab_map == 2) {
+           run("write_verilog -org-name -noattr -noexpr -nohex after_ofab_map.v");
         }
     }
 
@@ -7231,8 +7446,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         //sec_check("final_netlist", true, true);
         
-
         writeNetlistInfo("netlist_info.json");
+
+        if (ofab_map) {
+          map_ofab();
+        }
 
         run("stat");
 
