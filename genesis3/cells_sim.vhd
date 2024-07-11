@@ -412,13 +412,30 @@ begin
     O <= I;
 end Behavioral;
 
+--------------------------------------------------------------------------------
+-- O_FAB
+--------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+entity O_FAB is
+    Port ( I : in std_logic;
+           O : out std_logic);
+end O_FAB;
+
+architecture Behavioral of O_FAB is
+begin
+    O <= I;
+end Behavioral;
+
 --------------------------------------------------------------------------------
 -- I_DELAY
 --------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
 entity I_DELAY is
     generic (
         DELAY : integer := 0  -- TAP delay value (0-63)
