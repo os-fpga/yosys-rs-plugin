@@ -413,6 +413,23 @@ begin
 end Behavioral;
 
 --------------------------------------------------------------------------------
+-- I_FAB
+--------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity I_FAB is
+    Port ( I : in std_logic;
+           O : out std_logic);
+end I_FAB;
+
+architecture Behavioral of I_FAB is
+begin
+    O <= I;
+end Behavioral;
+
+--------------------------------------------------------------------------------
 -- O_FAB
 --------------------------------------------------------------------------------
 library ieee;
