@@ -257,8 +257,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -new_iobuf_map <0|1|2>\n");
         log("        Performs a new approach to map IO buffers. '0' value means mapping is OFF. '1' means new mapping is ON and '2' is ON in debug mode.\n");
         log("\n");
-        log("    -ofab_map <0|1|2>\n");
-        log("        Performs mapping of O_FAB cells to drive netlist editor. '0' value means mapping is OFF. '1' means mapping is ON and '2' is ON in debug mode.\n");
+        log("    -iofab_map <0|1|2>\n");
+        log("        Performs mapping of I_FAB/O_FAB cells to drive netlist editor. '0' value means mapping is OFF. '1' means mapping is ON and '2' is ON in debug mode.\n");
         log("\n");
         log("    -cec\n");
         log("        Use internal equivalence checking (ABC based) during optimization\n");
@@ -398,7 +398,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sec;
     int post_cleanup;
     int new_iobuf_map;
-    int ofab_map;
+    int iofab_map;
     bool legalize_ram_clk_ports;
     bool new_tdp36k;
     bool new_dsp19x2;
@@ -474,7 +474,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_iobuf= false;
         post_cleanup= 0;
         new_iobuf_map= 0;
-        ofab_map= 0;
+        iofab_map= 0;
         legalize_ram_clk_ports= false;
         nobram = false;
         new_tdp36k = false;
@@ -687,8 +687,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 new_iobuf_map = stoi(args[++argidx]);
                 continue;
             }
-            if (args[argidx] == "-ofab_map" && argidx + 1 < args.size()) {
-                ofab_map = stoi(args[++argidx]);
+            if (args[argidx] == "-iofab_map" && argidx + 1 < args.size()) {
+                iofab_map = stoi(args[++argidx]);
                 continue;
             }
             if (args[argidx] == "-clock_enable_strategy" && argidx + 1 < args.size()) {
@@ -815,8 +815,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (new_iobuf_map < 0 && new_iobuf_map > 2) {
             log_cmd_error("Invalid new iobuf map value: '%i'\n", new_iobuf_map);
         }
-        if (ofab_map < 0 && ofab_map > 2) {
-            log_cmd_error("Invalid ofab map value: '%i'\n", ofab_map);
+        if (iofab_map < 0 && iofab_map > 2) {
+            log_cmd_error("Invalid iofab map value: '%i'\n", iofab_map);
         }
 
 
@@ -5564,9 +5564,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
     // of I_BUF/O_Buf like in test case : 
     // 'Validation/RTL_testcases/RS_Primitive_example_designs/primitive_example_design_1'
     // where I_BUF is user instantiated on a PI but sometime the PI is
-    // used directly in the logic instead of using the I-BUT output
+    // used directly in the logic instead of using the I_BUF output
     // So this allows to restart from a clean sheet.
-    // WWARNING; we may need to handle case where 'keep' attribute is on
+    // WARNING; we may need to handle case where 'keep' attribute is on
     // the I_BUF/O_BUF so that we cannot remove them.
     //
     void remove_io_buffers(RTLIL::Module* top_module)
@@ -5679,6 +5679,362 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        cell->setPort(portName, new_wire);
     }
+
+
+    void ofab_insert_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
+                              string portName, string fabPortName, RTLIL::SigSpec& actual)
+    {
+
+       if (iofab_map == 2) {
+          log("     - Inserting O_FAB on cell '%s' (%s) on NS input port '%s'\n", (cell->name).c_str(),
+              (cell->type).c_str(), portName.c_str());
+       }
+
+       RTLIL::Wire *wire = actual[0].wire;
+
+       if (fabPortName =="") {
+         fabPortName = "ofab";
+       }
+
+       // Make sure the wire is 1 bit size
+       //
+       if (GetSize(wire) != 1) {
+         log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                   (wire->name).c_str(), GetSize(wire));
+       }
+
+       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                       log_id(wire)));
+
+       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+       RTLIL::Cell *new_cell = top_module->addCell(
+                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                  log_id(wire->name))), RTLIL::escape_id("O_FAB"));
+
+       new_cell->set_bool_attribute(ID::keep);
+
+       new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+       new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+
+       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+       cell->unsetPort(idPortName);
+
+       cell->setPort(idPortName, new_wire);
+    }
+
+
+    void ifab_insert_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
+                              string portName, string fabPortName, RTLIL::SigSpec& actual)
+    {
+       if (iofab_map == 2) {
+          log("     - Inserting I_FAB on cell '%s' (%s) on NS output port '%s'\n", (cell->name).c_str(),
+              (cell->type).c_str(), portName.c_str());
+       }
+
+       RTLIL::Wire *wire = actual[0].wire;
+
+       if (fabPortName =="") {
+         fabPortName = "ifab";
+       }
+
+       // Make sure the wire is 1 bit size
+       //
+       if (GetSize(wire) != 1) {
+         log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                   (wire->name).c_str(), GetSize(wire));
+       }
+
+       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                       log_id(wire)));
+
+       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+       RTLIL::Cell *new_cell = top_module->addCell(
+                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                  log_id(wire->name))), RTLIL::escape_id("I_FAB"));
+
+       new_cell->set_bool_attribute(ID::keep);
+
+       new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
+       new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
+
+       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+       cell->unsetPort(idPortName);
+
+       cell->setPort(idPortName, new_wire);
+    }
+
+
+    // Insert a I_FAB or O_FAB at the port of name 'portName' of 'cell' if
+    // possible. For instance we do not insert anything if the port is driven 
+    // by a constant. We are in the Non Shared(NS) case which means that 
+    // we systematically create a I_FAB or O_FAB.
+    //
+    void insert_iofab_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
+                               string portName, string fabPortName)
+    {
+       int found = 0;
+       int insertable = 0;
+       RTLIL::SigSpec actual;
+
+       // Look for the Port 
+       //
+       for (auto &conn : cell->connections()) {
+
+          IdString cellPortName = conn.first;
+          actual = conn.second;
+
+          if (cellPortName == RTLIL::escape_id(portName)) {
+
+            found = 1;
+
+            // We cannot insert on a constant wire
+            //
+            if (actual.has_const()) {
+              return;
+            }
+            insertable = 1;
+            break;
+          }
+       }
+
+       if (!found) {
+         log_warning("Could not find port '%s' to insert I_FAB/O_FAB on cell of type '%s'\n",
+                     portName.c_str(), (cell->type).c_str());
+         return;
+       }
+
+       if (!insertable) {
+         log_warning("Nothing to insert at port '%s' for cell '%s' of type '%s (probably constant actual)'\n",
+                     portName.c_str(), (cell->name).c_str(), (cell->type).c_str());
+         return;
+       }
+
+       // For a primitive cell port input we need to insert a O_FAB in order to
+       // bring the logic driving this port from the fabric.
+       //
+       if (cell->input(RTLIL::escape_id(portName))) {
+
+          ofab_insert_NS_rules(top_module, cell, portName, fabPortName, actual);
+
+          return;
+       }
+
+       // For a primitive cell port output we need to insert a I_FAB in order to
+       // bring the logic into the fabric.
+       //
+       if (cell->output(RTLIL::escape_id(portName))) {
+
+          ifab_insert_NS_rules(top_module, cell, portName, fabPortName, actual);
+
+          return;
+       }
+
+       log_warning("Could not insert I_FAB/O_FAB cell on port '%s' of cell type '%s' because port direction is unknown\n", portName.c_str(), (cell->type).c_str());
+
+    }
+
+    // We are in SHARED mode. Insert one unique O_FAB for the sub group of cells 'sub_cells' 
+    // at port of name 'portName'.
+    //
+    void insert_ofab_sub_cells (RTLIL::Module* top_module, vector<RTLIL::Cell*>* sub_cells, 
+                               string portName, string fabPortName, RTLIL::SigSpec& actual) 
+    {
+       log("     - Inserting O_FAB on SHARED input port '%s' for cells\n", portName.c_str());
+
+       for (auto cell : *sub_cells) {
+         log("             '%s'\n", (cell->name).c_str());
+       }
+
+       RTLIL::Wire *wire = actual[0].wire;
+
+       if (fabPortName =="") {
+         fabPortName = "ofab";
+       }
+
+       // Make sure the wire is 1 bit size
+       //
+       if (GetSize(wire) != 1) {
+         log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                   (wire->name).c_str(), GetSize(wire));
+       }
+
+       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                       log_id(wire)));
+
+       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+       RTLIL::Cell *new_cell = top_module->addCell(
+                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                  log_id(wire->name))), RTLIL::escape_id("O_FAB"));
+
+       new_cell->set_bool_attribute(ID::keep);
+
+       new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+       new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+
+       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+       // rewire the sub group of cells
+       //
+       for (auto cell : *sub_cells) {
+
+         cell->unsetPort(idPortName);
+
+         cell->setPort(idPortName, new_wire);
+       }
+    }
+    
+    // We are in SHARED mode. Insert one unique I_FAB for the sub group of cells 'sub_cells' 
+    // at port of name 'portName'.
+    //
+    void insert_ifab_sub_cells (RTLIL::Module* top_module, vector<RTLIL::Cell*>* sub_cells, 
+                               string portName, string fabPortName, RTLIL::SigSpec& actual) 
+    {
+       
+       log("     - Inserting I_FAB on SHARED output port '%s' for cells\n", portName.c_str());
+
+       for (auto cell : *sub_cells) {
+         log("             '%s'\n", (cell->name).c_str());
+       }
+
+       RTLIL::Wire *wire = actual[0].wire;
+
+       if (fabPortName =="") {
+         fabPortName = "ifab";
+       }
+
+       // Make sure the wire is 1 bit size
+       //
+       if (GetSize(wire) != 1) {
+         log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                   (wire->name).c_str(), GetSize(wire));
+       }
+
+       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                       log_id(wire)));
+
+       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+       RTLIL::Cell *new_cell = top_module->addCell(
+                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                  log_id(wire->name))), RTLIL::escape_id("I_FAB"));
+
+       new_cell->set_bool_attribute(ID::keep);
+
+       new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
+       new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
+
+       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+       // rewire the sub group of cells
+       //
+       for (auto cell : *sub_cells) {
+
+         cell->unsetPort(idPortName);
+
+         cell->setPort(idPortName, new_wire);
+       }
+    }
+
+    // Insert a I_FAB or O_FAB at the port of name 'portName' for a group of cells if
+    // possible. For instance we do not insert anything if the port is driven 
+    // by a constant. We are in the Shared (S) case which means that we insert 
+    // a unique I_FAB or O_FAB for sub-group of cells that have in common the same 
+    // actual associated to a port of name 'portName'.
+    //
+    void insert_iofab_S_rules(RTLIL::Module* top_module, vector<RTLIL::Cell*>* cells, 
+                              string portName, string fabPortName)
+    {
+
+       dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> sig2cells;
+
+       int found = 0;
+
+       int direction = 0; // 0 -> unknown, 1 -> input, 2 -> output
+
+       RTLIL::Cell* last_cell;
+
+       if (cells->size() == 0) {
+          return;
+       }
+
+       // group cells having the same actual on portName
+       //
+       for (auto cell : *cells) {
+
+          last_cell = cell;
+
+          if (cell->input(RTLIL::escape_id(portName))) {
+            direction = 1;
+          }
+
+          if (cell->output(RTLIL::escape_id(portName))) {
+            direction = 2;
+          }
+
+          // Look for the Port 'portname'
+          //
+          for (auto &conn : cell->connections()) {
+
+            IdString cellPortName = conn.first;
+            RTLIL::SigSpec actual = conn.second;
+
+            if (cellPortName == RTLIL::escape_id(portName)) {
+
+              found = 1;
+
+              // We cannot insert on a constant wire
+              //
+              if (actual.has_const()) {
+                break;
+              }
+
+              if (sig2cells.count(actual) == 0) {
+                sig2cells[actual] = new vector<RTLIL::Cell*>;
+              }
+
+              sig2cells[actual]->push_back(cell);
+
+              break;
+            }
+          }
+       }
+
+       if (!found) {
+         log_warning("Could not find port '%s' to insert I_FAB/O_FAB on cell of type '%s'\n",
+                     portName.c_str(), (last_cell->type).c_str());
+         return;
+       }
+
+       if (!direction) {
+         log_warning("Could not insert I_FAB/O_FAB cell on port '%s' of cell type '%s' because port direction is unknown\n", portName.c_str(), (last_cell->type).c_str());
+         return;
+       }
+
+       // Insert only one I_FAB/O_FAB for the sub group of cells
+       //
+       for (auto group : sig2cells) {
+
+          RTLIL::SigSpec actual = group.first;
+
+          vector<RTLIL::Cell*>* sub_cells = group.second;
+
+          if (direction == 1) { // if primitive port direction is input -> insert a O_FAB
+
+            insert_ofab_sub_cells (top_module, sub_cells, portName, fabPortName, actual); 
+
+          } else { // if primitive port direction is output -> insert a I_FAB
+
+            insert_ifab_sub_cells (top_module, sub_cells, portName, fabPortName, actual); 
+          }
+       }
+
+    }
+
 
     // Creates for each primary input an associated 'rs__I_BUF' cell that will
     // be tech mapped later.
@@ -6283,12 +6639,14 @@ static void show_sig(const RTLIL::SigSpec &sig)
         // of I_BUF/O_Buf like in test case : 
         // 'Validation/RTL_testcases/RS_Primitive_example_designs/primitive_example_design_1'
         // where I_BUF is user instantiated on a PI but sometime the PI is
-        // used directly in the logic instead of using the I-BUT output
+        // used directly in the logic instead of using the I_BUF output
         // So this allows to restart from a clean sheet.
-        // WWARNING; we may need to handle case where 'keep' attribute is on
+        // WARNING; we may need to handle case where 'keep' attribute is on
         // the I_BUF/O_BUF so that we cannot remove them.
         //
+#if 0
         remove_io_buffers(top_module);
+#endif
 
         // Bypass the assigns by replacing LHs by RHS. Assigns will be
         // dangling but it is ok as they will be removed later.
@@ -6317,164 +6675,239 @@ static void show_sig(const RTLIL::SigSpec &sig)
         }
     }
 
-    // O_FAB mapper:
-    // This works only with a flattened design and we deal with the top module.
-    //
-    // The algorithm has a limitation : for a given cell, we can insert only
-    // one O_FAB to one of its ports. We cannot insert more. If we want to insert 
-    // an O_FAB to several ports of the cell we need to slightly rewrite the algorithm.
-    //
-    void map_ofab() {
+    void register_rule(string cellName, string portName, string fabPortName, int shared, 
+                       dict<RTLIL::IdString, vector<std::tuple<string, string, int>>*>& rules)
+    {
 
-        if (ofab_map == 2) {
-           run("write_verilog -org-name -noattr -noexpr -nohex before_ofab_map.v");
+        if (rules.find(RTLIL::escape_id(cellName)) == rules.end()) {
+          rules[RTLIL::escape_id(cellName)] = new vector<std::tuple<string, string, int>>;
         }
 
-        string read_O_FAB_args;
+        rules[RTLIL::escape_id(cellName)]->push_back(make_tuple(portName, fabPortName, shared));
+    } 
+
+    void show_all_rules(dict<RTLIL::IdString,
+                                vector<std::tuple<string, string, int>>*>& all_rules)
+    {
+
+       log("\n");
+       log(" ==================================================================================\n");
+       log("   Primitive            Control Port               Fabric control name     Shared \n");
+       log(" ==================================================================================\n");
+
+       for (auto rule : all_rules) {
+
+         IdString primitive = rule.first;
+
+         vector<std::tuple<string, string, int>>* spec = rule.second;
+
+         for (auto line : *spec) {
+           log("   %-16s     %-22s     %-22s  %c \n", primitive.c_str(),
+                 (std::get<0>(line)).c_str(), (std::get<1>(line)).c_str(), 
+                 (std::get<2>(line) ? 'S' : '-'));
+         }
+       }
+
+       log(" ==================================================================================\n");
+       log("\n");
+    }
+
+    void specify_all_rules(dict<RTLIL::IdString, 
+                                vector<std::tuple<string, string, int>>*>& all_rules) 
+    {
+       if (iofab_map == 2) {
+         log("Getting the rules ...\n");
+       }
+
+       register_rule("I_BUF", "EN", "f2g_in_en_A", 0 /* not shared */, all_rules);
+       register_rule("I_BUF_DS", "EN", "f2g_in_en_A", 0, all_rules);
+
+       register_rule("O_BUFT", "T", "f2g_tx_oe_A", 0, all_rules);
+       register_rule("O_BUFT_DS", "T", "f2g_tx_oe_A", 0, all_rules);
 
 #if 0
-        read_O_FAB_args = GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,
-                                     BLACKBOX_SIM_LIB_OFAB_FILE);
-
-        run("read_verilog -sv -lib "+read_O_FAB_args);
+       // SHARED version
+       //
+       register_rule("I_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 1 /* shared */, all_rules);
+       register_rule("I_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 1, all_rules);
+       register_rule("I_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 1, all_rules);
+       register_rule("I_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 1, all_rules);
+#else
+       // Non SHARED version
+       //
+       register_rule("I_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 0 /* not shared */, all_rules);
+       register_rule("I_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
+       register_rule("I_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
+       register_rule("I_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
 #endif
+
+       register_rule("I_DDR", "R", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("I_DDR", "E", "", 0, all_rules);
+
+       register_rule("O_DDR", "R", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("O_DDR", "E", "", 0, all_rules);
+
+       register_rule("I_SERDES", "RST", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("I_SERDES", "BITSLIP_ADJ", "", 0, all_rules);
+       register_rule("I_SERDES", "EN", "", 0, all_rules);
+       register_rule("I_SERDES", "DATA_VALID", "g2f_rx_dvalid_A", 0, all_rules);
+       register_rule("I_SERDES", "DPA_LOCK", "", 0, all_rules);
+       register_rule("I_SERDES", "DPA_ERROR", "", 0, all_rules);
+       register_rule("I_SERDES", "PLL_LOCK", "", 0, all_rules);
+
+       register_rule("O_SERDES", "RST", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("O_SERDES", "DATA_VALID", "f2g_trx_dvalid_A", 0, all_rules);
+       register_rule("O_SERDES", "OE_IN", "", 0, all_rules);
+       register_rule("O_SERDES", "OE_OUT", "", 0, all_rules);
+       register_rule("O_SERDES", "CHANNEL_BOND_SYNC_IN", "", 0, all_rules);
+       register_rule("O_SERDES", "CHANNEL_BOND_SYNC_OUT", "", 0, all_rules);
+       register_rule("O_SERDES", "PLL_LOCK", "", 0, all_rules);
+
+       register_rule("O_SERDES_CLK", "CLK_EN", "", 0, all_rules);
+       register_rule("O_SERDES_CLK", "PLL_EN", "", 0, all_rules);
+
+       register_rule("PLL", "PLL_EN", "", 0, all_rules);
+       register_rule("PLL", "LOCK", "", 0, all_rules);
+
+    }
+
+    void apply_rules(RTLIL::Module* top_module,
+                     RTLIL::IdString cellName, vector<RTLIL::Cell*>* cells, 
+                     vector<std::tuple<string, string, int>>* rules)
+    {
+        vector<std::tuple<string, string, int>> NSrules;
+        vector<std::tuple<string, string, int>> Srules;
+
+        // Split the rules into the Shared rules and the non-shared ones
+        //
+        for (auto rule : *rules) {
+
+           if (std::get<2>(rule) == 1) {
+
+             Srules.push_back(rule);
+
+           } else {
+
+             NSrules.push_back(rule);
+           }
+        }
+
+        // Process the non share port rules first
+        //
+        for (auto rule : NSrules) {
+           string portName = std::get<0>(rule);
+           string fabPortName = std::get<1>(rule);
+
+           if (iofab_map == 2) {
+             log("  o Apply NS rule on '%s', port = '%s', fabPort = '%s'\n",
+                 cellName.c_str(), portName.c_str(), fabPortName.c_str());
+           }
+
+           for (auto cell : *cells) {
+              insert_iofab_NS_rules(top_module, cell, portName, fabPortName);
+           }
+        }
+
+        // Process the share port rules at last
+        //
+        for (auto rule : Srules) {
+           string portName = std::get<0>(rule);
+           string fabPortName = std::get<1>(rule);
+
+           if (iofab_map == 2) {
+             log("  o Apply S rule on '%s', port = '%s', fabPort = '%s'\n",
+                 cellName.c_str(), portName.c_str(), fabPortName.c_str());
+           }
+
+           insert_iofab_S_rules(top_module, cells, portName, fabPortName);
+        }
+
+    }
+
+    // Insert I_FAB/O_FAB "fake" cells to add extra port inputs/outputs to the fabric through
+    // netlist editing.
+    //
+    // Works only for : 
+    //     - flattened design
+    //     - bit splitted design
+    //
+    void map_iofab() {
+
+        log("\nInserting I_FAB/O_FAB cells ...\n\n");
+
+        if (iofab_map == 2) {
+           run("write_verilog -org-name -noattr -noexpr -nohex before_iofab_map.v");
+        }
 
         RTLIL::Module* top_module = _design->top_module();
 
-        pool<RTLIL::Cell*> cells_processed;
+        dict<RTLIL::IdString, vector<std::tuple<string, string, int>>*> all_rules; 
 
-        int insert = 1;
-
-        while (insert) {
-
-           IdString portName;
-           RTLIL::SigSpec actual;
-           RTLIL::Cell* theCell = NULL;
-
-           insert = 0;
-
-           for (auto cell : top_module->cells()) {
-
-             theCell = cell;
-
-             // If already processed
-             //
-             if (cells_processed.find(cell) != cells_processed.end()) {
-               continue;
-             }
-
-             cells_processed.insert(cell);
-
-             // Of course do not process O_FAB
-             //
-             if (cell->type == RTLIL::escape_id("O_FAB")) {
-                continue;
-             }
-
-             // Enumerate all the cases where you want to pull into the
-             // fabric some logic that is driving some specific ports of
-             // some specific cells. Inserting a O_FAB will pull in the
-             // logic into the fabric.
-             //
-             // Right now we want to pull into fabric : 
-             //
-             //   - case 1: logic driving port 'E' of 'I_DDR'
-             //   - case 2: logic driving port 'RST' of 'I_SERDES'
-             //   - case 3: logic driving port 'RST' of 'O_SERDES'
-             //
-             
-             // ------
-             // Case 1
-             // ------
-             if (cell->type == RTLIL::escape_id("I_DDR")) {
-
-                for (auto &conn : cell->connections()) {
-
-                  portName = conn.first;
-                  actual = conn.second;
-
-                  if (actual.has_const()) {
-                     continue;
-                  }
-
-                  if (portName == RTLIL::escape_id("E")) {
-                    insert = 1;
-                    break;
-                  }
-                }
-                if (insert) {
-                  break;
-                } else {
-                  continue;
-                }
-             }
-
-             // ------
-             // Case 2
-             // ------
-             if (cell->type == RTLIL::escape_id("I_SERDES")) {
-
-                for (auto &conn : cell->connections()) {
-
-                  portName = conn.first;
-                  actual = conn.second;
-
-                  if (actual.has_const()) {
-                     continue;
-                  }
-
-                  if (portName == RTLIL::escape_id("RST")) {
-                    insert = 1;
-                    break;
-                  }
-                }
-                if (insert) {
-                  break;
-                } else {
-                  continue;
-                }
-             }
-
-             // ------
-             // Case 3
-             // ------
-             if (cell->type == RTLIL::escape_id("O_SERDES")) {
-
-                for (auto &conn : cell->connections()) {
-
-                  portName = conn.first;
-                  actual = conn.second;
-
-                  if (actual.has_const()) {
-                     continue;
-                  }
-
-                  if (portName == RTLIL::escape_id("RST")) {
-                    insert = 1;
-                    break;
-                  }
-                }
-                if (insert) {
-                  break;
-                } else {
-                  continue;
-                }
-             }
-          } // end for cells
-
-          if (insert) {
-            insert_ofab(top_module, theCell, portName, actual);
-          }
-
-        } // end while (insert)
-
-        // rebuild the port interface
+        // get all the rules for O_FAB and I_FAB insertions.
         //
-        top_module->fixup_ports();
+        specify_all_rules(all_rules); 
 
-        if (ofab_map == 2) {
-           run("write_verilog -org-name -noattr -noexpr -nohex after_ofab_map.v");
+        if (iofab_map == 2) {
+          show_all_rules(all_rules);
         }
+
+        // group cells by their type (I_BUF, I_DDR, O_DDR, ...)
+        //
+        dict<RTLIL::IdString, vector<RTLIL::Cell*>*> cells_to_process;
+
+        if (iofab_map == 2) {
+           log("Getting the cells ...\n");
+        }
+
+        for (auto cell : top_module->cells()) {
+
+           // Ignore the cell if not involved by a rule
+           //
+           if (!all_rules.count(cell->type)) {
+              continue;
+           }
+
+           if (!cells_to_process.count(cell->type)) {
+              cells_to_process[cell->type] = new vector<Cell*>;
+           }
+
+           (cells_to_process[cell->type])->push_back(cell);
+            
+        }
+
+        // Process each type of cells one by one
+        //
+        for (auto group : cells_to_process) {
+
+           RTLIL::IdString cellName = group.first;
+
+           vector<RTLIL::Cell*>* cells = group.second;
+
+           vector<std::tuple<string, string, int>>* rules = all_rules[cellName];
+
+           if (iofab_map == 2) {
+             log("\nCell type to process '%s' (Nb Cells=%ld):\n", cellName.c_str(), 
+                 cells->size());
+           }
+
+           apply_rules(top_module, cellName, cells, rules);
+        }
+
+        // Dispose all obects
+        //
+        for (auto group : all_rules) {
+          delete (group.second);
+        }
+
+        for (auto group : cells_to_process) {
+          delete (group.second);
+        }
+
+        if (iofab_map == 2) {
+           run("write_verilog -org-name -noattr -noexpr -nohex after_iofab_map.v");
+        }
+
+        log("\nInserting I_FAB/O_FAB cells done.\n\n");
     }
 
     void script() override
@@ -7448,8 +7881,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
         
         writeNetlistInfo("netlist_info.json");
 
-        if (ofab_map) {
-          map_ofab();
+        // Insert I_FAB/O_FAB "fake" cells to add extra port inputs/outputs to the fabric through
+        // netlist editing.
+        //
+        if (iofab_map) {
+          map_iofab();
         }
 
         run("stat");
