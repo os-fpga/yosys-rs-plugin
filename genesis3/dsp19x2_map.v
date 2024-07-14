@@ -8,7 +8,6 @@ module RS_DSPX2_MULTACC (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -68,11 +67,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]), 
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -90,7 +89,6 @@ module RS_DSPX2_MULT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 input  wire [2:0] feedback;
 input  wire       unsigned_a;
@@ -142,11 +140,11 @@ _TECHMAP_REPLACE_ (
     .RESET(), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]), 
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]), 
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -166,7 +164,6 @@ module RS_DSPX2_MULT_REGIN (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire       clk;
@@ -222,11 +219,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -247,7 +244,6 @@ module RS_DSPX2_MULT_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire       clk;
@@ -303,11 +299,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -327,7 +323,6 @@ module RS_DSPX2_MULT_REGIN_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire       clk;
@@ -384,11 +379,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -754,7 +749,6 @@ module RS_DSPX2_MULTACC_REGIN (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -816,11 +810,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -841,7 +835,6 @@ module RS_DSPX2_MULTACC_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -903,11 +896,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
@@ -928,7 +921,6 @@ module RS_DSPX2_MULTACC_REGIN_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -989,11 +981,11 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A1(a[9:0]), 
     .B1(b[8:0]), 
-    .DLY_B1(dly_b[8:0]),
+    .DLY_B1(),
     .Z1(z[18:0]),
     .A2(a[19:10]), 
     .B2(b[17:9]), 
-    .DLY_B2(dly_b[17:9]),
+    .DLY_B2(),
     .Z2(z[37:19]),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),

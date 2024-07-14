@@ -8,7 +8,6 @@ module RS_DSP_MULTACC (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -53,7 +52,7 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -71,7 +70,6 @@ module RS_DSP_MULT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 input  wire [2:0] feedback;
 input  wire       unsigned_a;
@@ -108,7 +106,7 @@ _TECHMAP_REPLACE_ (
     .RESET(), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -127,7 +125,6 @@ module RS_DSP_MULT_REGIN (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire       clk;
@@ -168,7 +165,7 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -188,7 +185,6 @@ module RS_DSP_MULT_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire       clk;
@@ -228,8 +224,8 @@ _TECHMAP_REPLACE_ (
     .CLK(clk), 
     .RESET(lreset), 
     .A(a), 
-    .B(b), 
-    .DLY_B(dly_b),
+    .B(b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -248,7 +244,6 @@ module RS_DSP_MULT_REGIN_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire       clk;
@@ -290,7 +285,7 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -575,7 +570,6 @@ module RS_DSP_MULTACC_REGIN (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -622,7 +616,7 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -642,7 +636,6 @@ module RS_DSP_MULTACC_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -689,7 +682,7 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
@@ -709,7 +702,6 @@ module RS_DSP_MULTACC_REGIN_REGOUT (...);
 input  wire [19:0] a;
 input  wire [17:0] b;
 output wire [37:0] z;
-output wire [17:0] dly_b;
 
 (* clkbuf_sink *)
 input  wire        clk;
@@ -755,7 +747,7 @@ _TECHMAP_REPLACE_ (
     .RESET(lreset), 
     .A(a), 
     .B(b), 
-    .DLY_B(dly_b),
+    .DLY_B(),
     .UNSIGNED_A(unsigned_a),
     .UNSIGNED_B(unsigned_b),
     .ACC_FIR(), 
