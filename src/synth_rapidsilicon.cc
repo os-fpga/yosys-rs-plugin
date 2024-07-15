@@ -5316,6 +5316,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
            if (cell->type == RTLIL::escape_id("I_BUF")) {
              ibuf_cells.insert(cell);
            }
+           if (cell->type == RTLIL::escape_id("I_BUF_DS")) {
+             ibuf_cells.insert(cell);
+           }
        }
     }
 
@@ -5328,6 +5331,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
            if (cell->type == RTLIL::escape_id("O_BUF")) {
              obuf_cells.insert(cell);
            }
+           if (cell->type == RTLIL::escape_id("O_BUF_DS")) {
+             obuf_cells.insert(cell);
+           }
+           if (cell->type == RTLIL::escape_id("O_BUFT")) {
+             obuf_cells.insert(cell);
+           }
+           if (cell->type == RTLIL::escape_id("O_BUFT_DS")) {
+             obuf_cells.insert(cell);
+           }
        }
     }
 
@@ -5336,12 +5348,33 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        for (auto cell : ibuf_cells) {
 
-           SigSpec input = cell->getPort(ID::I);
-           RTLIL::Wire *iw = input[0].wire;
+           if (cell->type == RTLIL::escape_id("I_BUF")) {
 
-           if (w->name == iw->name) {
-              return true;
+             SigSpec input = cell->getPort(ID::I);
+             RTLIL::Wire *iw = input[0].wire;
+
+             if (w->name == iw->name) {
+                return true;
+             }
+             continue;
            }
+           if (cell->type == RTLIL::escape_id("I_BUF_DS")) {
+
+             SigSpec input = cell->getPort(RTLIL::escape_id("I_P"));
+             RTLIL::Wire* iw = input[0].wire;
+
+             if (w->name == iw->name) {
+                return true;
+             }
+
+             input = cell->getPort(RTLIL::escape_id("I_N"));
+             iw = input[0].wire;
+
+             if (w->name == iw->name) {
+                return true;
+             }
+             continue;
+          }
        }
 
        return false;
@@ -5421,18 +5454,43 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        for (auto cell : obuf_cells) {
 
-           SigSpec output = cell->getPort(ID::O);
-           RTLIL::Wire *iw = output[0].wire;
+           if ((cell->type == RTLIL::escape_id("O_BUF")) ||
+               (cell->type == RTLIL::escape_id("O_BUFT"))) {
 
-           if (w->name == iw->name) {
-              return true;
+             SigSpec output = cell->getPort(ID::O);
+             RTLIL::Wire *ow = output[0].wire;
+
+             if (w->name == ow->name) {
+                return true;
+             }
+             continue;
+           }
+
+           if ((cell->type == RTLIL::escape_id("O_BUF_DS")) ||
+               (cell->type == RTLIL::escape_id("O_BUFT_DS"))) {
+
+             SigSpec output = cell->getPort(RTLIL::escape_id("O_N"));
+             RTLIL::Wire* ow = output[0].wire;
+
+             if (w->name == ow->name) {
+                return true;
+             }
+
+             output = cell->getPort(RTLIL::escape_id("O_P"));
+             ow = output[0].wire;
+
+             if (w->name == ow->name) {
+                return true;
+             }
+
+             continue;
            }
        }
 
        return false;
     }
 
-    // For any O_BUFT that is driven by a I_BUF though its port 'O' 
+    // For any O_BUFT that is driven by a I_BUF through its port 'O' 
     // we need to change the corresponding actual of 'O' and replace it
     // by the input of the I_BUF.
     //
@@ -5641,46 +5699,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
-    // Will insert a O_FAB cell at the signal 'actual'. The output of O_FAB
-    // will drive the sinks of 'actual'. The input of O_FAB will be driven by the 
-    // source of 'actual'.
-    //
-    void insert_ofab(RTLIL::Module* top_module, RTLIL::Cell* cell,
-                     RTLIL::IdString portName, RTLIL::SigSpec& actual)
-    {
-
-       log("Inserting O_FAB on cell '%s' (%s) on port '%s'\n", (cell->name).c_str(),
-           (cell->type).c_str(), portName.c_str());
-
-       RTLIL::Wire *wire = actual[0].wire;
-
-       // Make sure the wire is 1 bit size
-       //
-       if (GetSize(wire) != 1) {
-         log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
-                   (wire->name).c_str(), GetSize(wire));
-       }
-
-       RTLIL::IdString new_name = top_module->uniquify(stringf("$ofab_%s", log_id(wire)));
-
-       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
-
-       RTLIL::Cell *new_cell = top_module->addCell(
-                               top_module->uniquify(stringf("$ofab$%s.%s", 
-                                  log_id(top_module->name), log_id(wire->name))),
-                                  RTLIL::escape_id("O_FAB"));
-
-       new_cell->set_bool_attribute(ID::keep);
-
-       new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
-       new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
-
-       cell->unsetPort(portName);
-
-       cell->setPort(portName, new_wire);
-    }
-
-
     void ofab_insert_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
                               string portName, string fabPortName, RTLIL::SigSpec& actual)
     {
@@ -5690,40 +5708,94 @@ static void show_sig(const RTLIL::SigSpec &sig)
               (cell->type).c_str(), portName.c_str());
        }
 
-       RTLIL::Wire *wire = actual[0].wire;
+       if (!actual.is_chunk()) {
 
-       if (fabPortName =="") {
-         fabPortName = "ofab";
-       }
+          RTLIL::SigSpec new_sig;
 
-       // Make sure the wire is 1 bit size
-       //
-       if (GetSize(wire) != 1) {
-         log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
-                   (wire->name).c_str(), GetSize(wire));
-       }
+          // This is an append of sub signals
+          //
+          for (auto it = actual.chunks().rbegin(); it != actual.chunks().rend(); ++it) {
 
-       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                                       log_id(wire)));
+             RTLIL::SigSpec sub_actual = *it;
 
-       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+             RTLIL::Wire *wire = sub_actual[0].wire;
 
-       RTLIL::Cell *new_cell = top_module->addCell(
-                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                  log_id(wire->name))), RTLIL::escape_id("O_FAB"));
+             if (fabPortName =="") {
+               fabPortName = "ofab";
+             }
 
-       new_cell->set_bool_attribute(ID::keep);
+             // Make sure the wire is 1 bit size
+             //
+             if (GetSize(wire) != 1) {
+               log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                         (wire->name).c_str(), GetSize(wire));
+             }
 
-       new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
-       new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+             RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                             log_id(wire)));
 
-       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+             RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
 
-       cell->unsetPort(idPortName);
+             RTLIL::Cell *new_cell = top_module->addCell(
+                                     top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                        log_id(wire->name))), RTLIL::escape_id("O_FAB"));
 
-       cell->setPort(idPortName, new_wire);
+             new_cell->set_bool_attribute(ID::keep);
+  
+             new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+
+             RTLIL::SigSpec new_sigI = RTLIL::SigSpec(new_wire);
+
+             new_cell->setPort(ID::O, new_sigI);
+
+             // Build the new append
+             //
+             new_sig.append(new_sigI);
+
+          }
+
+          RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+          cell->unsetPort(idPortName);
+
+          cell->setPort(idPortName, new_sig);
+
+       } else {
+
+         RTLIL::Wire *wire = actual[0].wire;
+
+         if (fabPortName =="") {
+           fabPortName = "ofab";
+         }
+
+         // Make sure the wire is 1 bit size
+         //
+         if (GetSize(wire) != 1) {
+           log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                     (wire->name).c_str(), GetSize(wire));
+         }
+
+         RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                         log_id(wire)));
+
+         RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+         RTLIL::Cell *new_cell = top_module->addCell(
+                                 top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                    log_id(wire->name))), RTLIL::escape_id("O_FAB"));
+
+         new_cell->set_bool_attribute(ID::keep);
+  
+         new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+         new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+
+         RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+         cell->unsetPort(idPortName);
+
+         cell->setPort(idPortName, new_wire);
+      }
     }
-
 
     void ifab_insert_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
                               string portName, string fabPortName, RTLIL::SigSpec& actual)
@@ -5733,38 +5805,92 @@ static void show_sig(const RTLIL::SigSpec &sig)
               (cell->type).c_str(), portName.c_str());
        }
 
-       RTLIL::Wire *wire = actual[0].wire;
+       if (!actual.is_chunk()) {
 
-       if (fabPortName =="") {
-         fabPortName = "ifab";
+          RTLIL::SigSpec new_sig;
+
+          // This is an append of sub signals
+          //
+          for (auto it = actual.chunks().rbegin(); it != actual.chunks().rend(); ++it) {
+
+             RTLIL::SigSpec sub_actual = *it;
+
+             RTLIL::Wire *wire = sub_actual[0].wire;
+
+             if (fabPortName =="") {
+               fabPortName = "ifab";
+             }
+
+             // Make sure the wire is 1 bit size
+             //
+             if (GetSize(wire) != 1) {
+               log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                         (wire->name).c_str(), GetSize(wire));
+             }
+
+             RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                             log_id(wire)));
+
+             RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+             RTLIL::Cell *new_cell = top_module->addCell(
+                                     top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                        log_id(wire->name))), RTLIL::escape_id("I_FAB"));
+
+             new_cell->set_bool_attribute(ID::keep);
+
+             new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
+
+             RTLIL::SigSpec new_sigI = RTLIL::SigSpec(new_wire);
+
+             new_cell->setPort(ID::I, new_sigI);
+
+             // Build the new append
+             //
+             new_sig.append(new_sigI);
+          }
+
+          RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+          cell->unsetPort(idPortName);
+
+          cell->setPort(idPortName, new_sig);
+
+       } else {
+
+          RTLIL::Wire *wire = actual[0].wire;
+
+          if (fabPortName =="") {
+            fabPortName = "ifab";
+          }
+
+          // Make sure the wire is 1 bit size
+          //
+          if (GetSize(wire) != 1) {
+            log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                      (wire->name).c_str(), GetSize(wire));
+          }
+
+          RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                          log_id(wire)));
+
+          RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+          RTLIL::Cell *new_cell = top_module->addCell(
+                                  top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                     log_id(wire->name))), RTLIL::escape_id("I_FAB"));
+
+          new_cell->set_bool_attribute(ID::keep);
+
+          new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
+          new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
+
+          RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+          cell->unsetPort(idPortName);
+
+          cell->setPort(idPortName, new_wire);
        }
-
-       // Make sure the wire is 1 bit size
-       //
-       if (GetSize(wire) != 1) {
-         log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
-                   (wire->name).c_str(), GetSize(wire));
-       }
-
-       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                                       log_id(wire)));
-
-       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
-
-       RTLIL::Cell *new_cell = top_module->addCell(
-                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                  log_id(wire->name))), RTLIL::escape_id("I_FAB"));
-
-       new_cell->set_bool_attribute(ID::keep);
-
-       new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
-       new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
-
-       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
-
-       cell->unsetPort(idPortName);
-
-       cell->setPort(idPortName, new_wire);
     }
 
 
@@ -5849,43 +5975,91 @@ static void show_sig(const RTLIL::SigSpec &sig)
          log("             '%s'\n", (cell->name).c_str());
        }
 
-       RTLIL::Wire *wire = actual[0].wire;
+       if (!actual.is_chunk()) {
 
-       if (fabPortName =="") {
-         fabPortName = "ofab";
-       }
+          for (auto it = actual.chunks().rbegin(); it != actual.chunks().rend(); ++it) {
 
-       // Make sure the wire is 1 bit size
-       //
-       if (GetSize(wire) != 1) {
-         log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
-                   (wire->name).c_str(), GetSize(wire));
-       }
+             RTLIL::SigSpec sub_actual = *it;
 
-       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                                       log_id(wire)));
+             RTLIL::Wire *wire = sub_actual[0].wire;
 
-       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+             if (fabPortName =="") {
+               fabPortName = "ofab";
+             }
 
-       RTLIL::Cell *new_cell = top_module->addCell(
-                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                  log_id(wire->name))), RTLIL::escape_id("O_FAB"));
+             // Make sure the wire is 1 bit size
+             //
+             if (GetSize(wire) != 1) {
+               log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                        (wire->name).c_str(), GetSize(wire));
+             }
 
-       new_cell->set_bool_attribute(ID::keep);
+             RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                             log_id(wire)));
 
-       new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
-       new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+             RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
 
-       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+             RTLIL::Cell *new_cell = top_module->addCell(
+                                     top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                        log_id(wire->name))), RTLIL::escape_id("O_FAB"));
 
-       // rewire the sub group of cells
-       //
-       for (auto cell : *sub_cells) {
+             new_cell->set_bool_attribute(ID::keep);
 
-         cell->unsetPort(idPortName);
+             new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+             new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
 
-         cell->setPort(idPortName, new_wire);
-       }
+             RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+             // rewire the sub group of cells
+             //
+             for (auto cell : *sub_cells) {
+
+               cell->unsetPort(idPortName);
+
+               cell->setPort(idPortName, new_wire);
+             }
+          }
+
+       } else {
+
+         RTLIL::Wire *wire = actual[0].wire;
+
+         if (fabPortName =="") {
+           fabPortName = "ofab";
+         }
+
+         // Make sure the wire is 1 bit size
+         //
+         if (GetSize(wire) != 1) {
+           log_error("insert O_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                     (wire->name).c_str(), GetSize(wire));
+         }
+
+         RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                         log_id(wire)));
+
+         RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+         RTLIL::Cell *new_cell = top_module->addCell(
+                                 top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                    log_id(wire->name))), RTLIL::escape_id("O_FAB"));
+
+         new_cell->set_bool_attribute(ID::keep);
+
+         new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
+         new_cell->setPort(ID::O, RTLIL::SigSpec(new_wire));
+
+         RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+         // rewire the sub group of cells
+         //
+         for (auto cell : *sub_cells) {
+
+           cell->unsetPort(idPortName);
+
+           cell->setPort(idPortName, new_wire);
+         }
+      }
     }
     
     // We are in SHARED mode. Insert one unique I_FAB for the sub group of cells 'sub_cells' 
@@ -5901,42 +6075,90 @@ static void show_sig(const RTLIL::SigSpec &sig)
          log("             '%s'\n", (cell->name).c_str());
        }
 
-       RTLIL::Wire *wire = actual[0].wire;
+       if (!actual.is_chunk()) {
 
-       if (fabPortName =="") {
-         fabPortName = "ifab";
-       }
+          for (auto it = actual.chunks().rbegin(); it != actual.chunks().rend(); ++it) {
 
-       // Make sure the wire is 1 bit size
-       //
-       if (GetSize(wire) != 1) {
-         log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
-                   (wire->name).c_str(), GetSize(wire));
-       }
+             RTLIL::SigSpec sub_actual = *it;
 
-       RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                                       log_id(wire)));
+             RTLIL::Wire *wire = sub_actual[0].wire;
 
-       RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+             if (fabPortName =="") {
+               fabPortName = "ifab";
+             }
 
-       RTLIL::Cell *new_cell = top_module->addCell(
-                               top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
-                                  log_id(wire->name))), RTLIL::escape_id("I_FAB"));
+             // Make sure the wire is 1 bit size
+             //
+             if (GetSize(wire) != 1) {
+               log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                         (wire->name).c_str(), GetSize(wire));
+             }
 
-       new_cell->set_bool_attribute(ID::keep);
+             RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                             log_id(wire)));
 
-       new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
-       new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
+             RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
 
-       RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+             RTLIL::Cell *new_cell = top_module->addCell(
+                                        top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                        log_id(wire->name))), RTLIL::escape_id("I_FAB"));
 
-       // rewire the sub group of cells
-       //
-       for (auto cell : *sub_cells) {
+             new_cell->set_bool_attribute(ID::keep);
 
-         cell->unsetPort(idPortName);
+             new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
+             new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
 
-         cell->setPort(idPortName, new_wire);
+             RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+             // rewire the sub group of cells
+             //
+             for (auto cell : *sub_cells) {
+
+               cell->unsetPort(idPortName);
+   
+               cell->setPort(idPortName, new_wire);
+             }
+          }
+
+       } else {
+
+          RTLIL::Wire *wire = actual[0].wire;
+
+          if (fabPortName =="") {
+            fabPortName = "ifab";
+          }
+
+          // Make sure the wire is 1 bit size
+          //
+          if (GetSize(wire) != 1) {
+            log_error("insert I_FAB procedure expects '%s' to be a 1 bit signal (size = %d).\n",
+                      (wire->name).c_str(), GetSize(wire));
+          }
+
+          RTLIL::IdString new_name = top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                                          log_id(wire)));
+
+          RTLIL::Wire *new_wire = top_module->addWire(new_name, wire); 
+
+          RTLIL::Cell *new_cell = top_module->addCell(
+                                     top_module->uniquify(stringf("$%s_%s", fabPortName.c_str(), 
+                                     log_id(wire->name))), RTLIL::escape_id("I_FAB"));
+
+          new_cell->set_bool_attribute(ID::keep);
+
+          new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
+          new_cell->setPort(ID::I, RTLIL::SigSpec(new_wire));
+
+          RTLIL::IdString idPortName = RTLIL::escape_id(portName);
+
+          // rewire the sub group of cells
+          //
+          for (auto cell : *sub_cells) {
+
+            cell->unsetPort(idPortName);
+   
+            cell->setPort(idPortName, new_wire);
+          }
        }
     }
 
@@ -6048,6 +6270,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
     //
     void insert_input_buffers(RTLIL::Module* top_module)
     {
+new_iobuf_map = 2;
+
        log(" ***************************\n");
        log("   Inserting Input Buffers\n");
        log(" ***************************\n");
@@ -6060,8 +6284,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        collect_ibuf(top_module, ibuf_cells);
 
-       std::vector<RTLIL::Wire*> w2ibuf;
+       std::vector<RTLIL::Wire*> piw2ibuf;
 
+       // Collect primary Inputs wires (piw) that have no associated I_BUF/I_BUF_DS
+       //
        for (auto wire : top_module->wires()) {
 
             // Here we can process both input and inout because in both cases
@@ -6080,14 +6306,16 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             log("WARNING: port '%s' has no associated I_BUF\n", (wire->name).c_str());
 
-            w2ibuf.push_back(wire);
+            piw2ibuf.push_back(wire);
        } 
 
        pool<RTLIL::Cell*> newCells;
        dict<RTLIL::IdString, RTLIL::IdString> name2name;
        dict<RTLIL::Wire*, RTLIL::Wire*> wire2wire;
 
-       for (auto wire : w2ibuf) {
+       // Create I_BUF for these primary inputs without already associated I_BUF
+       //
+       for (auto wire : piw2ibuf) {
 
              RTLIL::IdString orgName = wire->name;
 
@@ -6154,6 +6382,85 @@ static void show_sig(const RTLIL::SigSpec &sig)
        // rebuild the port interface
        //
        top_module->fixup_ports();
+
+       // Now make sure that there is not a single primary input which is used
+       // directly. case :
+       // 'Validation/RTL_testcases/RS_Primitive_example_designs/primitive_example_design_1'
+       //
+
+       // Build the map table for all I_BUF input to I_BUF output
+       //
+       dict<RTLIL::Wire*, RTLIL::Wire*> in2out_ibuf;
+
+       for (auto cell : top_module->cells()) {
+
+           if (cell->type == RTLIL::escape_id("I_BUF")) {
+
+              RTLIL::SigSpec input = cell->getPort(ID::I);
+              RTLIL::SigSpec output = cell->getPort(ID::O);
+
+              if (input.has_const()) {
+                 continue;
+              }
+
+              RTLIL::Wire *win = input[0].wire;
+              RTLIL::Wire *wout = output[0].wire;
+
+              in2out_ibuf[win] = wout;
+           }
+       }
+
+       // Look at all the cells connected wires and replace them if
+       // they correspond to direct primary inputs
+       //
+       for (auto cell : top_module->cells()) {
+
+          if ((cell->type == RTLIL::escape_id("I_BUF")) ||
+              (cell->type == RTLIL::escape_id("I_BUF_DS"))) {
+            continue;
+          }
+
+	  dict<RTLIL::IdString, RTLIL::SigSpec> connections;
+
+          // Collect/duplicate the good cell connections
+          //
+          for (auto &conn : cell->connections()) {
+
+             RTLIL::SigSpec actual = conn.second;
+
+             if (actual.has_const()) {
+                 continue;
+             }
+             connections[conn.first] = actual;
+          }
+
+          // and eventually replace
+          //
+          for (auto conn : connections) {
+
+             IdString portName = conn.first;
+
+             RTLIL::SigSpec actual = conn.second;
+
+             RTLIL::Wire *wi = actual[0].wire;
+
+             // If we find a direct primary input occurence replace it
+             // by its corresponding output I_BUF
+             //
+             if (in2out_ibuf.count(wi)) {
+
+                RTLIL::Wire *wo = in2out_ibuf[wi];
+
+                cell->unsetPort(portName);
+
+                cell->setPort(portName, wo);
+
+                log_warning("Replacing direct input '%s' by I_BUF output '%s' in cell '%s (%s)'\n",
+                            (wi->name).c_str(), (wo->name).c_str(), (cell->name).c_str(),
+                            (cell->type).c_str());
+             }
+          }
+       }
 
        if (new_iobuf_map == 2) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_input_buffers.v");
@@ -6291,6 +6598,54 @@ static void show_sig(const RTLIL::SigSpec &sig)
                (cell->type == RTLIL::escape_id("DFFNRE"))) {
 
               RTLIL::SigSpec actual = cell->getPort(ID::C);
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
+              if (clock_domain.find(actual) == clock_domain.end()) {
+                clock_domain[actual] = new vector<RTLIL::Cell*>;
+              }
+              clock_domain[actual]->push_back(cell);
+              continue;
+           }
+
+           if ((cell->type == RTLIL::escape_id("I_DELAY")) ||
+               (cell->type == RTLIL::escape_id("O_DELAY"))) {
+
+              RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("CLK_IN"));
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
+              if (clock_domain.find(actual) == clock_domain.end()) {
+                clock_domain[actual] = new vector<RTLIL::Cell*>;
+              }
+              clock_domain[actual]->push_back(cell);
+              continue;
+           }
+
+           if ((cell->type == RTLIL::escape_id("I_DDR")) ||
+               (cell->type == RTLIL::escape_id("O_DDR"))) {
+
+              RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("C"));
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
+              if (clock_domain.find(actual) == clock_domain.end()) {
+                clock_domain[actual] = new vector<RTLIL::Cell*>;
+              }
+              clock_domain[actual]->push_back(cell);
+              continue;
+           }
+
+           if ((cell->type == RTLIL::escape_id("I_SERDES")) ||
+               (cell->type == RTLIL::escape_id("O_SERDES"))) {
+
+              RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("CLK_IN"));
 
               if (actual.has_const()) {
                  continue;
@@ -6477,7 +6832,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             RTLIL::Wire *newWire = top_module->addWire(newName, w); 
 
-            // Create the clock buf for the sequential clock domain
+            // Create the clock buf for the sequential clock domain : it can
+            // be either a CLK_BUF or FCLK_BUF
             //
             RTLIL::Cell *clk_buf = top_module->addCell(
                                    top_module->uniquify(stringf("$clkbuf$%s.%s", 
@@ -6495,6 +6851,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
             //
             vector<RTLIL::Cell*>* scells = cd.second;
 
+            // Now we rewire the clock port of the cells in the clock domain
+            // by the output of the new CLK_BUF/FCLK_BUF
+            //
             for (auto cell : *scells) {
 
                 if ((cell->type == RTLIL::escape_id("DFFRE")) ||
@@ -6613,6 +6972,52 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    continue;
                 }
 
+                if ((cell->type == RTLIL::escape_id("I_DELAY")) ||
+                    (cell->type == RTLIL::escape_id("O_DELAY"))) { 
+
+                   RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("CLK_IN"));
+
+                   if (actual == clk) {
+
+                      cell->unsetPort(RTLIL::escape_id("CLK_IN"));
+
+                      cell->setPort(RTLIL::escape_id("CLK_IN"), newWire);
+                   }
+
+                   continue;
+                }
+
+                if ((cell->type == RTLIL::escape_id("I_DDR")) ||
+                    (cell->type == RTLIL::escape_id("O_DDR"))) { 
+
+                   RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("C"));
+
+                   if (actual == clk) {
+
+                      cell->unsetPort(RTLIL::escape_id("C"));
+
+                      cell->setPort(RTLIL::escape_id("C"), newWire);
+                   }
+
+                   continue;
+                }
+
+                if ((cell->type == RTLIL::escape_id("I_SERDES")) ||
+                    (cell->type == RTLIL::escape_id("O_SERDES"))) { 
+
+                   RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("CLK_IN"));
+
+                   if (actual == clk) {
+
+                      cell->unsetPort(RTLIL::escape_id("CLK_IN"));
+
+                      cell->setPort(RTLIL::escape_id("CLK_IN"), newWire);
+                   }
+
+                   continue;
+                }
+
+
             } // for all the cells of the clock domain
 
        } // for all the clock domains
@@ -6646,12 +7051,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
         //
 #if 0
         remove_io_buffers(top_module);
-#endif
 
         // Bypass the assigns by replacing LHs by RHS. Assigns will be
         // dangling but it is ok as they will be removed later.
         //
         run("opt_clean");
+#endif
 
         // We need to respect the ordering of BUF insertions input buffers first,
         // then clock buffers, then output buffers then O_BUFT tristate buffers.
