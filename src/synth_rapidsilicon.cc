@@ -6507,7 +6507,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
     //
     void insert_input_buffers(RTLIL::Module* top_module)
     {
-new_iobuf_map = 2;
 
        log(" ***************************\n");
        log("   Inserting Input Buffers\n");
