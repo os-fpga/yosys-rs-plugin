@@ -5307,6 +5307,27 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
+    void collect_boot_clock(RTLIL::Module* module, pool<RTLIL::Cell*>& boot_clock_cells)
+    {
+       for (auto cell : module->cells()) {
+           if (cell->type == RTLIL::escape_id("BOOT_CLOCK")) {
+             boot_clock_cells.insert(cell);
+           }
+       }
+    }
+
+    void collect_clk_buf(RTLIL::Module* module, pool<RTLIL::Cell*>& clk_buf_cells)
+    {
+       for (auto cell : module->cells()) {
+           if (cell->type == RTLIL::escape_id("CLK_BUF")) {
+             clk_buf_cells.insert(cell);
+           }
+           if (cell->type == RTLIL::escape_id("FCLK_BUF")) {
+             clk_buf_cells.insert(cell);
+           }
+       }
+    }
+
     void collect_ibuf(RTLIL::Module* module, pool<RTLIL::Cell*>& ibuf_cells)
     {
        for (auto cell : module->cells()) {
@@ -5384,6 +5405,38 @@ static void show_sig(const RTLIL::SigSpec &sig)
     {
 
        for (auto cell : ibuf_cells) {
+
+           SigSpec output = cell->getPort(ID::O);
+           RTLIL::Wire *iw = output[0].wire;
+
+           if (w->name == iw->name) {
+              return true;
+           }
+       }
+
+       return false;
+    }
+
+    bool is_output_clk_buf(pool<RTLIL::Cell*>& clk_buf_cells, RTLIL::Wire* w)
+    {
+
+       for (auto cell : clk_buf_cells) {
+
+           SigSpec output = cell->getPort(ID::O);
+           RTLIL::Wire *iw = output[0].wire;
+
+           if (w->name == iw->name) {
+              return true;
+           }
+       }
+
+       return false;
+    }
+
+    bool is_output_boot_clock(pool<RTLIL::Cell*>& boot_clock_cells, RTLIL::Wire* w)
+    {
+
+       for (auto cell : boot_clock_cells) {
 
            SigSpec output = cell->getPort(ID::O);
            RTLIL::Wire *iw = output[0].wire;
@@ -5488,6 +5541,184 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
 
        return false;
+    }
+
+    // If CLK_BUF/FCLK_BUF outputs are used on a regular pin (not a clkbuf_sink), then we 
+    // need this pin to be rewired with input of the CLK_BUF/FCLK_BUF. This happens on 
+    // designs like GJC27/28/29.
+    //
+    void repair_bad_clock_usage()
+    {
+       if (new_iobuf_map == 2) {
+         run("write_verilog -org-name -noattr -noexpr -nohex before_repair_bad_clock_usage.v");
+       }
+
+       for (auto &module : _design->selected_modules()) {
+
+         dict<RTLIL::SigSpec, RTLIL::SigSpec> o2i_clk_buf;
+
+         for (auto cell : module->cells()) {
+
+            if ((cell->type == RTLIL::escape_id("CLK_BUF")) ||
+                (cell->type == RTLIL::escape_id("FCLK_BUF"))) {
+
+               RTLIL::SigSpec input = cell->getPort(ID::I);
+               RTLIL::SigSpec output = cell->getPort(ID::O);
+
+               o2i_clk_buf[output] = input;
+
+               continue;
+            }
+         }
+
+         for (auto cell : module->cells()) {
+
+            for (auto &conn : cell->connections()) {
+
+               IdString portName = conn.first;
+               RTLIL::SigSpec actual = conn.second;
+
+               // In case of append of signals then we should always replace.
+               //
+               if (!actual.is_chunk()) {
+
+                  RTLIL::SigSpec new_sig;
+                  RTLIL::SigSpec new_sigI;
+
+                  // This is an append of sub signals
+                  //
+                  for (auto it = actual.chunks().rbegin(); it != actual.chunks().rend(); ++it) {
+
+                     RTLIL::SigSpec sub_actual = *it;
+
+                     if (o2i_clk_buf.count(sub_actual)) {
+                       sub_actual = o2i_clk_buf[sub_actual];
+                     }
+
+                     new_sigI = sub_actual;
+
+                     new_sigI.append(new_sig);
+
+                     new_sig = new_sigI;
+                  }
+
+                  log_warning("Repair connection on port '%s' of cell '%s' (%s)\n",
+                              portName.c_str(), (cell->name).c_str(), (cell->type).c_str());
+                  log("         driven by output of CLK_BUF instead of its input.\n"); 
+
+                  cell->unsetPort(portName);
+
+                  cell->setPort(portName, new_sig);
+
+               } else {
+
+                   if (!o2i_clk_buf.count(actual)) {
+                      continue;
+                   }
+
+                   // Do not replace CLK_BUF/FCLK_BUF output bad usage
+                   // in legal situations.
+                   //
+                   if ((cell->type == RTLIL::escape_id("DFFRE")) &&
+                       (portName == RTLIL::escape_id("C"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("DFFNRE")) &&
+                       (portName == RTLIL::escape_id("C"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("CLK_BUF")) &&
+                       (portName == RTLIL::escape_id("O"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("FCLK_BUF")) &&
+                       (portName == RTLIL::escape_id("O"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("PLL")) &&
+                       (portName == RTLIL::escape_id("CLK_IN"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("I_SERDES")) &&
+                       (portName == RTLIL::escape_id("CLK_IN"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("O_SERDES")) &&
+                       (portName == RTLIL::escape_id("CLK_IN"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("I_DELAY")) &&
+                       (portName == RTLIL::escape_id("CLK_IN"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("O_DELAY")) &&
+                       (portName == RTLIL::escape_id("CLK_IN"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("I_DDR")) &&
+                       (portName == RTLIL::escape_id("C"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("O_DDR")) &&
+                       (portName == RTLIL::escape_id("C"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("DSP19X2")) &&
+                       (portName == RTLIL::escape_id("CLK"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("DSP38")) &&
+                       (portName == RTLIL::escape_id("CLK"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("TDP_RAM18KX2")) &&
+                       (portName == RTLIL::escape_id("CLK_A1"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("TDP_RAM18KX2")) &&
+                       (portName == RTLIL::escape_id("CLK_A2"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("TDP_RAM18KX2")) &&
+                       (portName == RTLIL::escape_id("CLK_B1"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("TDP_RAM18KX2")) &&
+                       (portName == RTLIL::escape_id("CLK_B2"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("TDP_RAM36K")) &&
+                       (portName == RTLIL::escape_id("CLK_A"))) {
+                     continue;
+                   }
+                   if ((cell->type == RTLIL::escape_id("TDP_RAM36K")) &&
+                       (portName == RTLIL::escape_id("CLK_B"))) {
+                     continue;
+                   }
+
+                   // We are in an illegal case. : rewire with the input of 
+                   // the CLK_BUF/FCLK_BUF.
+                   //
+                   log_warning("Repair connection on port '%s' of cell '%s' (%s)\n",
+                               portName.c_str(), (cell->name).c_str(), (cell->type).c_str());
+                   log("         driven by output of CLK_BUF instead of its input.\n"); 
+
+                   actual = o2i_clk_buf[actual];                   
+
+                   cell->unsetPort(portName);
+
+                   cell->setPort(portName, actual);
+               }
+
+            } // for all the connections of the cell
+
+         } // for all the cells
+
+       } // for all the modules
+
+       if (new_iobuf_map == 2) {
+         run("write_verilog -org-name -noattr -noexpr -nohex after_repair_bad_clock_usage.v");
+       }
     }
 
     // For any O_BUFT that is driven by a I_BUF through its port 'O' 
@@ -5711,6 +5942,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        if (!actual.is_chunk()) {
 
           RTLIL::SigSpec new_sig;
+          RTLIL::SigSpec new_sigO;
 
           // This is an append of sub signals
           //
@@ -5744,13 +5976,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
   
              new_cell->setPort(ID::I, RTLIL::SigSpec(wire));
 
-             RTLIL::SigSpec new_sigI = RTLIL::SigSpec(new_wire);
+             new_sigO = RTLIL::SigSpec(new_wire);
 
-             new_cell->setPort(ID::O, new_sigI);
+             new_cell->setPort(ID::O, new_sigO);
 
              // Build the new append
              //
-             new_sig.append(new_sigI);
+             new_sigO.append(new_sig);
+
+             new_sig = new_sigO;
 
           }
 
@@ -5808,6 +6042,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        if (!actual.is_chunk()) {
 
           RTLIL::SigSpec new_sig;
+          RTLIL::SigSpec new_sigI;
 
           // This is an append of sub signals
           //
@@ -5817,7 +6052,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              RTLIL::Wire *wire = sub_actual[0].wire;
 
-             if (fabPortName =="") {
+             if (1 || (fabPortName =="")) { // overide name whatever
                fabPortName = "ifab";
              }
 
@@ -5841,13 +6076,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              new_cell->setPort(ID::O, RTLIL::SigSpec(wire));
 
-             RTLIL::SigSpec new_sigI = RTLIL::SigSpec(new_wire);
+             new_sigI = RTLIL::SigSpec(new_wire);
 
              new_cell->setPort(ID::I, new_sigI);
 
              // Build the new append
              //
-             new_sig.append(new_sigI);
+             new_sigI.append(new_sig);
+
+             new_sig = new_sigI;
           }
 
           RTLIL::IdString idPortName = RTLIL::escape_id(portName);
@@ -5860,7 +6097,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
           RTLIL::Wire *wire = actual[0].wire;
 
-          if (fabPortName =="") {
+          if (1 || (fabPortName =="")) { // overide name whatever
             fabPortName = "ifab";
           }
 
@@ -5983,7 +6220,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              RTLIL::Wire *wire = sub_actual[0].wire;
 
-             if (fabPortName =="") {
+             if (1 || (fabPortName =="")) { // overide name whatever
                fabPortName = "ofab";
              }
 
@@ -6024,8 +6261,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
          RTLIL::Wire *wire = actual[0].wire;
 
-         if (fabPortName =="") {
-           fabPortName = "ofab";
+         if (1 || (fabPortName =="")) { // overide name whatever
+           fabPortName = "ofab"; 
          }
 
          // Make sure the wire is 1 bit size
@@ -6658,6 +6895,22 @@ new_iobuf_map = 2;
               continue;
            }
 
+           if (cell->type == RTLIL::escape_id("PLL")) {
+
+              RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("CLK_IN"));
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
+              if (clock_domain.find(actual) == clock_domain.end()) {
+                clock_domain[actual] = new vector<RTLIL::Cell*>;
+              }
+              clock_domain[actual]->push_back(cell);
+              continue;
+           }
+
+
            if ((cell->type == RTLIL::escape_id("DSP19X2")) ||
                (cell->type == RTLIL::escape_id("DSP38"))) {
 
@@ -6776,38 +7029,65 @@ new_iobuf_map = 2;
          run("write_verilog -org-name -noattr -noexpr -nohex before_clk_buffers.v");
        }
 
-       dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> clock_domains;
-
        // Collect the clocks driving the sequential cells of the
        // top module. Sequential cells are DFFRE, DFFNRE, DSP with clock port
        // and TDP_RAM.
        // We insert a CLK_BUF/FCLK_BUF only in front of these cells and not
        // in front of the other cells (comb. cells) in case clocks drive them.
        //
+       dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> clock_domains;
        collect_clock_domains(top_module, clock_domains);
 
-       pool<RTLIL::Cell*> ibuf_cells;
 
        // Collect the IBUF to decide later if we need to infer CLK_BUF (driven
        // by IBUF) or FCLK_BUF (not driven by IBUF).
        //
+       pool<RTLIL::Cell*> ibuf_cells;
        collect_ibuf(top_module, ibuf_cells);
 
+       // Collect PPL
+       //
        pool<RTLIL::Cell*> pll_cells;
-
        collect_pll(top_module, pll_cells);
+
+       // Collect BOOT_CLOCK
+       //
+       pool<RTLIL::Cell*> boot_clock_cells;
+       collect_boot_clock(top_module, boot_clock_cells);
+
+       // Collect CLK_BUF/FCLK_BUF
+       //
+       pool<RTLIL::Cell*> clk_buf_cells;
+       collect_clk_buf(top_module, clk_buf_cells);
 
        for (auto cd : clock_domains) {
 
             bool is_FCLK_BUF = false;
 
             RTLIL::SigSpec clk = cd.first;
+
+            log_assert(GetSize(clk) == 1);
+
             RTLIL::Wire *w = clk[0].wire;
+
+            // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
+            // a CLK_BUF/FCLK_BUF :-)
+            //
+            if (is_output_clk_buf(clk_buf_cells, w)) {
+              continue;
+            }
 
             // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
             // a PLL clock port.
             //
             if (is_output_pll(pll_cells, w)) {
+              continue;
+            }
+            
+            // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
+            // a BOOT_CLOCK output port.
+            //
+            if (is_output_boot_clock(boot_clock_cells, w)) {
               continue;
             }
 
@@ -6845,6 +7125,8 @@ new_iobuf_map = 2;
 
             clk_buf->setPort(ID::I, RTLIL::SigSpec(w));
             clk_buf->setPort(ID::O, RTLIL::SigSpec(newWire));
+
+            clk_buf_cells.insert(clk_buf);
 
             // vector of sequential cells with 'clk' driving one of their
             // port
@@ -7017,6 +7299,19 @@ new_iobuf_map = 2;
                    continue;
                 }
 
+                if (cell->type == RTLIL::escape_id("PLL")) {
+
+                   RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("CLK_IN"));
+
+                   if (actual == clk) {
+
+                      cell->unsetPort(RTLIL::escape_id("CLK_IN"));
+
+                      cell->setPort(RTLIL::escape_id("CLK_IN"), newWire);
+                   }
+
+                   continue;
+                }
 
             } // for all the cells of the clock domain
 
@@ -8256,6 +8551,7 @@ new_iobuf_map = 2;
 
         if (new_iobuf_map) {
           rewire_obuft();
+          repair_bad_clock_usage();
         }
 
         // Eventually performs post synthesis clean up
