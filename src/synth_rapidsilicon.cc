@@ -5182,7 +5182,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
     void check_blackbox_param(){
 	    std::set<RTLIL::IdString> primitive_names = {
 		/* genesis3 blackbox primitives*/
-		"\\I_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\O_SERDES_CLK","\\PLL",
+		"\\I_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\I_DELAY","\\O_SERDES_CLK","\\PLL",
         "\\SOC_FPGA_TEMPERATURE"};
 
         for (auto &module : _design->selected_modules()) {
@@ -5221,6 +5221,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 }
                 //O_DELAY Default Paramters
                 if (cell->type == RTLIL::escape_id("O_DELAY")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DELAY")))
+                        cell->setParam(RTLIL::escape_id("DELAY"), RTLIL::Const(0));
+                }
+                //I_DELAY Default Paramters
+                if (cell->type == RTLIL::escape_id("I_DELAY")){
 
                     if (!cell->hasParam(RTLIL::escape_id("DELAY")))
                         cell->setParam(RTLIL::escape_id("DELAY"), RTLIL::Const(0));
