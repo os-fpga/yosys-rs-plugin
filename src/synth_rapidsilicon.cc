@@ -5182,7 +5182,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
     void check_blackbox_param(){
 	    std::set<RTLIL::IdString> primitive_names = {
 		/* genesis3 blackbox primitives*/
-		"\\I_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\O_SERDES_CLK","\\PLL",
+		"\\I_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\I_DELAY","\\O_SERDES_CLK","\\PLL",
         "\\SOC_FPGA_TEMPERATURE"};
 
         for (auto &module : _design->selected_modules()) {
@@ -5225,6 +5225,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     if (!cell->hasParam(RTLIL::escape_id("DELAY")))
                         cell->setParam(RTLIL::escape_id("DELAY"), RTLIL::Const(0));
                 }
+                //I_DELAY Default Paramters
+                if (cell->type == RTLIL::escape_id("I_DELAY")){
+
+                    if (!cell->hasParam(RTLIL::escape_id("DELAY")))
+                        cell->setParam(RTLIL::escape_id("DELAY"), RTLIL::Const(0));
+                }
 
                 if (cell->type == RTLIL::escape_id("BOOT_CLOCK")){
 
@@ -5263,6 +5269,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                     if (!cell->hasParam(RTLIL::escape_id("WEAK_KEEPER")))
                         cell->setParam(RTLIL::escape_id("WEAK_KEEPER"), stringf("NONE"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("IOSTANDARD")))
+                        cell->setParam(RTLIL::escape_id("IOSTANDARD"), stringf("DEFAULT"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION")))
+                        cell->setParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION"), stringf("TRUE"));
                 }
 
                 if (cell->type == RTLIL::escape_id("SOC_FPGA_TEMPERATURE")){
