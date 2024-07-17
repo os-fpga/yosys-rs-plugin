@@ -5263,6 +5263,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                     if (!cell->hasParam(RTLIL::escape_id("WEAK_KEEPER")))
                         cell->setParam(RTLIL::escape_id("WEAK_KEEPER"), stringf("NONE"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("IOSTANDARD")))
+                        cell->setParam(RTLIL::escape_id("IOSTANDARD"), stringf("DEFAULT"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION")))
+                        cell->setParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION"), stringf("TRUE"));
                 }
 
                 if (cell->type == RTLIL::escape_id("SOC_FPGA_TEMPERATURE")){
