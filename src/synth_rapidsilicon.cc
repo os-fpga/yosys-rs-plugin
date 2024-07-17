@@ -5647,6 +5647,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
                        (portName == RTLIL::escape_id("CLK_IN"))) {
                      continue;
                    }
+                   if ((cell->type == RTLIL::escape_id("O_SERDES_CLK")) &&
+                       (portName == RTLIL::escape_id("PLL_CLK"))) {
+                     continue;
+                   }
                    if ((cell->type == RTLIL::escape_id("I_DELAY")) &&
                        (portName == RTLIL::escape_id("CLK_IN"))) {
                      continue;
@@ -6893,6 +6897,21 @@ static void show_sig(const RTLIL::SigSpec &sig)
               clock_domain[actual]->push_back(cell);
               continue;
            }
+           
+           if ((cell->type == RTLIL::escape_id("O_SERDES_CLK"))) {
+
+              RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("PLL_CLK"));
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
+              if (clock_domain.find(actual) == clock_domain.end()) {
+                clock_domain[actual] = new vector<RTLIL::Cell*>;
+              }
+              clock_domain[actual]->push_back(cell);
+              continue;
+           }
 
            if (cell->type == RTLIL::escape_id("PLL")) {
 
@@ -7293,6 +7312,20 @@ static void show_sig(const RTLIL::SigSpec &sig)
                       cell->unsetPort(RTLIL::escape_id("CLK_IN"));
 
                       cell->setPort(RTLIL::escape_id("CLK_IN"), newWire);
+                   }
+
+                   continue;
+                }
+                
+                if ((cell->type == RTLIL::escape_id("O_SERDES_CLK"))) { 
+
+                   RTLIL::SigSpec actual = cell->getPort(RTLIL::escape_id("PLL_CLK"));
+
+                   if (actual == clk) {
+
+                      cell->unsetPort(RTLIL::escape_id("PLL_CLK"));
+
+                      cell->setPort(RTLIL::escape_id("PLL_CLK"), newWire);
                    }
 
                    continue;
