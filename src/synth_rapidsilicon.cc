@@ -8477,6 +8477,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
           obs_clean();
         }
 
+        _design->sort();
+
         if (check_label("blif")) {
             if (!blif_file.empty()) {
                 run(stringf("write_blif %s", blif_file.c_str()));
@@ -8517,6 +8519,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
         log("   Number of REGs:               %5d\n", nbREGs);
 
         reportCarryChains();
+
+        // to prevent non determinism
+        //
+        _design->sort();
+
+        // Save systematically the core synthesis netlist even if it fails on
+        // max resource limits
+        //
+        run("write_verilog -noattr -nohex -noexpr core_synthesis.v");
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
