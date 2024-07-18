@@ -5413,15 +5413,14 @@ static void show_sig(const RTLIL::SigSpec &sig)
        return false;
     }
 
-    bool is_output_ibuf(pool<RTLIL::Cell*>& ibuf_cells, RTLIL::Wire* w)
+    bool is_output_ibuf(pool<RTLIL::Cell*>& ibuf_cells, RTLIL::SigSpec& sig)
     {
 
        for (auto cell : ibuf_cells) {
 
            SigSpec output = cell->getPort(ID::O);
-           RTLIL::Wire *iw = output[0].wire;
 
-           if (w->name == iw->name) {
+           if (sig == output) {
               return true;
            }
        }
@@ -5429,15 +5428,14 @@ static void show_sig(const RTLIL::SigSpec &sig)
        return false;
     }
 
-    bool is_output_clk_buf(pool<RTLIL::Cell*>& clk_buf_cells, RTLIL::Wire* w)
+    bool is_output_clk_buf(pool<RTLIL::Cell*>& clk_buf_cells, RTLIL::SigSpec& sig)
     {
 
        for (auto cell : clk_buf_cells) {
 
            SigSpec output = cell->getPort(ID::O);
-           RTLIL::Wire *iw = output[0].wire;
 
-           if (w->name == iw->name) {
+           if (sig == output) {
               return true;
            }
        }
@@ -5445,15 +5443,14 @@ static void show_sig(const RTLIL::SigSpec &sig)
        return false;
     }
 
-    bool is_output_boot_clock(pool<RTLIL::Cell*>& boot_clock_cells, RTLIL::Wire* w)
+    bool is_output_boot_clock(pool<RTLIL::Cell*>& boot_clock_cells, RTLIL::SigSpec& sig)
     {
 
        for (auto cell : boot_clock_cells) {
 
            SigSpec output = cell->getPort(ID::O);
-           RTLIL::Wire *iw = output[0].wire;
 
-           if (w->name == iw->name) {
+           if (sig == output) {
               return true;
            }
        }
@@ -5461,7 +5458,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        return false;
     }
 
-    bool is_output_pll(pool<RTLIL::Cell*>& ibuf_cells, RTLIL::Wire* w)
+    bool is_output_pll(pool<RTLIL::Cell*>& ibuf_cells, RTLIL::SigSpec& sig)
     {
 
        for (auto cell : ibuf_cells) {
@@ -5473,36 +5470,28 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                if (portName == RTLIL::escape_id("CLK_OUT")) {
 
-                   RTLIL::Wire *iw = actual[0].wire;
-
-                   if (w->name == iw->name) {
+                   if (sig == actual) {
                       return true;
                    }
                    continue;
                }
                if (portName == RTLIL::escape_id("CLK_OUT_DIV2")) {
 
-                   RTLIL::Wire *iw = actual[0].wire;
-
-                   if (w->name == iw->name) {
+                   if (sig == actual) {
                       return true;
                    }
                    continue;
                }
                if (portName == RTLIL::escape_id("CLK_OUT_DIV3")) {
 
-                   RTLIL::Wire *iw = actual[0].wire;
-
-                   if (w->name == iw->name) {
+                   if (sig == actual) {
                       return true;
                    }
                    continue;
                }
                if (portName == RTLIL::escape_id("CLK_OUT_DIV4")) {
 
-                   RTLIL::Wire *iw = actual[0].wire;
-
-                   if (w->name == iw->name) {
+                   if (sig == actual) {
                       return true;
                    }
                    continue;
@@ -6946,25 +6935,25 @@ static void show_sig(const RTLIL::SigSpec &sig)
             // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
             // a CLK_BUF/FCLK_BUF :-)
             //
-            if (is_output_clk_buf(clk_buf_cells, w)) {
+            if (is_output_clk_buf(clk_buf_cells, clk)) {
               continue;
             }
 
             // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
             // a PLL clock port.
             //
-            if (is_output_pll(pll_cells, w)) {
+            if (is_output_pll(pll_cells, clk)) {
               continue;
             }
             
             // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
             // a BOOT_CLOCK output port.
             //
-            if (is_output_boot_clock(boot_clock_cells, w)) {
+            if (is_output_boot_clock(boot_clock_cells, clk)) {
               continue;
             }
 
-            if (is_output_ibuf(ibuf_cells, w)) {
+            if (is_output_ibuf(ibuf_cells, clk)) {
 
               log("INFO: inserting CLK_BUF before '");
               show_sig(clk);
@@ -6983,7 +6972,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                                        (is_FCLK_BUF ? "$fclk_buf_%s" : "$clk_buf_%s"), 
                                        log_id(w)));
 
-            RTLIL::Wire *clkbuf_out = top_module->addWire(newName, w); 
+            RTLIL::Wire *clkbuf_out = top_module->addWire(newName, 1); 
 
             // Create the clock buf for the sequential clock domain : it can
             // be either a CLK_BUF or FCLK_BUF
@@ -6996,7 +6985,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             clk_buf->set_bool_attribute(ID::keep);
 
-            clk_buf->setPort(ID::I, RTLIL::SigSpec(w));
+            clk_buf->setPort(ID::I, clk);
             clk_buf->setPort(ID::O, RTLIL::SigSpec(clkbuf_out));
 
             clk_buf_cells.insert(clk_buf);
@@ -8388,7 +8377,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
            string readIOArgs;
            readIOArgs=GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_cells_FILE)
                       GET_FILE_PATH_RS_FPGA_SIM_BLACKBOX(GENESIS_3_DIR,BLACKBOX_SIM_LIB_FILE);
-           
+
+
            // New iobuf mapping flow taking care of tricky situations that could not
            // be handled with the regular Yosys 'iopadmap' command especially on 'inout'
            // with tristates.
@@ -8477,6 +8467,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
           obs_clean();
         }
 
+        _design->sort();
+
         if (check_label("blif")) {
             if (!blif_file.empty()) {
                 run(stringf("write_blif %s", blif_file.c_str()));
@@ -8517,6 +8509,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
         log("   Number of REGs:               %5d\n", nbREGs);
 
         reportCarryChains();
+
+        // to prevent non determinism
+        //
+        _design->sort();
+
+        // Save systematically the core synthesis netlist even if it fails on
+        // max resource limits
+        //
+        run("write_verilog -noattr -nohex -noexpr core_synthesis.v");
 
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
