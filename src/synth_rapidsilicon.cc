@@ -2724,6 +2724,10 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl, const string step)
                         cell->unsetParam(ID::DSP_RST);
                         cell->unsetParam(ID::DSP_RST_POL);
                     }
+                    if ((MODE_BITS_[80]==1) && (cell->getPort(RTLIL::escape_id("load_acc")) != RTLIL::S1)){
+                        MODE_BITS_[80] = RTLIL::S0;
+                        cell->setParam(RTLIL::escape_id("MODE_BITS"), MODE_BITS_);
+                    }
                 }
             }
         }
@@ -7681,12 +7685,12 @@ new_iobuf_map = 2;
                         }
                         sec_check("after_dsp_map4", true, true);
                        
-
                         run("rs-pack-dsp-regs -genesis3");
 
                         // add register at the remaining decomposed small multiplier that are not packed in DSP cells
                         if (tech == Technologies::GENESIS_3)
                             add_out_reg();
+                        
                         run("rs_dsp_io_regs -tech genesis3");
 
                         if (cec) {
