@@ -364,14 +364,6 @@ struct RsPackDspRegsWorker
                     continue;
                 }
             }
-            if (gen3){
-                if (it_dsp->getPort(RTLIL::escape_id("load_acc")) != RTLIL::S1) {
-                    RTLIL::Const dsp_mode_bits_const = it_dsp->getParam(RTLIL::escape_id("MODE_BITS"));
-                    // Changing RS_DSP MODE_BITS parameter, if not multacc will be incorrectly infered
-                    dsp_mode_bits_const[80] = RTLIL::S0;
-                    it_dsp->setParam(RTLIL::escape_id("MODE_BITS"), dsp_mode_bits_const);
-                }
-            }
             if (ignore_dsp){
                 continue;
             }
