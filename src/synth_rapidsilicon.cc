@@ -254,8 +254,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -post_cleanup <0|1|2>\n");
         log("        Performs a post synthesis netlist cleanup. '0' value means post cleanup is OFF. '1' means post cleanup is ON and '2' is ON in debug mode.\n");
         log("\n");
-        log("    -new_iobuf_map <0|1|2>\n");
-        log("        Performs a new approach to map IO buffers. '0' value means mapping is OFF. '1' means new mapping is ON and '2' is ON in debug mode.\n");
+        log("    -new_iobuf_map <0|1|2|3|4>\n");
+        log("        Performs a new approach to map IO buffers. '0' value means mapping is OFF. '1' means new mapping is ON (hard coded version) and '2' is ON in debug mode. 3 is the new generic approach, 4 generic with debug info\n");
         log("\n");
         log("    -iofab_map <0|1|2>\n");
         log("        Performs mapping of I_FAB/O_FAB cells to drive netlist editor. '0' value means mapping is OFF. '1' means mapping is ON and '2' is ON in debug mode.\n");
@@ -812,7 +812,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         if (post_cleanup < 0 && post_cleanup > 2) {
             log_cmd_error("Invalid post cleanup value: '%i'\n", post_cleanup);
         }
-        if (new_iobuf_map < 0 && new_iobuf_map > 3) {
+        if (new_iobuf_map < 0 && new_iobuf_map > 4) {
             log_cmd_error("Invalid new iobuf map value: '%i'\n", new_iobuf_map);
         }
         if (iofab_map < 0 && iofab_map > 2) {
@@ -5549,30 +5549,50 @@ static void show_sig(const RTLIL::SigSpec &sig)
     }
 
     // For any O_BUFT that is driven by a I_BUF through its port 'O' 
-    // we need to change the corresponding actual of 'O' and replace it
+    // we need to change the corresponding actual of O_BUFT 'O' and replace it
     // by the input of the I_BUF.
+    // For any O_BUFT driving an OBUF we need to reconnect its output 'O' to 
+    // the output of the OBUF and remove the OBUF (ex: GJC6).
     //
     void rewire_obuft()
     {
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_rewire_obuft.v");
        }
 
        for (auto &module : _design->selected_modules()) {
 
-         dict<RTLIL::SigSpec, RTLIL::SigSpec> sig2sig;
+         vector<RTLIL::Cell*> obufCells;
+         dict<RTLIL::SigSpec, RTLIL::SigSpec> ibuf_out2in;
+         dict<RTLIL::SigSpec, Cell*> obuf_in2cell;
 
+         // First store info regarding IBUF and OBUF
+         //
          for (auto cell : module->cells()) {
 
-            if (cell->type != RTLIL::escape_id("I_BUF")) {
-               continue;
-            }
-            RTLIL::SigSpec out = cell->getPort(ID::O);
-            RTLIL::SigSpec in = cell->getPort(ID::I);
+            if (cell->type == RTLIL::escape_id("I_BUF")) {
 
-            sig2sig[out] = in; // for the I_BUF output get its input
+              RTLIL::SigSpec out = cell->getPort(ID::O);
+              RTLIL::SigSpec in = cell->getPort(ID::I);
+
+              ibuf_out2in[out] = in; // from any I_BUF output get its input
+              continue;
+            }
+
+            if (cell->type == RTLIL::escape_id("O_BUF")) {
+
+              RTLIL::SigSpec in = cell->getPort(ID::I);
+
+              obuf_in2cell[in] = cell; // from any O_BUF input get its 
+                                       // corresponding O_BUF cell
+              continue;
+            }
          }
 
+         
+         // Now process all the O_BUFT and handle corner case situations
+         // where its output is connected to either IBUF or OBUF.
+         //
          for (auto cell : module->cells()) {
 
             if (cell->type != RTLIL::escape_id("O_BUFT")) {
@@ -5582,23 +5602,48 @@ static void show_sig(const RTLIL::SigSpec &sig)
             RTLIL::SigSpec out = cell->getPort(ID::O);
 
             // If the actual output of the O_BUFT is an output of an
-            // I_BUF.
+            // I_BUF reconnect the O_BUFT output to the IBUF input.
             //
-            if (sig2sig.find(out) != sig2sig.end()) {
+            if (ibuf_out2in.find(out) != ibuf_out2in.end()) {
 
-               cell->unsetPort(ID::O);
-
-               RTLIL::SigSpec in = sig2sig[out];
+               RTLIL::SigSpec in = ibuf_out2in[out];
 
                RTLIL::Wire *iw = in[0].wire;
 
+               cell->unsetPort(ID::O);
+
                cell->setPort(ID::O, iw);
-              
+            }
+            
+            // If the actual output of the O_BUFT is an input of an
+            // O_BUF reconnect the O_BUFT output to the OBUF output
+            // and remove the OBUF.
+            //
+            if (obuf_in2cell.find(out) != obuf_in2cell.end()) {
+
+               Cell* obuf = obuf_in2cell[out];
+
+               RTLIL::SigSpec obuf_out = obuf->getPort(ID::O);
+
+               RTLIL::Wire *ow = obuf_out[0].wire;
+
+               cell->unsetPort(ID::O);
+
+               cell->setPort(ID::O, ow);
+
+               // store 'obuf' for futur removal
+               //
+               obufCells.push_back(obuf);
             }
          }
+
+         for (auto cell : obufCells) {
+            module->remove(cell);
+         }
+
        } // for all the modules
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_rewire_obuft.v");
        }
     }
@@ -5611,7 +5656,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        log("   Mapping Tri-state Buffers\n");
        log(" *****************************\n");
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_map_obuft.v");
        }
 
@@ -5670,7 +5715,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             top_module->remove(cell);
        }
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_map_obuft.v");
        }
     }
@@ -5691,7 +5736,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        log("   Removing Input/Output Buffers\n");
        log(" *********************************\n");
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_remove_io_buffers.v");
        }
 
@@ -5752,7 +5797,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             top_module->remove(cell);
        }
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_remove_io_buffers.v");
        }
     }
@@ -6339,7 +6384,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        log("   Inserting Input Buffers\n");
        log(" ***************************\n");
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_input_buffers.v");
        }
 
@@ -6525,7 +6570,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
           }
        }
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_input_buffers.v");
        }
     }
@@ -6546,7 +6591,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        log("   Inserting Output Buffers\n");
        log(" *****************************\n");
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_output_buffers.v");
        }
 
@@ -6643,7 +6688,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        //
        top_module->fixup_ports();
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_output_buffers.v");
        }
     }
@@ -6891,7 +6936,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        log("   Inserting Clock Buffers\n");
        log(" ***************************\n");
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_clk_buffers.v");
        }
 
@@ -7226,7 +7271,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
        } // for all the clock domains
 
-       if (new_iobuf_map == 2) {
+       if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex after_clk_buffers.v");
        }
     }
@@ -7236,7 +7281,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
     //
     void map_iobuf() {
 
-        if (new_iobuf_map == 2) {
+        if (new_iobuf_map == 4) {
            run("write_verilog -org-name -noattr -noexpr -nohex before_map_iobuf.v");
         }
 
@@ -7279,7 +7324,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
         //
         run("opt_clean");
 
-        if (new_iobuf_map == 2) {
+        if (new_iobuf_map == 4) {
            run("write_verilog -org-name -noattr -noexpr -nohex after_map_iobuf.v");
         }
     }
@@ -7341,6 +7386,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
        register_rule("I_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 1, all_rules);
        register_rule("I_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 1, all_rules);
        register_rule("I_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 1, all_rules);
+
+       register_rule("O_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 1 /* shared */, all_rules);
+       register_rule("O_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 1, all_rules);
+       register_rule("O_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 1, all_rules);
+       register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 1, all_rules);
 #else
        // Non SHARED version
        //
@@ -7348,6 +7398,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
        register_rule("I_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
        register_rule("I_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
        register_rule("I_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
+
+       register_rule("O_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 0 /* not shared */, all_rules);
+       register_rule("O_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
+       register_rule("O_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
+       register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
 #endif
 
        register_rule("I_DDR", "R", "f2g_trx_reset_n_A", 0, all_rules);
@@ -8403,7 +8458,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
 
-                if (new_iobuf_map == 2) {
+                if (new_iobuf_map == 4) {
                   run("write_verilog -org-name -noattr -noexpr -nohex after_techmap_io_cells_final_map.v");
                 }
                 
@@ -8411,7 +8466,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 //
                 run("opt_clean");
 
-                if (new_iobuf_map == 2) {
+                if (new_iobuf_map == 4) {
                   run("write_verilog -org-name -noattr -noexpr -nohex after_new_iobuf_map_opt_clean.v");
                 }
 
@@ -8461,6 +8516,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         run("stat");
 
+        // Take care of corner case situations mixing OBUFT with IBUF/OBUF
+        //
         if (new_iobuf_map) {
           rewire_obuft();
         }
