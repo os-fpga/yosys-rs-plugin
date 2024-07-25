@@ -38,7 +38,7 @@ module rs__O_BUF(...);
         input  C;    
         output O;         
     
-      O_BUFT _TECHMAP_REPLACE_ (.I(I),.T(1'b1),.O(O));
+      O_BUF _TECHMAP_REPLACE_ (.I(I),.O(O));
 endmodule
 
 /*/ ----------------------------------------

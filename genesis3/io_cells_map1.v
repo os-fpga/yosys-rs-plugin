@@ -43,7 +43,7 @@ module rs__O_BUF (
   output O // Data output (connect to top-level port)
 );
 
-  O_BUFT obuf_inst (.I(I),.T(1'b1),.O(O));
+  O_BUF obuf_inst (.I(I),.O(O));
 
 endmodule 
 //--------------------------------------- 
