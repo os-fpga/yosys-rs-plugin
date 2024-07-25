@@ -5332,6 +5332,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
+    void collect_iserdes(RTLIL::Module* module, pool<RTLIL::Cell*>& iserdes_cells)
+    {
+       for (auto cell : module->cells()) {
+           if (cell->type == RTLIL::escape_id("I_SERDES")) {
+             iserdes_cells.insert(cell);
+           }
+       }
+    }
+
     void collect_clk_buf(RTLIL::Module* module, pool<RTLIL::Cell*>& clk_buf_cells)
     {
        for (auto cell : module->cells()) {
@@ -5456,6 +5465,29 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
            if (sig == output) {
               return true;
+           }
+       }
+
+       return false;
+    }
+
+    bool is_output_iserdes_clkout(pool<RTLIL::Cell*>& iserdes_cells, RTLIL::SigSpec& sig)
+    {
+
+       for (auto cell : iserdes_cells) {
+
+           for (auto &conn : cell->connections()) {
+
+               IdString portName = conn.first;
+               RTLIL::SigSpec actual = conn.second;
+
+               if (portName == RTLIL::escape_id("CLK_OUT")) {
+
+                   if (sig == actual) {
+                      return true;
+                   }
+                   continue;
+               }
            }
        }
 
@@ -7009,6 +7041,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
        //
        pool<RTLIL::Cell*> boot_clock_cells;
        collect_boot_clock(top_module, boot_clock_cells);
+       
+       // Collect I_SERDES
+       //
+       pool<RTLIL::Cell*> iserdes_cells;
+       collect_iserdes(top_module, iserdes_cells);
 
        // Collect CLK_BUF/FCLK_BUF
        //
@@ -7043,6 +7080,13 @@ static void show_sig(const RTLIL::SigSpec &sig)
             // a BOOT_CLOCK output port.
             //
             if (is_output_boot_clock(boot_clock_cells, clk)) {
+              continue;
+            }
+            
+            // We do not insert CLK_BUF in front of 'w' if 'w' is the output of
+            // a I_SERDES CLK_OUT port.
+            //
+            if (is_output_iserdes_clkout(iserdes_cells, clk)) {
               continue;
             }
 
@@ -7350,9 +7394,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
         //
         run("opt_clean");
 #endif
-        // We need to replace O_BUF by O_BUFT due to HW limitations
-        replace_obuf_by_obuft(top_module);
  
+        replace_obuf_by_obuft(_design->top_module());
+
         // We need to respect the ordering of BUF insertions input buffers first,
         // then clock buffers, then output buffers then O_BUFT tristate buffers.
         //
@@ -8567,6 +8611,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
         if (new_iobuf_map) {
           rewire_obuft();
         }
+        
+        // We need to replace O_BUF by O_BUFT due to HW limitations
+        //
+        replace_obuf_by_obuft(_design->top_module());
 
         // Eventually performs post synthesis clean up
         //
