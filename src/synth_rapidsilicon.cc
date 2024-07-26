@@ -5752,50 +5752,27 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
-    // Replace O_BUF by O_BUFT
-    // To correctly configure the GB in O_BUF mode, we need to use the O_BUFT and set the enable signal "T" to 1
-    void replace_obuf_by_obuft(RTLIL::Module *top_module)
+    // Replace all O_BUF cells by O_BUFT equivalent.
+    //
+    // To correctly configure the GB in O_BUF mode, we need to use 
+    // the O_BUFT and set the enable signal "T" to 1.
+    //
+    void map_obuf_to_obuft(RTLIL::Module *top_module)
     {  
-        std::vector<RTLIL::Cell *> cellsToReplace;
-        std::map<std::string, RTLIL::IdString> cellsToRename;
-        int cellIndex = 0;
         for (auto cell : top_module->cells()) {
+
             if (cell->type != RTLIL::escape_id("O_BUF")) {
                 continue;
             }
-            cellsToReplace.push_back(cell);
-        }
-        for (auto cell : cellsToReplace) {
-            RTLIL::IdString origCellName = cell->name;
-            std::string tmpName = std::string("\\tmpCellNameOBUF") + std::to_string(cellIndex);
-            cellsToRename.emplace(tmpName, origCellName);
-            Cell *newBufCell = top_module->addCell(tmpName, "\\O_BUFT");
-            for (auto &conn : cell->connections()) {
-              IdString portName = conn.first;
-              RTLIL::SigSpec actual = conn.second;
-              if (portName == RTLIL::escape_id("I")) {
-                newBufCell->setPort(ID::I, actual);
-                continue;
-              }
-              if (portName == RTLIL::escape_id("O")) {
-                newBufCell->setPort(ID::O, actual);
-                continue;
-              } 
-            }
-            Wire *constantOne = top_module->addWire("\\obuft_const1_" + std::to_string(cellIndex));
-            top_module->connect(constantOne, State::S1);
-            newBufCell->setPort(ID::T, constantOne);
-            cellIndex++; 
-        }
-        for (auto cell : cellsToReplace) {
-          top_module->remove(cell);
-        }
-        for (auto cellNames : cellsToRename) {
-          top_module->rename(cellNames.first, cellNames.second);
+
+            cell->type = RTLIL::escape_id("O_BUFT");
+
+            // Add extra port 'T' set to 1'b1
+            //
+            cell->setPort(ID::T, State::S1);
         }
     }
 
-  
     // Remove I_BUF and O_BUF and replace by assigns
     // This is usefull for instance when we start from a bad implementation
     // of I_BUF/O_Buf like in test case : 
@@ -7395,8 +7372,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
         run("opt_clean");
 #endif
  
-        replace_obuf_by_obuft(_design->top_module());
-
         // We need to respect the ordering of BUF insertions input buffers first,
         // then clock buffers, then output buffers then O_BUFT tristate buffers.
         //
@@ -8612,9 +8587,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
           rewire_obuft();
         }
         
-        // We need to replace O_BUF by O_BUFT due to HW limitations
+        // We have to replace O_BUF by O_BUFT due to HW limitations.
+        // We need to do this at the very end of the flow and absolutely 
+        // after calling 'rewire_obuft'.
         //
-        replace_obuf_by_obuft(_design->top_module());
+        map_obuf_to_obuft(_design->top_module());
 
         // Eventually performs post synthesis clean up
         //
