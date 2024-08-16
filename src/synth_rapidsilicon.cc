@@ -5591,7 +5591,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
        if (new_iobuf_map == 4) {
          run("write_verilog -org-name -noattr -noexpr -nohex before_rewire_obuft.v");
        }
-
+       log(" *****************************\n");
+       log("         Rewire_Obuft         \n");
+       log(" *****************************\n");
        for (auto &module : _design->selected_modules()) {
 
          vector<RTLIL::Cell*> obufCells;
@@ -5630,7 +5632,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
             if (cell->type != RTLIL::escape_id("O_BUFT")) {
                continue;
             }
-
+            bool inout_port =false;
             RTLIL::SigSpec out = cell->getPort(ID::O);
 
             // If the actual output of the O_BUFT is an output of an
@@ -5638,13 +5640,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
             //
             if (ibuf_out2in.find(out) != ibuf_out2in.end()) {
 
-               RTLIL::SigSpec in = ibuf_out2in[out];
+               RTLIL::SigBit in = ibuf_out2in[out];
 
-               RTLIL::Wire *iw = in[0].wire;
+               RTLIL::Wire *iw = in.wire;
+               if (iw->port_input && iw->port_output)
+                   inout_port=true;
 
                cell->unsetPort(ID::O);
 
-               cell->setPort(ID::O, iw);
+               cell->setPort(ID::O, in);
             }
             
             // If the actual output of the O_BUFT is an input of an
@@ -5653,19 +5657,23 @@ static void show_sig(const RTLIL::SigSpec &sig)
             //
             if (obuf_in2cell.find(out) != obuf_in2cell.end()) {
 
-               Cell* obuf = obuf_in2cell[out];
+                if (!inout_port){
 
-               RTLIL::SigSpec obuf_out = obuf->getPort(ID::O);
+                    Cell* obuf = obuf_in2cell[out];
 
-               RTLIL::Wire *ow = obuf_out[0].wire;
+                    RTLIL::SigBit obuf_out = obuf->getPort(ID::O);
 
-               cell->unsetPort(ID::O);
+                    //RTLIL::Wire *ow = obuf_out.wire;
 
-               cell->setPort(ID::O, ow);
+                    cell->unsetPort(ID::O);
 
-               // store 'obuf' for futur removal
-               //
-               obufCells.push_back(obuf);
+                    cell->setPort(ID::O, obuf_out);
+
+                    // store 'obuf' for future removal
+                    //
+                    obufCells.push_back(obuf);
+                }
+
             }
          }
 
@@ -5679,13 +5687,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
          run("write_verilog -org-name -noattr -noexpr -nohex after_rewire_obuft.v");
        }
     }
-
     // Map the $TBUF cells into OBUFT equivalent.
     //
     void map_obuft(RTLIL::Module* top_module)
     {
        log(" *****************************\n");
-       log("   Mapping Tri-state Buffers\n");
+       log("   Mapping Tri-state Buffers  \n");
        log(" *****************************\n");
 
        if (new_iobuf_map == 4) {
