@@ -18,7 +18,7 @@
 #include <string>
 #include <strings.h>
 #include <chrono>
-
+#include <cmath>  
 
 #ifdef PRODUCTION_BUILD
 #include "License_manager.hpp"
@@ -7645,11 +7645,97 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         log("\nInserting I_FAB/O_FAB cells done.\n\n");
     }
+    // std::map <int, std::map<RTLIL::Const, RTLIL::Const>> lut_param_val;
+    std::unordered_map<int, std::vector<std::pair<RTLIL::Const, RTLIL::Const>>> lut_param_val;
+    void lut_insensitive_port_rewrite()
+    {
+        for (auto cell : _design->top_module()->cells())
+        {
+            if (cell->type == RTLIL::escape_id("LUT1") || cell->type == RTLIL::escape_id("LUT2") || cell->type == RTLIL::escape_id("LUT3") || cell->type == RTLIL::escape_id("LUT4") || cell->type == RTLIL::escape_id("LUT5") || cell->type == RTLIL::escape_id("LUT6"))
+            {
+                int cell_processed = 1;
+                while (cell_processed > 0)
+                {
+                    lut_param_val.clear();
+                    RTLIL::Const LUT_INIT = cell->getParam(RTLIL::escape_id("INIT_VALUE"));
+                    int port_size = cell->getPort(ID::A).size();
+                    int init_size = static_cast<int>(pow(2, port_size));
+                    for (int n = 1; n <= port_size; n++)
+                    {
+                        for (int i = 0; i < init_size; i = i + (static_cast<int>(pow(2, n))))
+                        {
+                            int k = 2 * i + (static_cast<int>(pow(2, n)));
+                            int width = static_cast<int>(pow(2, n)) / 2;
+                            lut_param_val[n].emplace_back(LUT_INIT.extract(i, width), LUT_INIT.extract(k / 2, width));
+                        }
+                    }
+                    for (auto lut_in : lut_param_val)
+                    {
+                        bool in_lut = true;
+                        for (auto lut_sec : lut_in.second)
+                        {
+                            if (lut_sec.first != lut_sec.second)
+                            {
+                                in_lut = false;
+                                break;
+                            }
+                        }
+
+                        if (in_lut)
+                        {
+                            cell_processed++;
+                            auto output_pair = lut_param_val[lut_in.first];
+                            RTLIL::Const LUT_INIT_Final(State::S1, init_size / 2);
+                            int bit_in = 0;
+                            for (auto final_param : output_pair)
+                            {
+                                RTLIL::Const init_ = final_param.first;
+                                for (auto Sbit_Init : init_)
+                                {
+                                    if (Sbit_Init == State::S1)
+                                        LUT_INIT_Final[bit_in] = State::S1;
+                                    else
+                                        LUT_INIT_Final[bit_in] = State::S0;
+                                    bit_in++;
+                                }
+                            }
+                            log("Insensitive LUT port detected for Cell %s\n",log_id(cell->name));
+                            cell->setParam(RTLIL::escape_id("INIT_VALUE"), LUT_INIT_Final);
+                            cell->type = RTLIL::escape_id("LUT" + std::to_string(port_size - 1));
+                            SigSpec new_port;
+                            int port_id_ = 1;
+
+                            for (auto prt_bit : cell->getPort(ID::A))
+                            {
+                                if (port_id_ == lut_in.first)
+                                {
+                                    port_id_++;
+                                    continue;
+                                }
+                                else
+                                {
+                                    SigSpec bit_p = prt_bit;
+                                    new_port.append(bit_p);
+                                }
+                                port_id_++;
+                            }
+
+                            cell->unsetPort(ID::A);
+                            cell->setPort(ID::A, new_port);
+                            break;
+                        }
+                    }
+                    if (cell_processed == 1)
+                        break;
+                    cell_processed--;
+                }
+            }
+        }
+    }
 
     void script() override
     {
         string readArgs;
-
         if (preserve_ip){
             RTLIL::IdString protectId("$rs_protected");
             for (auto &module : _design->selected_modules()) {
@@ -7696,6 +7782,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     break;
                 }    
             }
+
             run("read_verilog -lib -specify -nomem2reg" GET_FILE_PATH(COMMON_DIR, SIM_LIB_FILE) + readArgs);
         }
 
@@ -8583,6 +8670,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
              legalize_all_tdp_ram_clock_ports();
            }
         }
+
+        lut_insensitive_port_rewrite();
 
         run("opt_clean");
 
