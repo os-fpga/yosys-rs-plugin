@@ -7660,13 +7660,11 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     RTLIL::Const LUT_INIT = cell->getParam(RTLIL::escape_id("INIT_VALUE"));
                     int port_size = cell->getPort(ID::A).size();
                     int init_size = static_cast<int>(pow(2, port_size));
-                    // log("Init Size = %d,Lut_type = %s\n", init_size, log_id(cell->type));
                     for (int n = 1; n <= port_size; n++)
                     {
                         for (int i = 0; i < init_size; i = i + (static_cast<int>(pow(2, n))))
                         {
                             int k = 2 * i + (static_cast<int>(pow(2, n)));
-                            int j = i + (static_cast<int>(pow(2, n)));
                             int width = static_cast<int>(pow(2, n)) / 2;
                             lut_param_val[n].emplace_back(LUT_INIT.extract(i, width), LUT_INIT.extract(k / 2, width));
                         }
@@ -7674,7 +7672,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
                     for (auto lut_in : lut_param_val)
                     {
                         bool in_lut = true;
-                        // log("\nLUT = %d:\n", lut_in.first);
                         for (auto lut_sec : lut_in.second)
                         {
                             if (lut_sec.first != lut_sec.second)
@@ -7682,7 +7679,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
                                 in_lut = false;
                                 break;
                             }
-                            // log("\tPair_1 = %x, Pair_2 = %x\n", lut_sec.first.as_int(), lut_sec.second.as_int());
                         }
 
                         if (in_lut)
@@ -7701,20 +7697,18 @@ static void show_sig(const RTLIL::SigSpec &sig)
                                     else
                                         LUT_INIT_Final[bit_in] = State::S0;
                                     bit_in++;
-                                    // log("Bit = %d, Val = %s, New_Param = %x\n", bit_in, log_const(Sbit_Init),LUT_INIT_Final.as_int());
                                 }
                             }
-                            // log("Init Value = %s\n", log_const(LUT_INIT_Final));
+                            log("Insensitive LUT port detected for Cell %s\n",log_id(cell->name));
                             cell->setParam(RTLIL::escape_id("INIT_VALUE"), LUT_INIT_Final);
                             cell->type = RTLIL::escape_id("LUT" + std::to_string(port_size - 1));
                             SigSpec new_port;
                             int port_id_ = 1;
+
                             for (auto prt_bit : cell->getPort(ID::A))
                             {
-                                // log("Port ID. %d Port No. %d\n", port_id_,lut_in.first);
                                 if (port_id_ == lut_in.first)
                                 {
-                                    // log("Continuining on %d\n", port_id_);
                                     port_id_++;
                                     continue;
                                 }
@@ -7731,7 +7725,6 @@ static void show_sig(const RTLIL::SigSpec &sig)
                             break;
                         }
                     }
-                    // log("Value of Cell_Processed %d\n",cell_processed);
                     if (cell_processed == 1)
                         break;
                     cell_processed--;
