@@ -5186,7 +5186,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
     void check_blackbox_param(){
 	    std::set<RTLIL::IdString> primitive_names = {
 		/* genesis3 blackbox primitives*/
-		"\\I_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\I_DELAY","\\O_SERDES_CLK","\\PLL",
+		"\\I_BUF_DS","\\O_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\I_DELAY","\\O_SERDES_CLK","\\PLL",
         "\\SOC_FPGA_TEMPERATURE"};
 
         for (auto &module : _design->selected_modules()) {
@@ -5273,6 +5273,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                     if (!cell->hasParam(RTLIL::escape_id("WEAK_KEEPER")))
                         cell->setParam(RTLIL::escape_id("WEAK_KEEPER"), stringf("NONE"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("IOSTANDARD")))
+                        cell->setParam(RTLIL::escape_id("IOSTANDARD"), stringf("DEFAULT"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION")))
+                        cell->setParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION"), stringf("TRUE"));
+                }
+
+                if (cell->type == RTLIL::escape_id("O_BUF_DS")){
 
                     if (!cell->hasParam(RTLIL::escape_id("IOSTANDARD")))
                         cell->setParam(RTLIL::escape_id("IOSTANDARD"), stringf("DEFAULT"));
