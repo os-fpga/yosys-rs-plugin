@@ -4719,7 +4719,28 @@ static void show_sig(const RTLIL::SigSpec &sig)
                          "RESET", pp_asyncReset, pp_activeHigh)) {
               continue;
            }
+           // Process PLL
+           if (cell->type == RTLIL::escape_id("PLL")) {
 
+             for (auto &conn : cell->connections()) {
+
+                IdString portName = conn.first;
+
+                RTLIL::SigSpec actual = conn.second;
+
+                if (!sigName(actual, name)) {
+                  continue;
+                }
+                if ((portName == RTLIL::escape_id("CLK_IN"))) {
+
+                  pp_clocks.insert(name);
+                  pp_activeHigh.insert(name);
+                  continue;
+                }
+             }
+
+             continue;
+            }
            // Process BRAM
            //
            if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
