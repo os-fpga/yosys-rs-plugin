@@ -8720,13 +8720,10 @@ static void show_sig(const RTLIL::SigSpec &sig)
         map_obuf_to_obuft(_design->top_module());
 
         // Eventually performs post synthesis clean up
-        // commenting post cleanup as it might have some bugs.
-        // Bugs could be fixed in December, 2024 release.
-
-        // if (post_cleanup){
-        //   obs_clean();
-        // }
-
+        //
+        if (post_cleanup){
+          obs_clean();
+        }
 
         _design->sort();
 
