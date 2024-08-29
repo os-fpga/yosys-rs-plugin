@@ -7533,9 +7533,9 @@ void collect_clocks (RTLIL::Module* module,
      */
 
     void convert_clock_gating(){
-
-        run("write_verilog -org-name -noattr -noexpr -nohex before_clock_gating_conversion.v");
-
+        if (cec) {
+            run("write_verilog -org-name -noattr -noexpr -nohex before_clock_gating_conversion.v");
+        }
         log(" ***************************\n");
         log("   Gated Clock Conversion   \n");
         log(" ***************************\n");
@@ -7651,7 +7651,9 @@ void collect_clocks (RTLIL::Module* module,
             }
         }
         run("opt_clean");
-        run("write_verilog -org-name -noattr -noexpr -nohex after_clock_gating_conversion.v");
+        if (cec) {
+            run("write_verilog -org-name -noattr -noexpr -nohex after_clock_gating_conversion.v");
+        }
     }
     /*********************************************************************************/
 
