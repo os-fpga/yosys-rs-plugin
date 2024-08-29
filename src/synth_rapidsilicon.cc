@@ -7526,6 +7526,31 @@ void collect_clocks (RTLIL::Module* module,
             }
         }
     }
+    bool check_gated_type(RTLIL::SigSpec& sig, dict<RTLIL::SigSpec, std::set<Cell*>*>& sig2CellsInFanin){
+        if (sig2CellsInFanin.count(sig)) {
+            // Get the cells that are driving this 'sig'
+            std::set<Cell*>* sigFanin = sig2CellsInFanin[sig];
+            //ideally it should be driven by only one cell
+            if (sigFanin->size()>1){
+               log_error("Multi driven signal '%s'.\n",log_signal(sig));
+            }
+
+            if (sigFanin->size()<1){
+               log("INFO: '%s' is not gated.\n",log_signal(sig));
+               return false;
+            }
+
+            for (std::set<Cell*>::iterator it = sigFanin->begin(); it != sigFanin->end(); it++) {
+               Cell* cell = *it;
+               if ((cell->type == RTLIL::escape_id("DFFRE")) ||
+                  (cell->type == RTLIL::escape_id("DFFNRE"))) {
+                  log("INFO: Found register gated clock '%s' cannot be handled with attribute 'logic' use 'global_clock' conversion.\n",log_signal(sig));
+                  return false;
+               }
+            }
+        }
+        return true;
+    }
     /* Synthesis converts these gates such that the clock will drive the register clock pin
        directly and the gating logic will go to the enable pin of register. The controlling of gated
        clock conversion is accomplished with a combination of two items. The GATED_CLOCK synthesis
@@ -7568,14 +7593,14 @@ void collect_clocks (RTLIL::Module* module,
             std::string val_s = kind->second.decode_string();
             if (val_s == "logic") {
                 clk2gate.insert(wire);
-                log("INFO: Found Input Clock with attribute '%s'. \n",kind->second.decode_string().c_str());
-                log("INFO: Finding combinational gated clock conversion (AND/OR/NAND/NOR) on gated clock.\n");
+                log("INFO: Found input clock with attribute '%s'. \n",kind->second.decode_string().c_str());
+                log("INFO: Finding combinational gated clock conversion (AND/OR/NAND/NOR) on '%s'.\n",log_id(wire->name));
             }
         }
 
         if(clk2gate.empty()){
-            log("INFO: No input Clock found with attribute (* gated_clock = logic *).\n");
-            log("INFO: Skipping Gated Clock conversion 'logic'.\n");
+            log("INFO: No input clock found with attribute (* gated_clock = logic *).\n");
+            log("INFO: Skipping gated clock conversion 'logic'.\n");
             return;
         }
 
@@ -7586,7 +7611,10 @@ void collect_clocks (RTLIL::Module* module,
             RTLIL::IdString clk_port_name;
 
             log_assert(GetSize(gated_clk) == 1);
-
+            // if Gated by Flop return & will be handled by FCLK_BUF
+            if(!check_gated_type(gated_clk, sig2CellsInFanin)){
+                continue;
+            }
             backCleanRec(gated_clk, sig2CellsInFanin,lhsSig2RhsSig,visitedCells,visitedSigSpec);
 
             for (auto cell : visitedCells) {
@@ -7604,7 +7632,7 @@ void collect_clocks (RTLIL::Module* module,
 
                 }
             }
-            if(gate_cell!=NULL){
+            if(gate_cell!=NULL && ((gate_cell->type.in(ID($_MUX_), ID($mux))))){
 
                 log("INFO: Converting combinational gated clock '%s'.\n",log_signal(gated_clk));
                 SigSpec MUX_output = gate_cell->getPort(ID::Y);
@@ -7646,7 +7674,7 @@ void collect_clocks (RTLIL::Module* module,
                 }
             }
             else{
-                log("INFO: No Input gated clock for '%s' \n",log_signal(gated_clk));
+                log("INFO: No input gated clock for '%s', skipping combinational gated clock conversion.\n",log_signal(gated_clk));
                 return;
             }
         }
