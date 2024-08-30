@@ -380,6 +380,11 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("        - late\n");
         log("        By default 'early' is used.\n");
         log("\n");
+        log("    -gated_clock_conversion <logic/global>\n");
+        log("        Performs gated clock conversion.\n");
+        log("        - logic :  inserts logic in the data path and clock is the original “global” clock\n");
+        log("        - global_clock : clock as data and forward the gated clock using a FCLK_BUF\n");
+        log("\n");
         log("\n");
     }
 
@@ -398,6 +403,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool sec;
     int post_cleanup;
     int new_iobuf_map;
+    string gated_clock_strategy;
+    bool gated_clock_conversion_logic;
+    bool gated_clock_conversion_global;
     int iofab_map;
     bool legalize_ram_clk_ports;
     bool new_tdp36k;
@@ -474,6 +482,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_iobuf= false;
         post_cleanup= 0;
         new_iobuf_map= 0;
+        gated_clock_strategy= "";
+        gated_clock_conversion_logic=false;
+        gated_clock_conversion_global=false;
         iofab_map= 0;
         legalize_ram_clk_ports= false;
         nobram = false;
@@ -687,6 +698,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
                 new_iobuf_map = stoi(args[++argidx]);
                 continue;
             }
+            if (args[argidx] == "-gated_clock_conversion" && argidx + 1 < args.size()) {
+                gated_clock_strategy = args[++argidx];
+                continue;
+            }
             if (args[argidx] == "-iofab_map" && argidx + 1 < args.size()) {
                 iofab_map = stoi(args[++argidx]);
                 continue;
@@ -817,6 +832,18 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         if (iofab_map < 0 && iofab_map > 2) {
             log_cmd_error("Invalid iofab map value: '%i'\n", iofab_map);
+        }
+
+        if (gated_clock_strategy == "logic")
+            gated_clock_conversion_logic=true;
+        else if (gated_clock_strategy == "global_clock")
+            gated_clock_conversion_global=true;
+        else if (gated_clock_strategy == ""){
+            gated_clock_conversion_global=true;
+            gated_clock_conversion_logic=false;
+        }
+        else{
+            log_cmd_error("Invalid gated_clock_conversion value: '%s'\n", gated_clock_strategy.c_str());
         }
 
 
@@ -1607,8 +1634,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
                           dict<RTLIL::SigSpec, RTLIL::SigSpec>& lhsSig2RhsSig,
                           std::set<Cell*> &visitedCells,
                           std::set<RTLIL::SigSpec> &visitedSigSpec) {
-
-
+  
         if (sigIsConstant(sig)) {
            return;
         }
@@ -4741,6 +4767,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              continue;
             }
+
            // Process BRAM
            //
            if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
@@ -7111,7 +7138,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
               log("'\n");
 
             } else {
-
+              //By default gated_clock_conversion=="global"
               is_FCLK_BUF = true;
 
               log("INFO: inserting FCLK_BUF before '");
@@ -7377,6 +7404,286 @@ static void show_sig(const RTLIL::SigSpec &sig)
          run("write_verilog -org-name -noattr -noexpr -nohex after_clk_buffers.v");
        }
     }
+
+void collect_clocks (RTLIL::Module* module, 
+                               dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*>& clock_domain)
+    {
+       for (auto cell : module->cells()) {
+
+           if ((cell->type == RTLIL::escape_id("DFFRE")) ||
+               (cell->type == RTLIL::escape_id("DFFNRE"))) {
+
+              RTLIL::SigSpec actual = cell->getPort(ID::C);
+
+              if (actual.has_const()) {
+                 continue;
+              }
+
+              if (clock_domain.find(actual) == clock_domain.end()) {
+                clock_domain[actual] = new vector<RTLIL::Cell*>;
+              }
+              clock_domain[actual]->push_back(cell);
+              continue;
+           }
+
+           if ((cell->type == RTLIL::escape_id("DSP19X2")) ||
+               (cell->type == RTLIL::escape_id("DSP38"))) {
+
+              for (auto &conn : cell->connections()) {
+
+                  IdString portName = conn.first;
+                  RTLIL::SigSpec actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+              }
+              continue;
+           }
+
+           if (cell->type == RTLIL::escape_id("TDP_RAM18KX2")) {
+
+              for (auto &conn : cell->connections()) {
+
+                  IdString portName = conn.first;
+                  RTLIL::SigSpec actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK_A1")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK_A2")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK_B1")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK_B2")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+              }
+              continue;
+           }
+
+           if (cell->type == RTLIL::escape_id("TDP_RAM36K")) {
+
+              for (auto &conn : cell->connections()) {
+
+                  IdString portName = conn.first;
+                  RTLIL::SigSpec actual = conn.second;
+
+                  if (actual.has_const()) {
+                     continue;
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK_A")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+
+                  if (portName == RTLIL::escape_id("CLK_B")) {
+
+                    if (clock_domain.find(actual) == clock_domain.end()) {
+                      clock_domain[actual] = new vector<RTLIL::Cell*>;
+                    }
+                    clock_domain[actual]->push_back(cell);
+                  }
+              }
+              continue;
+            }
+        }
+    }
+    bool check_gated_type(RTLIL::SigSpec& sig, dict<RTLIL::SigSpec, std::set<Cell*>*>& sig2CellsInFanin){
+        if (sig2CellsInFanin.count(sig)) {
+            // Get the cells that are driving this 'sig'
+            std::set<Cell*>* sigFanin = sig2CellsInFanin[sig];
+            //ideally it should be driven by only one cell
+            if (sigFanin->size()>1){
+               log_error("Multi driven signal '%s'.\n",log_signal(sig));
+            }
+
+            if (sigFanin->size()<1){
+               log("INFO: '%s' is not gated.\n",log_signal(sig));
+               return false;
+            }
+
+            for (std::set<Cell*>::iterator it = sigFanin->begin(); it != sigFanin->end(); it++) {
+               Cell* cell = *it;
+               if ((cell->type == RTLIL::escape_id("DFFRE")) ||
+                  (cell->type == RTLIL::escape_id("DFFNRE"))) {
+                  log("INFO: Found register gated clock '%s' cannot be handled with attribute 'logic' use 'global_clock' conversion.\n",log_signal(sig));
+                  return false;
+               }
+            }
+        }
+        return true;
+    }
+    /* Synthesis converts these gates such that the clock will drive the register clock pin
+       directly and the gating logic will go to the enable pin of register. The controlling of gated
+       clock conversion is accomplished with a combination of two items. The GATED_CLOCK synthesis
+       attribute,(* gated_clock = "logic" *) on the clock input port and the (-gated_clock_conversion logic) synthesis flag.
+     */
+
+    void convert_clock_gating(){
+        if (cec) {
+            run("write_verilog -org-name -noattr -noexpr -nohex before_clock_gating_conversion.v");
+        }
+        log(" ***************************\n");
+        log("   Gated Clock Conversion   \n");
+        log(" ***************************\n");
+
+        RTLIL::Module* top_module = _design->top_module();
+        dict<RTLIL::SigSpec, vector<RTLIL::Cell*>*> clock_domains;
+        collect_clocks(top_module, clock_domains);
+
+
+        dict<RTLIL::SigSpec, std::set<Cell*>*> sig2CellsInFanout;
+        dict<RTLIL::SigSpec, std::set<Cell*>*> sig2CellsInFanin;
+
+        dict<RTLIL::SigSpec, RTLIL::SigSpec> lhsSig2RhsSig;
+        std::set<RTLIL::Cell*> visitedCells;
+        std::set<RTLIL::SigSpec> visitedSigSpec;
+
+        sig2cells(sig2CellsInFanout, sig2CellsInFanin);
+
+        std::set<RTLIL::Wire*> clk2gate;
+
+
+        for (auto wire : top_module->wires()) {
+            if (!wire->port_input)
+               continue;
+            log_assert(wire->port_input);
+            // Check if the pin has (* gated_clock = logic *) attribute.
+            auto kind = wire->attributes.find(ID::gated_clock);
+            if(kind==wire->attributes.end())
+                continue;
+            std::string val_s = kind->second.decode_string();
+            if (val_s == "logic") {
+                clk2gate.insert(wire);
+                log("INFO: Found input clock with attribute '%s'. \n",kind->second.decode_string().c_str());
+                log("INFO: Finding combinational gated clock conversion (AND/OR/NAND/NOR) on '%s'.\n",log_id(wire->name));
+            }
+        }
+
+        if(clk2gate.empty()){
+            log("INFO: No input clock found with attribute (* gated_clock = logic *).\n");
+            log("INFO: Skipping gated clock conversion 'logic'.\n");
+            return;
+        }
+
+       for (auto cd : clock_domains) {
+
+            RTLIL::SigSpec gated_clk = cd.first;
+            RTLIL::Cell* gate_cell=NULL;
+            RTLIL::IdString clk_port_name;
+
+            log_assert(GetSize(gated_clk) == 1);
+            // if Gated by Flop return & will be handled by FCLK_BUF
+            if(!check_gated_type(gated_clk, sig2CellsInFanin)){
+                continue;
+            }
+            backCleanRec(gated_clk, sig2CellsInFanin,lhsSig2RhsSig,visitedCells,visitedSigSpec);
+
+            for (auto cell : visitedCells) {
+
+                for (auto &conn : cell->connections()) {
+                    IdString portName = conn.first;
+                    RTLIL::SigSpec actual_sig = conn.second;
+                    RTLIL::Wire *cin = actual_sig[0].wire;
+                    if (cell->input(portName) && clk2gate.count(cin)) {
+                        gate_cell=cell;
+                        clk_port_name=portName;
+                        log("INFO: Found combinational gated clock '%s'.\n",log_signal(gated_clk));
+                        break;
+                    }
+
+                }
+            }
+            if(gate_cell!=NULL && ((gate_cell->type.in(ID($_MUX_), ID($mux))))){
+
+                log("INFO: Converting combinational gated clock '%s'.\n",log_signal(gated_clk));
+                SigSpec MUX_output = gate_cell->getPort(ID::Y);
+                SigSpec MUX_slect  = gate_cell->getPort(ID::S);
+                SigSpec input_clk  = gate_cell->getPort(clk_port_name);
+
+                gate_cell->unsetPort(clk_port_name);// unset old input of MUX
+                gate_cell->unsetPort(ID::S);// unset old input of MUX
+                gate_cell->unsetPort(ID::Y);// unset old input of MUX
+
+                top_module->connect(MUX_output, MUX_slect);
+                top_module->remove(gate_cell);
+                // vector of sequential cells with 'clk' driving one of their
+                // port
+
+                vector<RTLIL::Cell*>* scells = cd.second;
+                for (auto dff_cell : *scells) {
+
+                    if ((dff_cell->type == RTLIL::escape_id("DFFRE")) ||
+                        (dff_cell->type == RTLIL::escape_id("DFFNRE"))) {
+                        RTLIL::SigSpec actual = dff_cell->getPort(ID::C);
+                        RTLIL::SigSpec old_enable = dff_cell->getPort(ID::E);
+                        RTLIL::SigSpec new_enable;
+
+
+                        dff_cell->unsetPort(ID::C);
+                        dff_cell->unsetPort(ID::E);
+
+                        dff_cell->setPort(ID::C, input_clk);// put original clk
+
+                        if (sigIsConstant(old_enable))
+                            dff_cell->setPort(ID::E, gated_clk);
+                        else{
+                            RTLIL::SigSpec and_output = top_module->addWire(NEW_ID,GetSize(gated_clk));
+                            top_module->addAnd(NEW_ID, gated_clk, old_enable, and_output);
+                            dff_cell->setPort(ID::E, and_output);// connect new enable to register
+                        }
+                    }
+                }
+            }
+            else{
+                log("INFO: No input gated clock for '%s', skipping combinational gated clock conversion.\n",log_signal(gated_clk));
+                return;
+            }
+        }
+        run("opt_clean");
+        if (cec) {
+            run("write_verilog -org-name -noattr -noexpr -nohex after_clock_gating_conversion.v");
+        }
+    }
+    /*********************************************************************************/
 
     // New iobuf map version
     // This works only with a flattened design and we deal with the top module
@@ -7675,6 +7982,8 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
         log("\nInserting I_FAB/O_FAB cells done.\n\n");
     }
+
+    
     // std::map <int, std::map<RTLIL::Const, RTLIL::Const>> lut_param_val;
     std::unordered_map<int, std::vector<std::pair<RTLIL::Const, RTLIL::Const>>> lut_param_val;
     void lut_insensitive_port_rewrite()
@@ -8572,6 +8881,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 sec_check("after_techmap_ff_map", true,false);
                
             }
+
             run("opt_expr -mux_undef");
             run("simplemap");
             run("opt_expr");
@@ -8581,6 +8891,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
             if (cec) {
                 run("write_verilog -noattr -nohex after_opt_clean4.v");
+            }
+            if (gated_clock_conversion_logic) {
+                convert_clock_gating();
             }
             sec_check("after_opt_clean4", true,false);
             
@@ -8643,6 +8956,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
                 // Everything is there : mapping I_BUF, CLK_BUF/FCLK_BUF, O_BUF and
                 // O_BUFT.
                 //
+
                 map_iobuf();
 
                 run("techmap -map " GET_TECHMAP_FILE_PATH(GENESIS_3_DIR,IO_CELLs_final_map));
