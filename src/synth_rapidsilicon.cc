@@ -254,6 +254,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         log("    -post_cleanup <0|1|2>\n");
         log("        Performs a post synthesis netlist cleanup. '0' value means post cleanup is OFF. '1' means post cleanup is ON and '2' is ON in debug mode.\n");
         log("\n");
+        log("    -init_registers <0|1|2>\n");
+        log("        Force initialization of uninitialized registers. '0' value means initialize with '0', '1' means initialize with '1' and '2' means leave it uninitialized. By default '0' is used.\n");
+        log("\n");
         log("    -new_iobuf_map <0|1|2|3|4>\n");
         log("        Performs a new approach to map IO buffers. '0' value means mapping is OFF. '1' means new mapping is ON (hard coded version) and '2' is ON in debug mode. 3 is the new generic approach, 4 generic with debug info\n");
         log("\n");
@@ -402,6 +405,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
     bool cec;
     bool sec;
     int post_cleanup;
+    int init_regs;
     int new_iobuf_map;
     string gated_clock_strategy;
     bool gated_clock_conversion_logic;
@@ -481,6 +485,7 @@ struct SynthRapidSiliconPass : public ScriptPass {
         no_flatten = false;
         no_iobuf= false;
         post_cleanup= 0;
+        init_regs= 0;
         new_iobuf_map= 0;
         gated_clock_strategy= "";
         gated_clock_conversion_logic=false;
@@ -693,6 +698,10 @@ struct SynthRapidSiliconPass : public ScriptPass {
             if (args[argidx] == "-post_cleanup" && argidx + 1 < args.size()) {
                 post_cleanup = stoi(args[++argidx]);
                 continue;
+            } 
+            if (args[argidx] == "-init_registers" && argidx + 1 < args.size()) {
+                init_regs = stoi(args[++argidx]);
+                continue;
             }
             if (args[argidx] == "-new_iobuf_map" && argidx + 1 < args.size()) {
                 new_iobuf_map = stoi(args[++argidx]);
@@ -826,6 +835,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
         }
         if (post_cleanup < 0 && post_cleanup > 2) {
             log_cmd_error("Invalid post cleanup value: '%i'\n", post_cleanup);
+        }
+        if (init_regs < 0 && init_regs > 2) {
+            log_cmd_error("Invalid init regs value: '%i'\n", init_regs);
         }
         if (new_iobuf_map < 0 && new_iobuf_map > 4) {
             log_cmd_error("Invalid new iobuf map value: '%i'\n", new_iobuf_map);
@@ -2005,6 +2017,36 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         log("\nTotal time for 'obs_clean' ...   \n");
         log(" [%.2f sec.]\n", ftotalTime);
+    }
+
+     void initRegisters (RTLIL::State init)
+     {
+         for (auto module : _design->selected_modules()) {
+ 
+              SigMap sigmap(module);
+              FfInitVals initvals(&sigmap, module);
+ 
+              for (auto cell : module->selected_cells()) {
+ 
+                  if (!RTLIL::builtin_ff_cell_types().count(cell->type)) {
+                     continue;
+                  }
+ 
+                  FfData ff(&initvals, cell);
+ 
+                  log("FF init value for cell %s (%s): %s = %s\n", log_id(cell), log_id(cell->type),
+                       log_signal(ff.sig_q), log_signal(ff.val_init));
+ 
+                  pool<int> bits;
+                  for (int i = 0; i < ff.width; i++) {
+                     if ((ff.val_init.bits[i] != State::S1) && (ff.val_init.bits[i] != State::S0)) {
+                        ff.val_init.bits[i] = init;
+                     }
+                  }
+		  ff.emit();
+              }
+         }
+ 
     }
 
     void reportCarryChains() {
@@ -5589,13 +5631,13 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    }
                    continue;
                }
-                if (portName == RTLIL::escape_id("FAST_CLK")) {
+               if (portName == RTLIL::escape_id("FAST_CLK")) {
 
                     if (sig == actual) {
                         return true;
                     }
-                continue;
-                }
+                    continue;
+               }
            }
        }
 
@@ -8231,6 +8273,20 @@ void collect_clocks (RTLIL::Module* module,
             run("check");
 
             run("stat");
+
+            // We need to initialize uninitialized registers otherwise we may see
+            // unexpected strong DFF optimizations like in EDA-3136 or EDA-3177 where
+            // the design is almost empty at the end.
+            //
+            if (init_regs == 0) {
+
+               initRegisters(State::S0); // by default we use '0' value
+
+            } else if (init_regs == 1) {
+
+               initRegisters(State::S1);
+            }
+
 
             top_run_opt(1 /* nodffe  */, 0 /* sat */, 1 /* force nosdff */, 1, 12, 0);
 
