@@ -5589,6 +5589,13 @@ static void show_sig(const RTLIL::SigSpec &sig)
                    }
                    continue;
                }
+                if (portName == RTLIL::escape_id("FAST_CLK")) {
+
+                    if (sig == actual) {
+                        return true;
+                    }
+                continue;
+                }
            }
        }
 
