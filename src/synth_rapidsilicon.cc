@@ -3793,7 +3793,8 @@ void Set_INIT_PlacementWithNoParity_mode(Cell* cell,RTLIL::Const mode) {
 static std::string id(RTLIL::IdString internal_id)
 {
         const char *str = internal_id.c_str();
-        return std::string(str);
+        std::string result = str;
+        return result;
 }
 
 static void dump_const(const RTLIL::Const &data, int width = -1, int offset = 0, bool no_decimal = false, bool escape_comment = false)
@@ -3992,13 +3993,13 @@ static void show_sig(const RTLIL::SigSpec &sig)
     {
         const RTLIL::SigChunk chunk = sig.as_chunk();
 
-        const char* name = "\\";
+        std::string name = "\\";
 
         if (chunk.width == chunk.wire->width && chunk.offset == 0) {
           name = id(chunk.wire->name).c_str();
         }
         // any name is prefixed with '\' so we need to remove it
-        name++;
+        name = name.substr(1);
 
         json_file << "\"";
         json_file << name;
