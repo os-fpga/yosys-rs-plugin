@@ -5969,8 +5969,49 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
-    void ofab_insert_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
-                              string portName, string fabPortName, RTLIL::SigSpec& actual)
+    // This function may be ok in term of runtime because we expect the vector 
+    // 'cells_primitives' to have a small size (few tens) so that the global loop
+    // is small and there is no much runtime hit.
+    //
+    bool isPrimitiveOutput(vector<Cell*>& cells_primitives, RTLIL::SigSpec actual) {
+
+       for (auto cell : cells_primitives) {
+
+          for (auto &conn : cell->connections()) {
+
+              IdString portName = conn.first;
+              RTLIL::SigSpec out = conn.second;
+
+              if (!cell->output(portName)) {
+                 continue;
+              }
+
+              if (!out.is_chunk()) { // If this is a concat of sub-actuals ...
+
+                 for (auto it = out.chunks().rbegin(); it != out.chunks().rend(); ++it) {
+
+                    RTLIL::SigSpec sub_actual = *it;
+
+                    if (actual == sub_actual) {
+                       return true; // yes 'actual' is the output net of a primitive
+                    }
+                 }
+
+              } else { // or it is a simple signal
+
+                 if (actual == out) {
+                    return true; // yes 'actual' is the output net of a primitive
+                 }
+              }
+          }
+       }
+
+       return false;
+    }
+
+    void ofab_insert_NS_rules(RTLIL::Module* top_module,  vector<RTLIL::Cell*>& cells_primitives,
+                              RTLIL::Cell* cell, string portName, string fabPortName, 
+                              RTLIL::SigSpec& actual)
     {
 
        if (iofab_map == 2) {
@@ -5978,18 +6019,34 @@ static void show_sig(const RTLIL::SigSpec &sig)
               (cell->type).c_str(), portName.c_str());
        }
 
-       if (!actual.is_chunk()) {
+       if (!actual.is_chunk()) { // If this is a concat of sub-actuals ...
 
           RTLIL::SigSpec new_sig;
           RTLIL::SigSpec new_sigO;
 
-          // This is an append of sub signals
+          // This is a concat of sub signals
           //
           for (auto it = actual.chunks().rbegin(); it != actual.chunks().rend(); ++it) {
 
              RTLIL::SigSpec sub_actual = *it;
 
              RTLIL::Wire *wire = sub_actual[0].wire;
+
+             // Do not create O_FAB if 'sub_actual' net is driven by a primitive
+             //
+             if (isPrimitiveOutput(cells_primitives, actual)) {
+
+               log("Skip O_FAB insertion on net '%s' (Primitive output)\n", (wire->name).c_str());
+
+               // Build the new append
+               //
+               new_sigO.append(sub_actual); // do not create any new net, keep the current
+                                            // 'sub_actual' net 
+
+               new_sig = new_sigO;
+
+               continue;
+             }
 
              if (fabPortName =="") {
                fabPortName = "ofab";
@@ -6019,7 +6076,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
              new_cell->setPort(ID::O, new_sigO);
 
-             // Build the new append
+             // Build the new concat
              //
              new_sigO.append(new_sig);
 
@@ -6029,13 +6086,23 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
           RTLIL::IdString idPortName = RTLIL::escape_id(portName);
 
+          // replace the former concat by the new built concat 'new_sig'
+          //
           cell->unsetPort(idPortName);
 
           cell->setPort(idPortName, new_sig);
 
-       } else {
+       } else { // else we are processing a simple 'actual' net
 
          RTLIL::Wire *wire = actual[0].wire;
+
+         // Do not create O_FAB if 'actual' net is driven by a primitive
+         //
+         if (isPrimitiveOutput(cells_primitives, actual)) {
+
+           log("Skip O_FAB insertion on net '%s' (Primitive output)\n", (wire->name).c_str());
+           return;
+         }
 
          if (fabPortName =="") {
            fabPortName = "ofab";
@@ -6175,7 +6242,9 @@ static void show_sig(const RTLIL::SigSpec &sig)
     // by a constant. We are in the Non Shared(NS) case which means that 
     // we systematically create a I_FAB or O_FAB.
     //
-    void insert_iofab_NS_rules(RTLIL::Module* top_module, RTLIL::Cell* cell,
+    void insert_iofab_NS_rules(RTLIL::Module* top_module, 
+                               vector<RTLIL::Cell*>& cells_primitives,
+                               RTLIL::Cell* cell,
                                string portName, string fabPortName)
     {
        int found = 0;
@@ -6220,7 +6289,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
        //
        if (cell->input(RTLIL::escape_id(portName))) {
 
-          ofab_insert_NS_rules(top_module, cell, portName, fabPortName, actual);
+          ofab_insert_NS_rules(top_module, cells_primitives, cell, portName, fabPortName, actual);
 
           return;
        }
@@ -7832,11 +7901,11 @@ void collect_clocks (RTLIL::Module* module,
          log("Getting the rules ...\n");
        }
 
-       register_rule("I_BUF", "EN", "f2g_in_en_A", 0 /* not shared */, all_rules);
-       register_rule("I_BUF_DS", "EN", "f2g_in_en_A", 0, all_rules);
+       register_rule("I_BUF", "EN", "f2g_in_en", 0 /* not shared */, all_rules);
+       register_rule("I_BUF_DS", "EN", "f2g_in_en", 0, all_rules);
 
-       register_rule("O_BUFT", "T", "f2g_tx_oe_A", 0, all_rules);
-       register_rule("O_BUFT_DS", "T", "f2g_tx_oe_A", 0, all_rules);
+       register_rule("O_BUFT", "T", "f2g_tx_oe", 0, all_rules);
+       register_rule("O_BUFT_DS", "T", "f2g_tx_oe", 0, all_rules);
 
 #if 0
        // SHARED version
@@ -7864,22 +7933,22 @@ void collect_clocks (RTLIL::Module* module,
        register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
 #endif
 
-       register_rule("I_DDR", "R", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("I_DDR", "R", "f2g_trx_reset_n", 0, all_rules);
        register_rule("I_DDR", "E", "", 0, all_rules);
 
-       register_rule("O_DDR", "R", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("O_DDR", "R", "f2g_trx_reset_n", 0, all_rules);
        register_rule("O_DDR", "E", "", 0, all_rules);
 
-       register_rule("I_SERDES", "RST", "f2g_trx_reset_n_A", 0, all_rules);
+       register_rule("I_SERDES", "RST", "f2g_trx_reset_n", 0, all_rules);
        register_rule("I_SERDES", "BITSLIP_ADJ", "", 0, all_rules);
        register_rule("I_SERDES", "EN", "", 0, all_rules);
-       register_rule("I_SERDES", "DATA_VALID", "g2f_rx_dvalid_A", 0, all_rules);
+       register_rule("I_SERDES", "DATA_VALID", "g2f_rx_dvalid", 0, all_rules);
        register_rule("I_SERDES", "DPA_LOCK", "", 0, all_rules);
        register_rule("I_SERDES", "DPA_ERROR", "", 0, all_rules);
        register_rule("I_SERDES", "PLL_LOCK", "", 0, all_rules);
 
-       register_rule("O_SERDES", "RST", "f2g_trx_reset_n_A", 0, all_rules);
-       register_rule("O_SERDES", "DATA_VALID", "f2g_trx_dvalid_A", 0, all_rules);
+       register_rule("O_SERDES", "RST", "f2g_trx_reset_n", 0, all_rules);
+       register_rule("O_SERDES", "DATA_VALID", "f2g_trx_dvalid", 0, all_rules);
        register_rule("O_SERDES", "OE_IN", "", 0, all_rules);
        register_rule("O_SERDES", "OE_OUT", "", 0, all_rules);
        register_rule("O_SERDES", "CHANNEL_BOND_SYNC_IN", "", 0, all_rules);
@@ -7894,7 +7963,7 @@ void collect_clocks (RTLIL::Module* module,
 
     }
 
-    void apply_rules(RTLIL::Module* top_module,
+    void apply_rules(RTLIL::Module* top_module, vector<RTLIL::Cell*>& cells_primitives,
                      RTLIL::IdString cellName, vector<RTLIL::Cell*>* cells, 
                      vector<std::tuple<string, string, int>>* rules)
     {
@@ -7927,7 +7996,7 @@ void collect_clocks (RTLIL::Module* module,
            }
 
            for (auto cell : *cells) {
-              insert_iofab_NS_rules(top_module, cell, portName, fabPortName);
+              insert_iofab_NS_rules(top_module, cells_primitives, cell, portName, fabPortName);
            }
         }
 
@@ -7956,7 +8025,7 @@ void collect_clocks (RTLIL::Module* module,
     //
     void map_iofab() {
 
-        log("\nInserting I_FAB/O_FAB cells ...\n\n");
+        log("Inserting I_FAB/O_FAB cells ...\n\n");
 
         if (iofab_map == 2) {
            run("write_verilog -org-name -noattr -noexpr -nohex before_iofab_map.v");
@@ -7978,11 +8047,22 @@ void collect_clocks (RTLIL::Module* module,
         //
         dict<RTLIL::IdString, vector<RTLIL::Cell*>*> cells_to_process;
 
+        vector<RTLIL::Cell*> cells_primitives;
+
         if (iofab_map == 2) {
            log("Getting the cells ...\n");
         }
 
         for (auto cell : top_module->cells()) {
+
+           if (cell->type.in(ID(I_BUF_DS), ID(O_BUF_DS), ID(O_BUFT_DS), ID(O_SERDES), ID(I_SERDES),
+                            ID(BOOT_CLOCK), ID(O_DELAY), ID(I_DELAY), ID(O_SERDES_CLK), ID(PLL))) {
+
+#if 0
+             log("Collect Cell %s\n", (cell->type).c_str());
+#endif
+             cells_primitives.push_back(cell);
+           }
 
            // Ignore the cell if not involved by a rule
            //
@@ -8013,7 +8093,7 @@ void collect_clocks (RTLIL::Module* module,
                  cells->size());
            }
 
-           apply_rules(top_module, cellName, cells, rules);
+           apply_rules(top_module, cells_primitives, cellName, cells, rules);
         }
 
         // Dispose all obects
