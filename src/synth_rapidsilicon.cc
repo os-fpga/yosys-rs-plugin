@@ -7931,6 +7931,16 @@ void collect_clocks (RTLIL::Module* module,
        register_rule("O_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
        register_rule("O_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
        register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
+
+       // Data signals
+       // 
+       register_rule("O_BUF", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_BUFT", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_BUF_DS", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_BUFT_DS", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_DELAY", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_DDR", "D", "f2g_tx_out", 0, all_rules);
+       register_rule("O_SERDES", "D", "f2g_tx_out", 0, all_rules);
 #endif
 
        register_rule("I_DDR", "R", "f2g_trx_reset_n", 0, all_rules);
