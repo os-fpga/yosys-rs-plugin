@@ -24,6 +24,7 @@
 #include "License_manager.hpp"
 #endif
 
+int Count_ADD;
 int DSP_COUNTER;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -8212,6 +8213,101 @@ void collect_clocks (RTLIL::Module* module,
         }
     }
 
+    std::pair<int, std::unordered_map<RTLIL::Cell *, int>> best_sum_under_dsp_limit(const std::unordered_map<RTLIL::Cell *, int> &items, int dsp_limit)
+    {
+        std::vector<int> dp(dsp_limit + 1, 0);
+        std::vector<std::vector<RTLIL::Cell *>> dp_items(dsp_limit + 1);
+
+        for (const auto &item : items)
+        {
+            RTLIL::Cell *cell = item.first;
+            int value = item.second;
+
+            for (int j = dsp_limit; j >= value; --j)
+            {
+                if (dp[j - value] + value > dp[j])
+                {
+                    dp[j] = dp[j - value] + value;
+                    dp_items[j] = dp_items[j - value]; 
+                    dp_items[j].push_back(cell);       
+                }
+            }
+        }
+
+        std::unordered_map<RTLIL::Cell *, int> best_items;
+        for (const auto &cell : dp_items[dsp_limit])
+        {
+            best_items[cell] = items.at(cell); 
+        }
+
+        return {dp[dsp_limit], best_items};
+    }
+
+    void check_dsp_device_limit()
+    {
+        std::unordered_map<RTLIL::Cell *, int> dsp_control;
+
+        for (auto cell : _design->top_module()->cells())
+        {
+            if (cell->type == RTLIL::escape_id("$mul"))
+            {
+                int _a_width_ = cell->getParam(ID::A_WIDTH).as_int();
+                int _b_width_ = cell->getParam(ID::B_WIDTH).as_int();
+                int a_signed = cell->getParam(ID::A_SIGNED).as_int();
+                int b_signed = cell->getParam(ID::B_SIGNED).as_int();
+                if (_a_width_ >= 11 && _b_width_ >= 10)
+                {
+                    if (a_signed && b_signed)
+                    {
+                        double sliceA = static_cast<double>(_a_width_ - a_signed - 1) / (20 - a_signed);
+                        double sliceB = static_cast<double>(_b_width_ - b_signed - 1) / (18 - b_signed);
+                        int nodsp = round(sliceA) * round(sliceB);
+                        dsp_control[cell] = nodsp;
+                    }
+                    else
+                    {
+                        double sliceA = static_cast<double>(_a_width_ - 1) / (20);
+                        double sliceB = static_cast<double>(_b_width_ - 1) / (18);
+                        int nodsp = round(sliceA) * round(sliceB);
+                        dsp_control[cell] = nodsp;
+                    }
+                }
+                else
+                {
+                    dsp_control[cell] = 1;
+                }
+            }
+        }
+        auto result = best_sum_under_dsp_limit(dsp_control, max_dsp - DSP_COUNTER);
+
+        int best_sum = result.first;
+        std::unordered_map<RTLIL::Cell *, int> best_items = result.second;
+        DSP_COUNTER = DSP_COUNTER + best_sum;
+        for (const auto &cell_info : best_items)
+        {
+            cell_info.first->set_bool_attribute(RTLIL::escape_id("valid_map"));
+        }
+        bool dsp_limit_exhausted = false;
+        if (DSP_COUNTER >= max_dsp)
+        {
+            for (auto cell : _design->top_module()->cells())
+            {
+                if (cell->type == RTLIL::escape_id("$mul"))
+                {
+                    if (!cell->get_bool_attribute(RTLIL::escape_id("valid_map")))
+                    {
+                        dsp_limit_exhausted = true;
+                        log_warning("Using soft logic for mult '%s'\n", log_id(cell->name));
+                    }
+                }
+            }
+        }
+        if (dsp_limit_exhausted)
+        {
+            log_warning("DSP exceeds the available DSP block limit on the device; the excess will be mapped to LUTs.\n");
+        }
+    }
+
     void script() override
     {
         string readArgs;
@@ -8542,25 +8638,18 @@ void collect_clocks (RTLIL::Module* module,
                         run("stat");
 #endif                  
                         if (new_dsp19x2) // RUN based on DSP19x2 mapping
-                            run("rs-dsp-multadd -genesis3 -new_dsp19x2");
-                        else 
-                            run("rs-dsp-multadd -genesis3");
+                            run("rs-dsp-multadd -genesis3 -new_dsp19x2 -max_dsp " + std::to_string(max_dsp));
+                        else
+                            run("rs-dsp-multadd -genesis3 -max_dsp " + std::to_string(max_dsp));
+                        
+                        DSP_COUNTER = DSP_COUNTER + Count_ADD;
                         run("wreduce t:$mul");
                         if (!new_dsp19x2)
                             run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
                         else // RUN based on DSP19x2 mapping
                             run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -new_dsp19x2" + " -max_dsp " + std::to_string(max_dsp));
-                        if (max_dsp != -1)
-                            for(auto& modules : _design->selected_modules()){
-                                for(auto& cells : modules->selected_cells()){
-                                    if(cells->type == RTLIL::escape_id("$mul")){
-                                        if(DSP_COUNTER < max_dsp){
-                                            cells->set_bool_attribute(RTLIL::escape_id("valid_map"));
-                                        }
-                                        ++DSP_COUNTER;
-                                    }
-                                }
-                            }
+                        
+                        check_dsp_device_limit();
 
                         // Check if mult output is connected with Registers output  
                         if (tech == Technologies::GENESIS_3)
