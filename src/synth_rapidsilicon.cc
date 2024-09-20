@@ -403,6 +403,8 @@ struct SynthRapidSiliconPass : public ScriptPass {
     Encoding fsm_encoding;
     EffortLevel effort;
     string abc_script;
+    bool dsp_limit_exhausted = false;
+    string dsp_limit_message = "";
     bool cec;
     bool sec;
     int post_cleanup;
@@ -8245,6 +8247,12 @@ void collect_clocks (RTLIL::Module* module,
 
     std::pair<int, std::unordered_map<RTLIL::Cell *, int>> best_sum_under_dsp_limit(const std::unordered_map<RTLIL::Cell *, int> &items, int dsp_limit)
     {
+        // Early exit if the items map is empty
+        if (items.empty())
+        {
+            return {0, {}}; // Return a sum of 0 and an empty map
+        }
+
         std::vector<int> dp(dsp_limit + 1, 0);
         std::vector<std::vector<RTLIL::Cell *>> dp_items(dsp_limit + 1);
 
@@ -8258,8 +8266,8 @@ void collect_clocks (RTLIL::Module* module,
                 if (dp[j - value] + value > dp[j])
                 {
                     dp[j] = dp[j - value] + value;
-                    dp_items[j] = dp_items[j - value]; 
-                    dp_items[j].push_back(cell);       
+                    dp_items[j] = dp_items[j - value];
+                    dp_items[j].push_back(cell);
                 }
             }
         }
@@ -8267,7 +8275,7 @@ void collect_clocks (RTLIL::Module* module,
         std::unordered_map<RTLIL::Cell *, int> best_items;
         for (const auto &cell : dp_items[dsp_limit])
         {
-            best_items[cell] = items.at(cell); 
+            best_items[cell] = items.at(cell);
         }
 
         return {dp[dsp_limit], best_items};
@@ -8285,40 +8293,59 @@ void collect_clocks (RTLIL::Module* module,
                 int _b_width_ = cell->getParam(ID::B_WIDTH).as_int();
                 int a_signed = cell->getParam(ID::A_SIGNED).as_int();
                 int b_signed = cell->getParam(ID::B_SIGNED).as_int();
+
                 if (_a_width_ >= 11 && _b_width_ >= 10)
                 {
+                    double sliceA, sliceB;
                     if (a_signed && b_signed)
                     {
-                        double sliceA = static_cast<double>(_a_width_ - a_signed - 1) / (20 - a_signed);
-                        double sliceB = static_cast<double>(_b_width_ - b_signed - 1) / (18 - b_signed);
-                        int nodsp = round(sliceA) * round(sliceB);
-                        dsp_control[cell] = nodsp;
+                        sliceA = static_cast<double>(_a_width_ - a_signed - 1) / (20 - a_signed);
+                        sliceB = static_cast<double>(_b_width_ - b_signed - 1) / (18 - b_signed);
                     }
                     else
                     {
-                        double sliceA = static_cast<double>(_a_width_ - 1) / (20);
-                        double sliceB = static_cast<double>(_b_width_ - 1) / (18);
-                        int nodsp = round(sliceA) * round(sliceB);
-                        dsp_control[cell] = nodsp;
+                        sliceA = static_cast<double>(_a_width_ - 1) / 20;
+                        sliceB = static_cast<double>(_b_width_ - 1) / 18;
                     }
+                    int nodsp = round(sliceA) * round(sliceB);
+                    dsp_control[cell] = nodsp;
                 }
                 else
                 {
-                    dsp_control[cell] = 1;
+                    dsp_control[cell] = 1; 
                 }
             }
         }
+
         auto result = best_sum_under_dsp_limit(dsp_control, max_dsp - DSP_COUNTER);
 
-        int best_sum = result.first;
+        int best_sum = result.first; 
         std::unordered_map<RTLIL::Cell *, int> best_items = result.second;
-        DSP_COUNTER = DSP_COUNTER + best_sum;
+
+        DSP_COUNTER += best_sum;
+
         for (const auto &cell_info : best_items)
         {
             cell_info.first->set_bool_attribute(RTLIL::escape_id("valid_map"));
         }
-        bool dsp_limit_exhausted = false;
-        if (DSP_COUNTER >= max_dsp)
+
+        int remaining_item_count = 0;           
+        int remaining_sum = 0;                   
+
+        for (auto cell : _design->top_module()->cells())
+        {
+            if (cell->type == RTLIL::escape_id("$mul"))
+            {
+                if (!cell->get_bool_attribute(RTLIL::escape_id("valid_map")))
+                {
+                    remaining_item_count++;             
+                    remaining_sum += dsp_control[cell]; 
+                }
+            }
+        }
+
+        dsp_limit_exhausted = (remaining_item_count > 0);
+        if (dsp_limit_exhausted)
         {
             for (auto cell : _design->top_module()->cells())
             {
@@ -8326,16 +8353,17 @@ void collect_clocks (RTLIL::Module* module,
                 {
                     if (!cell->get_bool_attribute(RTLIL::escape_id("valid_map")))
                     {
-                        dsp_limit_exhausted = true;
                         log_warning("Using soft logic for mult '%s'\n", log_id(cell->name));
                     }
                 }
             }
+            dsp_limit_message =  "DSP exceeds the available DSP block limit (" + std::to_string(max_dsp) +
+                     ") on the device; the excess " + std::to_string(remaining_sum) +
+                     " DSP blocks is mapped to soft logic.\n";
+            log_warning("DSP exceeds the available DSP block limit (%d) on the device; the excess %d DSP blocks will be mapped to LUTs.\n",max_dsp, remaining_sum);
         }
-        if (dsp_limit_exhausted)
-        {
-            log_warning("DSP exceeds the available DSP block limit on the device; the excess will be mapped to LUTs.\n");
-        }
+
+        
     }
 
     void script() override
@@ -9365,11 +9393,14 @@ void collect_clocks (RTLIL::Module* module,
         //
         run("write_verilog -noattr -nohex -noexpr core_synthesis.v");
 
+        if (dsp_limit_exhausted){
+            log("\n");
+            log_warning("%s\n",dsp_limit_message.c_str());
+        }
         if ((max_lut != -1) && (nbLUTx > max_lut)) {
           log("\n");
           log_error("Final netlist LUTs number [%d] exceeds '-max_lut' specified value [%d].\n", nbLUTx, max_lut);
         }
-
         if ((max_reg != -1) && (nbREGs > max_reg)) {
           log("\n");
           log_error("Final netlist DFFs number [%d] exceeds '-max_reg' specified value [%d].\n", nbREGs, max_reg);
