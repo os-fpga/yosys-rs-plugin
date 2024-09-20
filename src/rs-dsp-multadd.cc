@@ -6,6 +6,7 @@
 #include "kernel/ffinit.h"
 #include "kernel/ff.h"
 
+extern int Count_ADD;
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
@@ -23,6 +24,7 @@ bool is_genesis;
 bool is_genesis2;
 bool is_genesis3;
 bool new_dsp19x2;
+int max_dsp;
 struct RsDspMultAddWorker
 {
     RTLIL::Module *m_module;
@@ -191,6 +193,11 @@ struct RsDspMultAddWorker
                     // Too wide
                     continue;
                 }
+                if (max_dsp != -1 && Count_ADD > max_dsp)
+                {
+                    return;
+                }
+                ++Count_ADD;
                 log("Inferring MULTADD %zux%zu->%zu as %s from:\n", a_width, b_width, z_width, RTLIL::unescape_id(type).c_str());
                 for (auto cell : {mult_coeff, mult_add_cell, shift_left_cell}) { //Awais: unescape $neg which is being handled in MACC
                     if (cell != nullptr) {
@@ -420,6 +427,10 @@ struct RSDspMultAddPass : public Pass {
                 is_genesis = true;
             if (a_Args[argidx] == "-new_dsp19x2")
                 new_dsp19x2 = true;
+            if (a_Args[argidx] == "-max_dsp"  && argidx + 1 < a_Args.size()) {
+                max_dsp = std::stoi(a_Args[++argidx]);
+                continue;
+            }
         }
         
         extra_args(a_Args, argidx, design);
