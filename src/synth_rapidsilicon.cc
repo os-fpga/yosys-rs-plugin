@@ -5359,6 +5359,12 @@ static void show_sig(const RTLIL::SigSpec &sig)
 
                     if (!cell->hasParam(RTLIL::escape_id("WEAK_KEEPER")))
                         cell->setParam(RTLIL::escape_id("WEAK_KEEPER"), stringf("NONE"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("IOSTANDARD")))
+                        cell->setParam(RTLIL::escape_id("IOSTANDARD"), stringf("DEFAULT"));
+
+                    if (!cell->hasParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION")))
+                        cell->setParam(RTLIL::escape_id("DIFFERENTIAL_TERMINATION"), stringf("TRUE"));
                 }
 
                 if (cell->type == RTLIL::escape_id("I_BUF_DS")){
@@ -5887,7 +5893,26 @@ static void show_sig(const RTLIL::SigSpec &sig)
             cell->setPort(ID::T, State::S1);
         }
     }
+   // Replace all O_BUF_DS cells by O_BUFT_DS equivalent.
+    //
+    // To correctly configure the GB in O_BUF_DS mode, we need to use
+    // the O_BUFT_DS and set the enable signal "T" to 1.
+    //
+    void map_o_buf_ds_to_o_buft_ds(RTLIL::Module *top_module)
+    {
+        for (auto cell : top_module->cells()) {
 
+            if (cell->type != RTLIL::escape_id("O_BUF_DS")) {
+                continue;
+            }
+
+            cell->type = RTLIL::escape_id("O_BUFT_DS");
+
+            // Add extra port 'T' set to 1'b1
+            //
+            cell->setPort(ID::T, State::S1);
+        }
+    }
     // Remove I_BUF and O_BUF and replace by assigns
     // This is usefull for instance when we start from a bad implementation
     // of I_BUF/O_Buf like in test case : 
@@ -7932,6 +7957,20 @@ void collect_clocks (RTLIL::Module* module,
        register_rule("O_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
        register_rule("O_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
        register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
+
+#if 1
+
+       // Data signals
+       //
+       register_rule("O_BUF", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_BUFT", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_BUF_DS", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_BUFT_DS", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_DELAY", "I", "f2g_tx_out", 0, all_rules);
+       register_rule("O_DDR", "D", "f2g_tx_out", 0, all_rules);
+       register_rule("O_SERDES", "D", "f2g_tx_out", 0, all_rules);
+#endif
+
 #endif
 
        register_rule("I_DDR", "R", "f2g_trx_reset_n", 0, all_rules);
@@ -8056,8 +8095,9 @@ void collect_clocks (RTLIL::Module* module,
 
         for (auto cell : top_module->cells()) {
 
-           if (cell->type.in(ID(I_BUF_DS), ID(O_BUF_DS), ID(O_BUFT_DS), ID(O_SERDES), ID(I_SERDES),
-                            ID(BOOT_CLOCK), ID(O_DELAY), ID(I_DELAY), ID(O_SERDES_CLK), ID(PLL))) {
+           if (cell->type.in(ID(I_BUF_DS), ID(O_BUF_DS), ID(O_BUFT_DS), ID(O_SERDES), 
+                             ID(I_SERDES), ID(BOOT_CLOCK), ID(O_DELAY), ID(I_DELAY), 
+                             ID(O_BUF), ID(O_BUFT), ID(O_DDR))) {
 
 #if 0
              log("Collect Cell %s\n", (cell->type).c_str());
@@ -9241,7 +9281,6 @@ void collect_clocks (RTLIL::Module* module,
            run("techmap -map" + techMaplutArgs);
 #endif
 
-           check_blackbox_param();
           
            if (legalize_ram_clk_ports) {
              legalize_all_tdp_ram_clock_ports();
@@ -9265,6 +9304,8 @@ void collect_clocks (RTLIL::Module* module,
         // after calling 'rewire_obuft'.
         //
         map_obuf_to_obuft(_design->top_module());
+        map_o_buf_ds_to_o_buft_ds(_design->top_module());
+        check_blackbox_param();
 
         // Eventually performs post synthesis clean up
         //
