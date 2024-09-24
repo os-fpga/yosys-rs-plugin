@@ -8283,12 +8283,24 @@ void collect_clocks (RTLIL::Module* module,
 
     void check_dsp_device_limit()
     {
+        if (max_dsp == -1)
+        {
+            for (auto cell : _design->top_module()->cells())
+            {
+                if (cell->type == RTLIL::escape_id("$mul"))
+                {
+                    cell->set_bool_attribute(RTLIL::escape_id("valid_map"));
+                }
+            }
+            return; 
+        }
         std::unordered_map<RTLIL::Cell *, int> dsp_control;
 
         for (auto cell : _design->top_module()->cells())
         {
             if (cell->type == RTLIL::escape_id("$mul"))
             {
+                
                 int _a_width_ = cell->getParam(ID::A_WIDTH).as_int();
                 int _b_width_ = cell->getParam(ID::B_WIDTH).as_int();
                 int a_signed = cell->getParam(ID::A_SIGNED).as_int();
@@ -8359,11 +8371,9 @@ void collect_clocks (RTLIL::Module* module,
             }
             dsp_limit_message =  "DSP exceeds the available DSP block limit (" + std::to_string(max_dsp) +
                      ") on the device; the excess " + std::to_string(remaining_sum) +
-                     " DSP blocks is mapped to soft logic.\n";
+                     " DSP blocks are mapped to soft logic.\n";
             log_warning("DSP exceeds the available DSP block limit (%d) on the device; the excess %d DSP blocks will be mapped to LUTs.\n",max_dsp, remaining_sum);
         }
-
-        
     }
 
     void script() override
