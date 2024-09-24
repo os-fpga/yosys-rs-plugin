@@ -8125,6 +8125,7 @@ void collect_clocks (RTLIL::Module* module,
 
            if (cell->type.in(ID(I_BUF_DS), ID(O_BUF_DS), ID(O_BUFT_DS), ID(O_SERDES), 
                              ID(I_SERDES), ID(BOOT_CLOCK), ID(O_DELAY), ID(I_DELAY), 
+                             ID(O_SERDES_CLK), ID(PLL),
                              ID(O_BUF), ID(O_BUFT), ID(O_DDR))) {
 
 #if 0
