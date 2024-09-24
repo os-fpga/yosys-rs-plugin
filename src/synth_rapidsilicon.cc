@@ -464,7 +464,9 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
     // Special cells
     //
-    dict<std::string, pair<int, int>> pp_memories;
+    dict<std::string, pair<int, int>> pp_memories; // pair is width and depth
+    dict<std::string, string> pp_memories_prop;    // property like "dissolved", "rom"
+
 
     // Alias between same signals (for I_BUF/CLK_BUF)
     //
@@ -4208,10 +4210,15 @@ static void show_sig(const RTLIL::SigSpec &sig)
              }
 
              json_file << "     {\n";
-             std::string name = it->first;
+             std::string name = (it->first).substr(1);
              pair<int, int> wd = it->second;
 
-             json_file << "        \"name\" : \"" << name.substr(1) << "\",\n";
+             json_file << "        \"name\" : \"" << name << "\",\n";
+
+             if (pp_memories_prop.count(name)) {
+               json_file << "        \"type\" : \"" << pp_memories_prop[name] << "\",\n";
+             }
+
              json_file << "        \"width\" : \"" << wd.first << "\",\n";
              json_file << "        \"depth\" : \"" << wd.second << "\"\n";
              json_file << "     }";
@@ -4935,6 +4942,25 @@ static void show_sig(const RTLIL::SigSpec &sig)
            int depth = mem.size;
 
            pp_memories[mem_id] = std::make_pair(width, depth);
+        }
+    }
+
+    // Scratchpad mechanism is used to extract data posted by the call to 
+    // "memory_map". Data give extra memory info like "dissolved", "rom". 
+    //
+    void memoryMapAnalysis() 
+    {
+        dict<std::string, pair<int, int>>::iterator it;
+
+        for (it = pp_memories.begin(); it != pp_memories.end(); ++it) {
+
+             std::string mem_name = it->first;
+             string type = _design->scratchpad_get_string(mem_name);
+
+             if (type.size()) {
+               log("Memory %s type : %s\n", mem_name.c_str(), type.c_str());
+               pp_memories_prop[mem_name.substr(1)] = type;
+             }
         }
     }
 
@@ -8826,6 +8852,10 @@ void collect_clocks (RTLIL::Module* module,
         run("muxpack");
 
         run("memory_map");
+
+        // To attach exra info for the netlist info json file
+        //
+        memoryMapAnalysis();
 
         postProcessBrams();
 
