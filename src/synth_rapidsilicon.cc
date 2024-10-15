@@ -2199,6 +2199,106 @@ struct SynthRapidSiliconPass : public ScriptPass {
        return nb;
     }
 
+    void carry_2_gate()
+    {
+
+        dict<RTLIL::SigSpec, Cell *> ci2cell;
+        dict<Cell *, RTLIL::SigSpec> co2cell;
+        std::map<int, std::vector<Cell *>> carry_chains;
+        vector<Cell *> carry_chain_head_cells;
+
+        for (auto cell : _design->top_module()->cells())
+        {
+            if (cell->type != RTLIL::escape_id("CARRY"))
+                continue;
+
+            bool noCo = true;
+            for (auto &conn : cell->connections())
+            {
+                IdString portName = conn.first;
+                RTLIL::SigSpec actual = conn.second;
+
+                if (portName == RTLIL::escape_id("CIN"))
+                {
+                    ci2cell[actual] = cell;
+                    continue;
+                }
+
+                if (portName == RTLIL::escape_id("COUT") && !(actual.empty()))
+                {
+                    noCo = false;
+                    co2cell[cell] = actual;
+                    continue;
+                }
+            }
+            if (noCo)
+            {
+                co2cell[cell] = {};
+                carry_chain_head_cells.push_back(cell);
+            }
+        }
+        vector<RTLIL::SigSpec> carry_chain_head_co2cell;
+
+        int chain = 0;
+        for (auto head_cell : carry_chain_head_cells)
+        {
+            RTLIL::SigSpec signal = head_cell->getPort(RTLIL::escape_id("CIN"));
+            chain += 1;
+            carry_chains[chain].push_back(head_cell);
+            while (!signal.empty())
+            {
+                bool found = false;
+                for (auto &co_signal : co2cell)
+                {
+                    if (co_signal.second == signal)
+                    {
+                        carry_chains[chain].push_back(co_signal.first);
+                        signal = co_signal.first->getPort(RTLIL::escape_id("CIN"));
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    break;
+                }
+            }
+        }
+
+        for (auto &chain : carry_chains)
+        {
+            const std::vector<Cell *> &chain_ = chain.second;
+            int extra_carry = chain_.size() - max_carry_length;
+            if (extra_carry > 0)
+            {
+                std::vector<Cell *> ExcessCarry;
+                ExcessCarry.reserve(extra_carry);
+                std::copy(chain_.begin(), chain_.begin() + extra_carry, std::back_inserter(ExcessCarry));
+
+                for (auto it = ExcessCarry.begin(); it != ExcessCarry.end();)
+                {
+                    Cell *ec = *it;
+
+                    log("Converting %s to logic.\n", log_id(ec->name));
+                    RTLIL::Module *top_module = _design->top_module();
+                    RTLIL::SigSpec np = top_module->addWire(NEW_ID, 1);
+                    RTLIL::SigSpec and1 = top_module->addWire(NEW_ID, 1);
+                    RTLIL::SigSpec and2 = top_module->addWire(NEW_ID, 1);
+                    RTLIL::SigSpec c_out = top_module->addWire(NEW_ID, 1);
+                    top_module->addXor(NEW_ID, ec->getPort(RTLIL::escape_id("P")), ec->getPort(RTLIL::escape_id("CIN")), ec->getPort(RTLIL::escape_id("O")));
+                    top_module->addNot(NEW_ID, ec->getPort(RTLIL::escape_id("P")), np);
+                    top_module->addAnd(NEW_ID, ec->getPort(RTLIL::escape_id("P")), ec->getPort(RTLIL::escape_id("CIN")), and1);
+                    top_module->addAnd(NEW_ID, np, ec->getPort(RTLIL::escape_id("G")), and2);
+                    top_module->addOr(NEW_ID, and1, and2, ec->getPort(RTLIL::escape_id("COUT")));
+                    
+                    top_module->remove(ec);
+                    it = ExcessCarry.erase(it);
+                }
+                ExcessCarry.clear();
+            }
+        }
+    }
+    
     int getNumberOfGenericREGs() {
 
        int nb = 0;
@@ -8941,7 +9041,8 @@ void collect_clocks (RTLIL::Module* module,
                     break;
                 }    
             }
-
+            // Awais: Convert Carry to logic if carry in a chain exceed max carry length limit in a chain.
+            carry_2_gate();
             if (cec) {
                 run("write_verilog -noexpr -noattr -nohex after_tech_map.v");
             }
