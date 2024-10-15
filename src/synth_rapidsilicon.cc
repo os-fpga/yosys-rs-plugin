@@ -7880,7 +7880,7 @@ void collect_clocks (RTLIL::Module* module,
         // WARNING; we may need to handle case where 'keep' attribute is on
         // the I_BUF/O_BUF so that we cannot remove them.
         //
-#if 1
+#if 0
         remove_io_buffers(top_module);
 
         // Bypass the assigns by replacing LHs by RHS. Assigns will be
