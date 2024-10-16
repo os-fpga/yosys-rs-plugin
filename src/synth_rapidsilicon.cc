@@ -9034,6 +9034,10 @@ void collect_clocks (RTLIL::Module* module,
                         }
                     }
                     run("stat");
+                    // Awais: Convert Carry to logic if carry in a chain exceed max carry length limit in a chain.
+                    if (max_carry_length != -1)
+                        carry_2_gate();
+                    run("stat");
                             break;
                 }
                 case Technologies::GENERIC: {
@@ -9041,8 +9045,6 @@ void collect_clocks (RTLIL::Module* module,
                     break;
                 }    
             }
-            // Awais: Convert Carry to logic if carry in a chain exceed max carry length limit in a chain.
-            carry_2_gate();
             if (cec) {
                 run("write_verilog -noexpr -noattr -nohex after_tech_map.v");
             }
