@@ -2199,6 +2199,129 @@ struct SynthRapidSiliconPass : public ScriptPass {
        return nb;
     }
 
+    void carry_2_gate()
+    {
+
+        dict<RTLIL::SigSpec, Cell *> ci2cell;
+        dict<Cell *, RTLIL::SigSpec> co2cell;
+        std::map<int, std::vector<Cell *>> carry_chains;
+        vector<Cell *> carry_chain_head_cells;
+
+        for (auto cell : _design->top_module()->cells())
+        {
+            if (cell->type != RTLIL::escape_id("CARRY"))
+                continue;
+
+            bool noCo = true;
+            for (auto &conn : cell->connections())
+            {
+                IdString portName = conn.first;
+                RTLIL::SigSpec actual = conn.second;
+
+                if (portName == RTLIL::escape_id("CIN"))
+                {
+                    ci2cell[actual] = cell;
+                    continue;
+                }
+
+                if (portName == RTLIL::escape_id("COUT") && !(actual.empty()))
+                {
+                    noCo = false;
+                    co2cell[cell] = actual;
+                    continue;
+                }
+            }
+            if (noCo)
+            {
+                co2cell[cell] = {};
+                carry_chain_head_cells.push_back(cell);
+            }
+        }
+        vector<RTLIL::SigSpec> carry_chain_head_co2cell;
+
+        int chain = 0;
+        for (auto head_cell : carry_chain_head_cells)
+        {
+            RTLIL::SigSpec signal = head_cell->getPort(RTLIL::escape_id("CIN"));
+            chain += 1;
+            carry_chains[chain].push_back(head_cell);
+            while (!signal.empty())
+            {
+                bool found = false;
+                for (auto &co_signal : co2cell)
+                {
+                    if (co_signal.second == signal)
+                    {
+                        carry_chains[chain].push_back(co_signal.first);
+                        signal = co_signal.first->getPort(RTLIL::escape_id("CIN"));
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    break;
+                }
+            }
+        }
+
+        for (auto &chain : carry_chains)
+        {
+            std::vector<Cell*> original_chain = chain.second;
+            std::reverse(original_chain.begin(), original_chain.end());
+
+            std::vector<std::vector<Cell*>> sub_chains;
+
+            size_t i = 0;
+            size_t first_chunk_size = std::min(max_carry_length, static_cast<int>(original_chain.size()));
+            std::vector<Cell*> first_chain_chunk(original_chain.begin(), original_chain.begin() + first_chunk_size);
+            sub_chains.push_back(first_chain_chunk);
+
+            for (i = first_chunk_size; i < original_chain.size(); i += (max_carry_length - 1))
+            {
+                size_t chunk_size = std::min(max_carry_length - 1, static_cast<int>(original_chain.size() - i));
+
+                std::vector<Cell*> chain_chunk;
+                chain_chunk.reserve(chunk_size + 1);
+
+                chain_chunk.push_back(sub_chains.back().back());
+
+                std::copy(original_chain.begin() + i, original_chain.begin() + i + chunk_size, std::back_inserter(chain_chunk));
+
+                sub_chains.push_back(chain_chunk);
+            }
+
+            bool  ignore_chain1 = false;
+            for (auto _chain_ : sub_chains){
+                if (!ignore_chain1){
+                    ignore_chain1=true;
+                    continue;
+                }
+                
+                RTLIL::Cell* cell_next = _chain_[1];
+                RTLIL::Cell* cell_prev = _chain_[0];
+                RTLIL::Module *top_module = _design->top_module();
+                RTLIL::IdString newName = top_module->uniquify(stringf("$first_adder%s", 
+                                                  log_id(cell_next->name)));
+                RTLIL::Cell* newcell = top_module->addCell(NEW_ID, "\\CARRY");
+                newcell->set_bool_attribute(ID::keep);
+
+                RTLIL::SigSpec cin = top_module->addWire(NEW_ID, 1);
+                RTLIL::SigSpec O = top_module->addWire(NEW_ID, 1);
+                newcell->setPort(RTLIL::escape_id("CIN"), {});
+                newcell->setPort(RTLIL::escape_id("O"), O);
+                newcell->setPort(RTLIL::escape_id("G"), cell_prev->getPort(RTLIL::escape_id("COUT")));
+                newcell->setPort(RTLIL::escape_id("P"), State::S0);
+
+                RTLIL::SigSpec cout = top_module->addWire(NEW_ID, 1);
+                newcell->setPort(RTLIL::escape_id("COUT"), cout);
+                cell_next->unsetPort(RTLIL::escape_id("CIN"));
+                cell_next->setPort(RTLIL::escape_id("CIN"),cout);
+                
+            }
+        }
+    }
+    
     int getNumberOfGenericREGs() {
 
        int nb = 0;
@@ -8934,6 +9057,11 @@ void collect_clocks (RTLIL::Module* module,
                         }
                     }
                     run("stat");
+                    // Awais: Split large carry chain into smaller sub chains to be under device limit
+                    log("Split large carry chains");
+                    if (max_carry_length != -1)
+                        carry_2_gate();
+                    run("stat");
                             break;
                 }
                 case Technologies::GENERIC: {
@@ -8941,11 +9069,9 @@ void collect_clocks (RTLIL::Module* module,
                     break;
                 }    
             }
-
             if (cec) {
-                run("write_verilog -noexpr -noattr -nohex after_tech_map.v");
+                run("write_verilog -noexpr -nohex after_tech_map.v");
             }
-            //sec_check("after_tech_map", false);
             sec_check("after_tech_map", true, true);
             
             
