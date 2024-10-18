@@ -9057,7 +9057,8 @@ void collect_clocks (RTLIL::Module* module,
                         }
                     }
                     run("stat");
-                    // Awais: Convert Carry to logic if carry in a chain exceed max carry length limit in a chain.
+                    // Awais: Split large carry chain into smaller sub chains to be under device limit
+                    log("Split large carry chains");
                     if (max_carry_length != -1)
                         carry_2_gate();
                     run("stat");
@@ -9068,10 +9069,9 @@ void collect_clocks (RTLIL::Module* module,
                     break;
                 }    
             }
-            // if (cec) {
+            if (cec) {
                 run("write_verilog -noexpr -nohex after_tech_map.v");
-            // }
-            //sec_check("after_tech_map", false);
+            }
             sec_check("after_tech_map", true, true);
             
             
