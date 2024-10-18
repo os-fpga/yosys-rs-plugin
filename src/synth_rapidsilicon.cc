@@ -2267,34 +2267,57 @@ struct SynthRapidSiliconPass : public ScriptPass {
 
         for (auto &chain : carry_chains)
         {
-            const std::vector<Cell *> &chain_ = chain.second;
-            int extra_carry = chain_.size() - max_carry_length;
-            if (extra_carry > 0)
+            std::vector<Cell*> original_chain = chain.second;
+            std::reverse(original_chain.begin(), original_chain.end());
+
+            std::vector<std::vector<Cell*>> sub_chains;
+
+            size_t i = 0;
+            size_t first_chunk_size = std::min(max_carry_length, static_cast<int>(original_chain.size()));
+            std::vector<Cell*> first_chain_chunk(original_chain.begin(), original_chain.begin() + first_chunk_size);
+            sub_chains.push_back(first_chain_chunk);
+
+            for (i = first_chunk_size; i < original_chain.size(); i += (max_carry_length - 1))
             {
-                std::vector<Cell *> ExcessCarry;
-                ExcessCarry.reserve(extra_carry);
-                std::copy(chain_.begin(), chain_.begin() + extra_carry, std::back_inserter(ExcessCarry));
+                size_t chunk_size = std::min(max_carry_length - 1, static_cast<int>(original_chain.size() - i));
 
-                for (auto it = ExcessCarry.begin(); it != ExcessCarry.end();)
-                {
-                    Cell *ec = *it;
+                std::vector<Cell*> chain_chunk;
+                chain_chunk.reserve(chunk_size + 1);
 
-                    log("Converting %s to logic.\n", log_id(ec->name));
-                    RTLIL::Module *top_module = _design->top_module();
-                    RTLIL::SigSpec np = top_module->addWire(NEW_ID, 1);
-                    RTLIL::SigSpec and1 = top_module->addWire(NEW_ID, 1);
-                    RTLIL::SigSpec and2 = top_module->addWire(NEW_ID, 1);
-                    RTLIL::SigSpec c_out = top_module->addWire(NEW_ID, 1);
-                    top_module->addXor(NEW_ID, ec->getPort(RTLIL::escape_id("P")), ec->getPort(RTLIL::escape_id("CIN")), ec->getPort(RTLIL::escape_id("O")));
-                    top_module->addNot(NEW_ID, ec->getPort(RTLIL::escape_id("P")), np);
-                    top_module->addAnd(NEW_ID, ec->getPort(RTLIL::escape_id("P")), ec->getPort(RTLIL::escape_id("CIN")), and1);
-                    top_module->addAnd(NEW_ID, np, ec->getPort(RTLIL::escape_id("G")), and2);
-                    top_module->addOr(NEW_ID, and1, and2, ec->getPort(RTLIL::escape_id("COUT")));
-                    
-                    top_module->remove(ec);
-                    it = ExcessCarry.erase(it);
+                chain_chunk.push_back(sub_chains.back().back());
+
+                std::copy(original_chain.begin() + i, original_chain.begin() + i + chunk_size, std::back_inserter(chain_chunk));
+
+                sub_chains.push_back(chain_chunk);
+            }
+
+            bool  ignore_chain1 = false;
+            for (auto _chain_ : sub_chains){
+                if (!ignore_chain1){
+                    ignore_chain1=true;
+                    continue;
                 }
-                ExcessCarry.clear();
+                
+                RTLIL::Cell* cell_next = _chain_[1];
+                RTLIL::Cell* cell_prev = _chain_[0];
+                RTLIL::Module *top_module = _design->top_module();
+                RTLIL::IdString newName = top_module->uniquify(stringf("$first_adder%s", 
+                                                  log_id(cell_next->name)));
+                RTLIL::Cell* newcell = top_module->addCell(NEW_ID, "\\CARRY");
+                newcell->set_bool_attribute(ID::keep);
+
+                RTLIL::SigSpec cin = top_module->addWire(NEW_ID, 1);
+                RTLIL::SigSpec O = top_module->addWire(NEW_ID, 1);
+                newcell->setPort(RTLIL::escape_id("CIN"), {});
+                newcell->setPort(RTLIL::escape_id("O"), O);
+                newcell->setPort(RTLIL::escape_id("G"), cell_prev->getPort(RTLIL::escape_id("COUT")));
+                newcell->setPort(RTLIL::escape_id("P"), State::S0);
+
+                RTLIL::SigSpec cout = top_module->addWire(NEW_ID, 1);
+                newcell->setPort(RTLIL::escape_id("COUT"), cout);
+                cell_next->unsetPort(RTLIL::escape_id("CIN"));
+                cell_next->setPort(RTLIL::escape_id("CIN"),cout);
+                
             }
         }
     }
@@ -9045,9 +9068,9 @@ void collect_clocks (RTLIL::Module* module,
                     break;
                 }    
             }
-            if (cec) {
-                run("write_verilog -noexpr -noattr -nohex after_tech_map.v");
-            }
+            // if (cec) {
+                run("write_verilog -noexpr -nohex after_tech_map.v");
+            // }
             //sec_check("after_tech_map", false);
             sec_check("after_tech_map", true, true);
             
