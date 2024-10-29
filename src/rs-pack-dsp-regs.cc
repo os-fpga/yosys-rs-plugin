@@ -364,15 +364,30 @@ struct RsPackDspRegsWorker
                     continue;
                 }
             }
-            if (ignore_dsp){
-                continue;
+            RTLIL::Const DSP_RST_POL;
+            if (!gen)
+            {
+                DSP_RST_POL = it_dsp->getParam(RTLIL::escape_id("DSP_RST_POL"));
+                log("DSP_Reset value = %d\n", DSP_RST_POL.as_int());
+                if ((ignore_dsp) && !(DSP_RST_POL.as_int()))
+                    continue;
+                // if DSP data ports is driven from DFFs add it in vector
+                if (port_a_from_dff && port_b_from_dff && port_load_acc_from_dff && (!ignore_dsp || DSP_RST_POL.as_int() != 0))
+                    DSP_driven_only_by_DFF.push_back(it_dsp);
+            }
+            else
+            {
+                if (ignore_dsp)
+                    continue;
+                // if DSP data ports is driven from DFFs add it in vector
+                if (port_a_from_dff && port_b_from_dff && port_load_acc_from_dff && !ignore_dsp)
+                    DSP_driven_only_by_DFF.push_back(it_dsp);
             }
 
             // if DSP data ports is driven from DFFs add it in vector
-            if (port_a_from_dff && port_b_from_dff && port_load_acc_from_dff && !ignore_dsp) {
-                DSP_driven_only_by_DFF.push_back(it_dsp);
-            }
-            if (1) {
+
+            if (1)
+            {
                 DSP_drives_DFF.push_back(it_dsp);
             }
         }
