@@ -5829,6 +5829,44 @@ static void show_sig(const RTLIL::SigSpec &sig)
          run("write_verilog -org-name -noattr -noexpr -nohex after_rewire_obuft.v");
        }
     }
+
+    // Force 'keep' attribute on original IO BUF cells instantiated at RTL.
+    // (ex: EDA-3307 where one I_BUF is removed by optimizer because input is not used)
+    //
+    void set_iobuf_keep_attribute()
+    {
+       for(auto& modules : _design->selected_modules()) {
+
+            for(auto& cell : modules->selected_cells()) {
+
+                if (cell->type == RTLIL::escape_id("I_BUF")) {
+                   cell->set_bool_attribute(ID::keep);
+                   continue;
+                }
+                if (cell->type == RTLIL::escape_id("I_BUF_DS")) {
+                   cell->set_bool_attribute(ID::keep);
+                   continue;
+                }
+                if (cell->type == RTLIL::escape_id("O_BUF")) {
+                   cell->set_bool_attribute(ID::keep);
+                   continue;
+                }
+                if (cell->type == RTLIL::escape_id("O_BUF_DS")) {
+                   cell->set_bool_attribute(ID::keep);
+                   continue;
+                }
+                if (cell->type == RTLIL::escape_id("O_BUFT")) {
+                   cell->set_bool_attribute(ID::keep);
+                   continue;
+                }
+                if (cell->type == RTLIL::escape_id("O_BUFT_DS")) {
+                   cell->set_bool_attribute(ID::keep);
+                   continue;
+                }
+            }
+       }
+    }
+
     // Map the $TBUF cells into OBUFT equivalent.
     //
     void map_obuft(RTLIL::Module* top_module)
@@ -8490,6 +8528,10 @@ void collect_clocks (RTLIL::Module* module,
 
             remove_print_cell();
             illegal_clk_connection();
+
+            // set keep attribute on original IO buf cells
+            //
+            set_iobuf_keep_attribute();
 
             transform(nobram /* bmuxmap */); // no "$bmux" mapping in bram state
 
