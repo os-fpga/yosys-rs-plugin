@@ -272,14 +272,23 @@ struct RsDspMultAddWorker
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::B_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                 }
                 else if (mult_coeff->getPort(ID::B).is_fully_const()){
-                    cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), mult_coeff->getPort(ID::B).as_const());
+                    RTLIL::Const coeff_0 = const_or(RTLIL::Const(RTLIL::S0,tgt_a_width), mult_coeff->getPort(ID::B).as_const(), false, false, tgt_a_width);
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), coeff_0);
+            
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_1"), RTLIL::Const(RTLIL::S0,tgt_a_width));
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_2"), RTLIL::Const(RTLIL::S0,tgt_a_width));
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_3"), RTLIL::Const(RTLIL::S0,tgt_a_width));
                     sig_b = mult_coeff->getPort(ID::A);
                     cell_muladd->setPort(RTLIL::escape_id("b_i"), sig_b);
                     cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);
                     cell_muladd->setPort(RTLIL::escape_id("unsigned_b_i"),mult_coeff->getParam(ID::A_SIGNED).as_bool()?RTLIL::S0:RTLIL::S1);
                 }
                 else{
-                    cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), mult_coeff->getPort(ID::A).as_const());
+                    RTLIL::Const coeff_0 = const_or(RTLIL::Const(RTLIL::S0,tgt_a_width), mult_coeff->getPort(ID::A).as_const(), false, false, tgt_a_width);
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_0"), coeff_0);
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_1"), RTLIL::Const(RTLIL::S0,tgt_a_width));
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_2"), RTLIL::Const(RTLIL::S0,tgt_a_width));
+                    cell_muladd->setParam(RTLIL::escape_id("COEFF_3"), RTLIL::Const(RTLIL::S0,tgt_a_width));
                     sig_b = mult_coeff->getPort(ID::B);
                     cell_muladd->setPort(RTLIL::escape_id("b_i"), sig_b);
                     cell_muladd->setPort(RTLIL::escape_id("a_i"), sig_a);

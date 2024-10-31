@@ -368,7 +368,6 @@ struct RsPackDspRegsWorker
             if (!gen)
             {
                 DSP_RST_POL = it_dsp->getParam(RTLIL::escape_id("DSP_RST_POL"));
-                log("DSP_Reset value = %d\n", DSP_RST_POL.as_int());
                 if ((ignore_dsp) && !(DSP_RST_POL.as_int()))
                     continue;
                 // if DSP data ports is driven from DFFs add it in vector
