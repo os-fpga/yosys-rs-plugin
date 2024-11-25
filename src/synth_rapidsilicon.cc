@@ -2820,7 +2820,16 @@ void abcDffOpt(int unmap_dff_ce, int n, int dfl, const string step)
                     continue;
                 }
                 if(cell->type == RTLIL::escape_id("$mul")){
-                    MULT_used_cells.push_back(cell);
+                    if (tech == Technologies::GENESIS_3)
+                    {
+                        if (cell->get_bool_attribute(RTLIL::escape_id("valid_map")))
+                        {
+                            MULT_used_cells.push_back(cell);
+                        }
+                    }
+                    else {
+                        MULT_used_cells.push_back(cell);
+                    }
                     continue;
                 }
             }
