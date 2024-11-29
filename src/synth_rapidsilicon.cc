@@ -45,6 +45,7 @@ PRIVATE_NAMESPACE_BEGIN
 #define BLACKBOX_SIM_LIB_FILE cell_sim_blackbox.v
 #define BLACKBOX_SIM_LIB_OFAB_FILE cell_ofab_sim_blackbox.v
 #define SIM_LIB_CARRY_FILE CARRY.v
+#define SIM_LIB_CARRY_BREAK_FILE CARRY_BREAK.v
 #define LLATCHES_SIM_FILE llatches_sim.v
 #define DSP_SIM_LIB_FILE dsp_sim.v
 #define BRAMS_SIM_LIB_FILE brams_sim.v
@@ -5839,6 +5840,111 @@ static void show_sig(const RTLIL::SigSpec &sig)
        }
     }
 
+    // We replace CARRY cells by CARRY_BREAK cells when we encounter carry chains
+    // longer than 'max_carry_length'
+    //
+    // Return 1 if at least one break occured, 0 otherwise.
+    //
+    int insert_carry_chain_break_cells()
+    {
+        int break_chain = 0;
+
+        dict<RTLIL::SigSpec, Cell *> ci2cell;
+        dict<Cell *, RTLIL::SigSpec> co2cell;
+        std::map<int, std::vector<Cell *>> carry_chains;
+        vector<Cell *> carry_chain_head_cells;
+
+        for (auto cell : _design->top_module()->cells())
+        {
+            if (cell->type != RTLIL::escape_id("CARRY"))
+                continue;
+
+            // log("Cout = %s, CIN = %s\n",log_signal(cell->getPort(RTLIL::escape_id("COUT"))),log_signal(cell->getPort(RTLIL::escape_id("CIN"))));
+            bool noCo = true;
+            for (auto &conn : cell->connections())
+            {
+                IdString portName = conn.first;
+                RTLIL::SigSpec actual = conn.second;
+
+                if (portName == RTLIL::escape_id("CIN"))
+                {
+                    ci2cell[actual] = cell;
+                    continue;
+                }
+
+                if (portName == RTLIL::escape_id("COUT") && !(actual.empty()))
+                {
+                    noCo = false;
+                    co2cell[cell] = actual;
+                    continue;
+                }
+            }
+            if (noCo)
+            {
+                co2cell[cell] = {};
+                carry_chain_head_cells.push_back(cell);
+            }
+        }
+        vector<RTLIL::SigSpec> carry_chain_head_co2cell;
+
+        int chain = 0;
+        for (auto head_cell : carry_chain_head_cells)
+        {
+            RTLIL::SigSpec signal = head_cell->getPort(RTLIL::escape_id("CIN"));
+            chain += 1;
+            carry_chains[chain].push_back(head_cell);
+            while (!signal.empty())
+            {
+                bool found = false;
+                for (auto &co_signal : co2cell)
+                {
+                    if (co_signal.second == signal)
+                    {
+                        carry_chains[chain].push_back(co_signal.first);
+                        signal = co_signal.first->getPort(RTLIL::escape_id("CIN"));
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    break;
+                }
+            }
+        }
+
+        for (auto &chain : carry_chains)
+        {
+            std::vector<Cell*> original_chain = chain.second;
+
+            int start = max_carry_length;
+            int step = max_carry_length-2;
+
+            for (long unsigned int i = start; (i > 0) && (i < original_chain.size()); i += step) {
+
+               Cell* previous_cell = original_chain[i-1];
+               Cell* cell = original_chain[i];
+
+               if (previous_cell->type != RTLIL::escape_id("CARRY")) {
+                 continue; // should never happen as cells are always CARRY
+               }
+               if (cell->type != RTLIL::escape_id("CARRY")) {
+                 continue; // should never happen as cells are always CARRY
+               }
+
+               // Every max length on the chain replace CARRY cell by a 
+               // CARRY_BREAK cell.
+               //
+               previous_cell->type = RTLIL::escape_id("CARRY_BREAK");
+               log("NOTE: Breaking carry chain at carry cell '%s'\n", 
+                   (previous_cell->name).c_str());
+               break_chain = 1;
+            }
+        }
+
+        return break_chain;
+    }
+
     // Force 'keep' attribute on original IO BUF cells instantiated at RTL.
     // (ex: EDA-3307 where one I_BUF is removed by optimizer because input is not used)
     //
@@ -8449,6 +8555,42 @@ void collect_clocks (RTLIL::Module* module,
             log_warning("DSP exceeds the available DSP block limit (%d) on the device; the excess %d DSP blocks will be mapped to LUTs.\n",max_dsp, remaining_sum);
         }
     }
+ 
+    // We try to break long carry chains that exceed 'max_carry_length'
+    //
+    //  0. Extract all carry chains (use 'reportCarryChains' source code)
+    //  1. replace CARRY cells by CARRY_BREAK cells every max_carry_length-2
+    //  2. techmap CARRY_BREAK cells and replace them by verilog model
+    //  3. clean up design after techmap
+    //
+    void break_carry_chains()
+    {
+       // Performs 0. and 1.
+       //
+       int carry_breaks = insert_carry_chain_break_cells();
+
+       if (!carry_breaks) {
+         return;
+       }
+
+       log("NOTE: after inserting carry chain break cells");
+       run("stat");
+
+       // Perform 2.
+       
+       //string rreadArgs = GET_FILE_PATH(GENESIS_3_DIR, carry_break.v);
+       string rreadArgs = GET_FILE_PATH_RS_FPGA_SIM(GENESIS_3_DIR, SIM_LIB_CARRY_BREAK_FILE); 
+
+       // tech map the carry_break cells
+       //
+       run(stringf("techmap -map %s ", rreadArgs.c_str()));
+       
+       // Perform 3.
+       //
+       run("opt_clean -purge");
+
+       log("NOTE: after carry chain breaks");
+    }
 
     void script() override
     {
@@ -8984,8 +9126,13 @@ void collect_clocks (RTLIL::Module* module,
                             break;
                         }
                     }
+
+                    // We try to break long carry chains that exceed 'max_carry_length'
+                    //
+                    break_carry_chains();
+
                     run("stat");
-                            break;
+                    break;
                 }
                 case Technologies::GENERIC: {
                     run("techmap");

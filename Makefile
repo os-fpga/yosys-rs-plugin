@@ -52,6 +52,7 @@ VERILOG_MODULES	= $(COMMON)/cells_sim.v \
 				  $(GENESIS3)/SEC_MODELS/DFFRE.blif \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/blackbox_models/cell_sim_blackbox.v \
 				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/CARRY.v \
+				  $(GENESIS3)/FPGA_PRIMITIVES_MODELS/sim_models/verilog/CARRY_BREAK.v \
 				  $(GENESIS3)/cells_sim.vhd \
 				  $(GENESIS3)/brams_sim.v \
 				  $(GENESIS3)/ffs_map.v \
