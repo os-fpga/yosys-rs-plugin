@@ -2,6 +2,29 @@
  *  Copyright (C) 2022 RapidSilicon
  *
  */
+
+// Awais Abbas                                             
+// The multiplier's output is added to the accumulator's output, and the result from the adder is fed back into the accumulator.
+// this kind of cell structure will be infered as MULTACC
+//                   
+//                                                                                  
+//                         _______            ____________                       
+//                        |       |          |            |                      
+//         ACC[19:0] `--->|       |          |            |         _________    
+//                        |  Mult |--------> |            |        |         |___
+//        In_B[17:0] ---->|       |          |            |------->|D       Q|   |---------> output
+//                        |_______|          |            |        |         |   |
+//                                           |  Add/Neg   |        |   ACC   |   |                      
+//                                           |            |        |         |   |
+//                                           |            |  clk-->|         |   |
+//                            ACC[63:0] ---->|            |        |_________|   |
+//                                      |    |            |                      |
+//                                      |    |____________|                      |
+//                                      |                                        |
+//                                      |                                        |
+//                                      |                                        |
+//                                      |________________________________________|
+
 #include "kernel/sigtools.h"
 #include "kernel/yosys.h"
 #include "kernel/modtools.h"
