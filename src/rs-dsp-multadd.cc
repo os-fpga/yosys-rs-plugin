@@ -1,6 +1,40 @@
 // Copyright (C) 2022 RapidSilicon
 //
 
+// Awais Abbas
+// If the multiplier's input is multiplied by a coefficient/constant, and another input is left-shifted, their results are added together, 
+// will infer a MULTADD operation for RS_DSP.
+//                         _______                 ____________
+//                        |       |               |            |
+//  Coefficint[19:0] ---->|       |               |            |
+//                        |  Mult |-------------> |            |
+//        In_B[17:0] ---->|       |               |            |
+//                        |_______|               |            |
+//                         _______                |   Adder    |------->   output                   
+//                        |       |               |            |
+//        In_A[19:0] ---->|       |               |            |
+//                        | Shift |-------------> |            |
+//      acc_fir[5:0] ---->| Left  |               |            |
+//                        |_______|               |____________|
+//                                                
+// If the accumulator's output is multiplied by the multiplier's second input, and another input is left-shifted, their results are added together, 
+// with the adder's output serving as the input to the accumulator, this structure will be infered a MULTADD operation for RS_DSP.
+//
+//                    ________________________________________________________________
+//                   |                                                                |
+//                   |     _______                 ____________                       |
+//                   |    |       |               |            |                      |
+//         ACC[19:0] `--->|       |               |            |         _________    |
+//                        |  Mult |-------------> |            |        |         |___|-----------------------------> output
+//        In_B[17:0] ---->|       |               |            |------->|D       Q|
+//                        |_______|               |            |        |         |
+//                         _______                |   Adder    |        |   ACC   |                      
+//                        |       |               |            |        |         |
+//        In_A[19:0] ---->|       |               |            |  clk-->|         |
+//                        | Shift |-------------> |            |        |_________|
+//      acc_fir[5:0] ---->| Left  |               |            |
+//                        |_______|               |____________|
+
 #include "kernel/yosys.h"
 #include "kernel/modtools.h"
 #include "kernel/ffinit.h"
@@ -74,37 +108,6 @@ struct RsDspMultAddWorker
                     continue;
             }
         }
-        // If the following structure is found in the rtlil model than we can infr a MULTADD for RS-DSP
-        //                         _______                 ____________
-        //                        |       |               |            |
-        //  Coefficint[19:0] ---->|       |               |            |
-        //                        |  Mult |-------------> |            |
-        //        In_B[19:0] ---->|       |               |            |
-        //                        |_______|               |            |
-        //                         _______                |   Adder    |------->   output                   
-        //                        |       |               |            |
-        //        In_A[19:0] ---->|       |               |            |
-        //                        | Shift |-------------> |            |
-        //      acc_fir[5:0] ---->| Left  |               |            |
-        //                        |_______|               |____________|
-        //                                                
-        //
-        //
-        //                    ________________________________________________________________
-        //                   |                                                                |
-        //                   |     _______                 ____________                       |
-        //                   |    |       |               |            |                      |
-        //         ACC[19:0] `--->|       |               |            |         _________    |
-        //                        |  Mult |-------------> |            |        |         |___|-----------------------------> output
-        //        In_B[19:0] ---->|       |               |            |------->|D       Q|
-        //                        |_______|               |            |        |         |
-        //                         _______                |   Adder    |        |   ACC   |                      
-        //                        |       |               |            |        |         |
-        //        In_A[19:0] ---->|       |               |            |  clk-->|         |
-        //                        | Shift |-------------> |            |        |_________|
-        //      acc_fir[5:0] ---->| Left  |               |            |
-        //                        |_______|               |____________|
-
         for (auto &add_cell : add_cells_) {
             add_shl = false;
             add_mul = false;

@@ -8782,7 +8782,12 @@ void collect_clocks (RTLIL::Module* module,
                     case Technologies::GENESIS_3: {
 #ifdef DEV_BUILD
                         run("stat");
-#endif                  
+#endif
+                        // rs-dsp-multadd pass will infer multiplier as
+                        //    1. dsp_t1_20X1864_cfg_ports
+                        //    2. dsp_t1_10X9X32_cfg_params
+                        // All the parameters and Ports are configured to support multiply-add (MULTADD) functionality.
+
                         if (new_dsp19x2) // RUN based on DSP19x2 mapping
                             run("rs-dsp-multadd -genesis3 -new_dsp19x2 -max_dsp " + std::to_string(max_dsp));
                         else
@@ -8790,6 +8795,12 @@ void collect_clocks (RTLIL::Module* module,
                         
                         DSP_COUNTER = DSP_COUNTER + Count_ADD;
                         run("wreduce t:$mul");
+
+                        // rs-dsp-multacc pass will infer multiplier as
+                        //    1. dsp_t1_20X18X64_cfg_ports
+                        //    2. dsp_t1_10X9X32_cfg_params
+                        // All the parameters and Ports are configured to support multiply-accumulate (MULTACC) functionality.
+
                         if (!new_dsp19x2)
                             run("rs_dsp_macc" + use_dsp_cfg_params + genesis3 + " -max_dsp " + std::to_string(max_dsp));
                         else // RUN based on DSP19x2 mapping
@@ -8797,11 +8808,22 @@ void collect_clocks (RTLIL::Module* module,
                         
                         check_dsp_device_limit();
 
-                        // Check if mult output is connected with Registers output  
+                        // Check if the multiplier output is connected to a register input before decomposing large multipliers.
+                        // This function configures the parameters DSP_CLK, DSP_RESET_POL, REGOUT, 
+                        // and DSP_RESET if the corresponding multiplier output Y is connected to a register input.
+                        // This information is later used during register packing stage of DSP inference.
+                        
                         if (tech == Technologies::GENESIS_3)
                             check_mult_regout();
+
+                        // Process the large multiplier and decompose it into smaller multipliers optimized for RapidSilicon DSP. 
+                        // The smaller multipliers are then mapped to the following cells.
+                        // \$__RS_MUL20X18
+                        // \$__RS_MUL10X9
+
                         processDsp(cec);
 
+                        // map the processed \$__RS_MUL20X18 and \$__RS_MUL10X9 into dsp_t1_dsp_t1_20X18X64_cfg_ports and dsp_t1_10X9X32_cfg_params.
                         if (use_dsp_cfg_params.empty())
                             run("techmap -map " + dspMapFile + " -D USE_DSP_CFG_PARAMS=0");
                         else
@@ -8827,11 +8849,17 @@ void collect_clocks (RTLIL::Module* module,
                         }
                         sec_check("after_dsp_map4", true, true);
                        
+                        // pack the registers connected to the input and output of multipliers into DSP's 
                         run("rs-pack-dsp-regs -genesis3");
 
                         // add register at the remaining decomposed small multiplier that are not packed in DSP cells
                         if (tech == Technologies::GENESIS_3)
                             add_out_reg();
+                        
+                        // map the processed DSP cells into following cells based on the mode bits
+                        // RS_DSP_MULT ,RS_DSP_MULT_REGIN, RS_DSP_MULT_REGOUT, RS_DSP_MULT_REGIN_REGOUT
+                        // RS_DSP_MULTADD ,RS_DSP_MULTADD_REGIN, RS_DSP_MULTADD_REGOUT, RS_DSP_MULTADD_REGIN_REGOUT
+                        // RS_DSP_MULTACC ,RS_DSP_MULTACC_REGIN, RS_DSP_MULTACC_REGOUT, RS_DSP_MULTACC_REGIN_REGOUT
                         
                         run("rs_dsp_io_regs -tech genesis3");
 
@@ -8842,7 +8870,8 @@ void collect_clocks (RTLIL::Module* module,
                         
 
 #if 1
-                        //run("stat");
+                        run("stat");
+                        // finaly mapped above DSP mapped multiplier into DSP38 and DSP19X2 
                         run("techmap -map " + dsp38MapFile);
                         if (new_dsp19x2)
                             run("techmap -map " + dsp19x2MapFile);
