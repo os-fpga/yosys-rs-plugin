@@ -5316,7 +5316,7 @@ static void show_sig(const RTLIL::SigSpec &sig)
     void check_blackbox_param(){
 	    std::set<RTLIL::IdString> primitive_names = {
 		/* genesis3 blackbox primitives*/
-		"\\I_BUF_DS","\\O_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\I_DELAY","\\O_SERDES_CLK","\\PLL",
+		"\\I_BUF_DS","\\O_BUF_DS","\\O_BUFT_DS","\\O_SERDES", "\\I_SERDES","\\BOOT_CLOCK","\\O_DELAY","\\I_DELAY","\\DLY_SEL_DECODER","\\O_SERDES_CLK","\\PLL",
         "\\SOC_FPGA_TEMPERATURE"};
 
         for (auto &module : _design->selected_modules()) {
@@ -8114,30 +8114,17 @@ void collect_clocks (RTLIL::Module* module,
        register_rule("O_BUFT", "T", "f2g_tx_oe", 0, all_rules);
        register_rule("O_BUFT_DS", "T", "f2g_tx_oe", 0, all_rules);
 
-#if 0
-       // SHARED version
-       //
-       register_rule("I_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 1 /* shared */, all_rules);
-       register_rule("I_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 1, all_rules);
-       register_rule("I_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 1, all_rules);
-       register_rule("I_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 1, all_rules);
+#if 1
 
-       register_rule("O_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 1 /* shared */, all_rules);
-       register_rule("O_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 1, all_rules);
-       register_rule("O_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 1, all_rules);
-       register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 1, all_rules);
-#else
        // Non SHARED version
        //
-       register_rule("I_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 0 /* not shared */, all_rules);
-       register_rule("I_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
-       register_rule("I_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
-       register_rule("I_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
+       register_rule("DLY_SEL_DECODER", "DLY_LOAD", "f2g_trx_dly_ld", 0 /* not shared */, all_rules);
+       register_rule("DLY_SEL_DECODER", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
+       register_rule("DLY_SEL_DECODER", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
+       register_rule("DLY_SEL_DECODER", "DLY_ADDR", "f2g_trx_dly_tap", 0, all_rules);
+       register_rule("DLY_SEL_DECODER", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
 
-       register_rule("O_DELAY", "DLY_LOAD", "f2g_trx_dly_ld", 0 /* not shared */, all_rules);
-       register_rule("O_DELAY", "DLY_ADJ", "f2g_trx_dly_adj", 0, all_rules);
-       register_rule("O_DELAY", "DLY_INCDEC", "f2g_trx_dly_inc", 0, all_rules);
-       register_rule("O_DELAY", "DLY_TAP_VALUE", "f2g_trx_dly_tap", 0, all_rules);
+#endif
 
 #if 1
 
@@ -8151,9 +8138,6 @@ void collect_clocks (RTLIL::Module* module,
        register_rule("O_DDR", "D", "f2g_tx_out", 0, all_rules);
        register_rule("O_SERDES", "D", "f2g_tx_out", 0, all_rules);
 #endif
-
-#endif
-
        register_rule("I_DDR", "R", "f2g_trx_reset_n", 0, all_rules);
        register_rule("I_DDR", "E", "", 0, all_rules);
 
@@ -8277,7 +8261,7 @@ void collect_clocks (RTLIL::Module* module,
         for (auto cell : top_module->cells()) {
 
            if (cell->type.in(ID(I_BUF_DS), ID(O_BUF_DS), ID(O_BUFT_DS), ID(O_SERDES), 
-                             ID(I_SERDES), ID(BOOT_CLOCK), ID(O_DELAY), ID(I_DELAY), 
+                             ID(I_SERDES), ID(BOOT_CLOCK), ID(O_DELAY), ID(I_DELAY), ID(DLY_SEL_DECODER),
                              ID(O_SERDES_CLK), ID(PLL),
                              ID(O_BUF), ID(O_BUFT), ID(O_DDR))) {
 
